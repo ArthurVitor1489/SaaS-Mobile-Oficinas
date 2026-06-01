@@ -1,4 +1,6 @@
 .expo/
 node_modules/
 dist/
+android/
+ios/
 *.log

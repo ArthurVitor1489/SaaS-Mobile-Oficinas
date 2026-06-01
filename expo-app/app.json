@@ -18,6 +18,12 @@
     },
     "web": {
       "bundler": "metro"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "5cf5a4dd-4ebb-42c8-a2fc-aac5b6f8a430"
+      }
+    },
+    "owner": "tinywen"
   }
 }

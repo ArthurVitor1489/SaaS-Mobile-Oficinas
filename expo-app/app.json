@@ -4,6 +4,10 @@
     "slug": "mecanicapro-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#0f1115"
+    },
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0f1115",
     "ios": {

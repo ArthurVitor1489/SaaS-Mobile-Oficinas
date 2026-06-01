@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "MecânicaPro",
+    "slug": "mecanicapro-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0f1115",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mecanicapro.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0f1115"
+      },
+      "package": "com.mecanicapro.app"
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}

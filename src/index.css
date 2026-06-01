@@ -1,0 +1,160 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand color tokens */
+  --color-brand-50: #f5f7ff;
+  --color-brand-100: #ebf0ff;
+  --color-brand-200: #d6e0ff;
+  --color-brand-300: #adc2ff;
+  --color-brand-400: #7599ff;
+  --color-brand-500: #3b66ff;
+  --color-brand-600: #2544e6;
+  --color-brand-700: #1c30bf;
+  --color-brand-800: #1a2799;
+  --color-brand-900: #1b247a;
+  --color-brand-950: #10144d;
+
+  /* State color tokens */
+  --color-success-50: #ecfdf5;
+  --color-success-500: #10b981;
+  --color-success-600: #059669;
+
+  --color-warning-50: #fffbeb;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+
+  --color-danger-50: #fef2f2;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+
+  /* Premium dark color palette */
+  --color-dark-50: #f6f6f7;
+  --color-dark-100: #eef0f3;
+  --color-dark-200: #d8dce2;
+  --color-dark-300: #b5bdc9;
+  --color-dark-400: #8c98aa;
+  --color-dark-500: #6e7a8e;
+  --color-dark-600: #586376;
+  --color-dark-700: #485060;
+  --color-dark-800: #2c313c;
+  --color-dark-850: #1d2026;
+  --color-dark-900: #16181f;
+  --color-dark-950: #0f1115;
+  
+  --font-sans: 'Outfit', 'Inter', sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-dark-950 text-slate-100 font-sans antialiased overflow-x-hidden;
+  }
+}
+
+/* Glassmorphism Utilities */
+.glass-panel {
+  background: rgba(22, 28, 45, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.glass-panel-light {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.glass-card {
+  background: rgba(30, 37, 56, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.glass-card-light {
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.glass-accent {
+  background: linear-gradient(135deg, rgba(59, 102, 255, 0.12) 0%, rgba(59, 102, 255, 0.02) 100%);
+  border: 1px solid rgba(59, 102, 255, 0.15);
+}
+
+/* Interactive Device Screen Styles */
+.phone-screen {
+  font-family: 'Outfit', 'Inter', sans-serif;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 17, 21, 0.3);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(59, 102, 255, 0.15);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 102, 255, 0.3);
+}
+
+/* Hide scrollbar for clean app design */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Animations */
+@keyframes slideUp {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulseBorder {
+  0%, 100% {
+    border-color: rgba(59, 102, 255, 0.2);
+    box-shadow: 0 0 0 0 rgba(59, 102, 255, 0.1);
+  }
+  50% {
+    border-color: rgba(59, 102, 255, 0.6);
+    box-shadow: 0 0 12px 2px rgba(59, 102, 255, 0.2);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.pulse-glow {
+  animation: pulseBorder 2s infinite ease-in-out;
+}
+
+/* Signature Drawing Canvas */
+.sig-canvas {
+  touch-action: none;
+}

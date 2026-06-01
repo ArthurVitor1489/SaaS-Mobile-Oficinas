@@ -189,15 +189,15 @@ const DatabaseContext = createContext<DatabaseContextProps | undefined>(undefine
 // --- MOCK SEED DATA ---
 
 const defaultSettings: CompanySettings = {
-  name: 'AutoTech Mecânica Premium',
-  cnpj: '24.680.135/0001-88',
-  address: 'Av. Industrial, 4500 - Bairro Jardim, Santo André - SP',
-  phone: '(11) 4567-8901',
-  whatsapp: '(11) 94567-8901',
-  email: 'contato@autotechpremium.com.br',
+  name: 'Minha Oficina Mecânica',
+  cnpj: '',
+  address: '',
+  phone: '',
+  whatsapp: '',
+  email: '',
   logoUrl: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?q=80&w=200&auto=format&fit=crop',
   autoSequence: true,
-  nextOSNumber: 4,
+  nextOSNumber: 1,
   pdfNotes: 'Garantia de 90 dias para serviços e peças aplicadas. Obrigado pela preferência!'
 };
 
@@ -459,19 +459,37 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const saved = localStorage.getItem('oficina_saas_database');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (
+          parsed &&
+          Array.isArray(parsed.clients) &&
+          Array.isArray(parsed.vehicles) &&
+          Array.isArray(parsed.services) &&
+          Array.isArray(parsed.parts) &&
+          Array.isArray(parsed.workOrders) &&
+          Array.isArray(parsed.billings) &&
+          Array.isArray(parsed.transactions) &&
+          parsed.settings
+        ) {
+          if (parsed.settings.name === 'AutoTech Mecânica Premium') {
+            console.log('Transitioning old demo database to clean blank state');
+            localStorage.removeItem('oficina_saas_database');
+          } else {
+            return parsed;
+          }
+        }
       } catch (e) {
         console.error('Failed to parse saved database state, initializing seeds');
       }
     }
     return {
-      clients: seedClients,
-      vehicles: seedVehicles,
-      services: seedServices,
-      parts: seedParts,
-      workOrders: seedWorkOrders,
-      billings: seedBillings,
-      transactions: seedTransactions,
+      clients: [],
+      vehicles: [],
+      services: [],
+      parts: [],
+      workOrders: [],
+      billings: [],
+      transactions: [],
       settings: defaultSettings
     };
   });
@@ -857,13 +875,13 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const resetDatabase = () => {
     localStorage.removeItem('oficina_saas_database');
     setState({
-      clients: seedClients,
-      vehicles: seedVehicles,
-      services: seedServices,
-      parts: seedParts,
-      workOrders: seedWorkOrders,
-      billings: seedBillings,
-      transactions: seedTransactions,
+      clients: [],
+      vehicles: [],
+      services: [],
+      parts: [],
+      workOrders: [],
+      billings: [],
+      transactions: [],
       settings: defaultSettings
     });
   };

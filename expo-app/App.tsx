@@ -6,7 +6,8 @@ import {
 import { 
   Plus, Search, ArrowUpRight, ArrowDownRight, Trash2, Calendar, 
   Wallet, DollarSign, PiggyBank, Users, ClipboardList, Settings, Menu,
-  CheckCircle, Clock, Play, ChevronRight, UserPlus, Car, Check, X
+  CheckCircle, Clock, Play, ChevronRight, UserPlus, Car, Check, X,
+  Tag, Package, Edit2, AlertTriangle, ArrowLeft, MoreHorizontal
 } from 'lucide-react-native';
 
 // --- TYPES & INTERFACES ---
@@ -49,6 +50,24 @@ interface Transaction {
   date: string;
 }
 
+interface ServiceItem {
+  id: string;
+  name: string;
+  code: string;
+  description: string;
+  price: number;
+}
+
+interface PartItem {
+  id: string;
+  name: string;
+  code: string;
+  supplier: string;
+  purchasePrice: number;
+  salePrice: number;
+  stock: number;
+}
+
 export default function App() {
   // --- DATABASE STATE ---
   const [settings, setSettings] = useState({
@@ -65,11 +84,31 @@ export default function App() {
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
-  // Navigation: 'dashboard' | 'clients' | 'os' | 'finance' | 'settings'
-  const [currentTab, setCurrentTab] = useState<'dashboard' | 'clients' | 'os' | 'finance' | 'settings'>('dashboard');
+  // Catalog State
+  const [services, setServices] = useState<ServiceItem[]>([]);
+  const [parts, setParts] = useState<PartItem[]>([]);
+
+  // Navigation: 'dashboard' | 'clients' | 'os' | 'finance' | 'more'
+  const [currentTab, setCurrentTab] = useState<'dashboard' | 'clients' | 'os' | 'finance' | 'more'>('dashboard');
+  const [moreSubScreen, setMoreSubScreen] = useState<'menu' | 'catalog' | 'settings'>('menu');
 
   // Interactive Period Selector ('diario' | 'semanal' | 'mensal')
   const [summaryPeriod, setSummaryPeriod] = useState<'diario' | 'semanal' | 'mensal'>('mensal');
+
+  // --- CATALOG SCREEN STATE ---
+  const [catalogSegment, setCatalogSegment] = useState<'services' | 'parts'>('services');
+  const [catalogSearch, setCatalogSearch] = useState('');
+  
+  // Modals for catalog items
+  const [isAddingCatalogService, setIsAddingCatalogService] = useState(false);
+  const [isAddingCatalogPart, setIsAddingCatalogPart] = useState(false);
+  const [editingCatalogItemId, setEditingCatalogItemId] = useState<string | null>(null);
+
+  // Forms for catalog items
+  const [serviceForm, setServiceForm] = useState({ name: '', code: '', description: '', price: '' });
+  const [partForm, setPartForm] = useState({
+    name: '', code: '', supplier: '', purchasePrice: '', salePrice: '', stock: ''
+  });
 
   // --- MODAL FORMS STATE ---
   const [isAddingClient, setIsAddingClient] = useState(false);
@@ -194,6 +233,116 @@ export default function App() {
     setIsAddingExpense(false);
     setExpenseForm({ description: '', amount: '', date: new Date().toISOString().split('T')[0] });
     Alert.alert('Sucesso', 'Despesa lançada com sucesso!');
+  };
+
+  // --- CATALOG CRUD ACTIONS ---
+  const handleSaveCatalogService = () => {
+    if (!serviceForm.name || !serviceForm.price) {
+      Alert.alert('Erro', 'Por favor, preencha o nome e o preço do serviço!');
+      return;
+    }
+
+    const priceNum = parseFloat(serviceForm.price) || 0;
+    if (editingCatalogItemId) {
+      setServices(prev => prev.map(item => item.id === editingCatalogItemId ? {
+        ...item,
+        name: serviceForm.name,
+        code: serviceForm.code.toUpperCase(),
+        description: serviceForm.description,
+        price: priceNum
+      } : item));
+      Alert.alert('Sucesso', 'Serviço atualizado com sucesso!');
+    } else {
+      const newService: ServiceItem = {
+        id: `s-${Date.now()}`,
+        name: serviceForm.name,
+        code: serviceForm.code.toUpperCase() || `SRV-${Date.now().toString().slice(-4)}`,
+        description: serviceForm.description,
+        price: priceNum
+      };
+      setServices(prev => [...prev, newService]);
+      Alert.alert('Sucesso', 'Serviço adicionado ao catálogo!');
+    }
+
+    setIsAddingCatalogService(false);
+    setEditingCatalogItemId(null);
+    setServiceForm({ name: '', code: '', description: '', price: '' });
+  };
+
+  const handleSaveCatalogPart = () => {
+    if (!partForm.name || !partForm.code || !partForm.salePrice || !partForm.stock) {
+      Alert.alert('Erro', 'Por favor, preencha nome, código, preço de venda e estoque!');
+      return;
+    }
+
+    const purchasePriceNum = parseFloat(partForm.purchasePrice) || 0;
+    const salePriceNum = parseFloat(partForm.salePrice) || 0;
+    const stockNum = parseInt(partForm.stock) || 0;
+
+    if (editingCatalogItemId) {
+      setParts(prev => prev.map(item => item.id === editingCatalogItemId ? {
+        ...item,
+        name: partForm.name,
+        code: partForm.code.toUpperCase(),
+        supplier: partForm.supplier || 'Fornecedor avulso',
+        purchasePrice: purchasePriceNum,
+        salePrice: salePriceNum,
+        stock: stockNum
+      } : item));
+      Alert.alert('Sucesso', 'Peça atualizada com sucesso!');
+    } else {
+      const newPart: PartItem = {
+        id: `p-${Date.now()}`,
+        name: partForm.name,
+        code: partForm.code.toUpperCase(),
+        supplier: partForm.supplier || 'Fornecedor avulso',
+        purchasePrice: purchasePriceNum,
+        salePrice: salePriceNum,
+        stock: stockNum
+      };
+      setParts(prev => [...prev, newPart]);
+      Alert.alert('Sucesso', 'Peça adicionada ao estoque!');
+    }
+
+    setIsAddingCatalogPart(false);
+    setEditingCatalogItemId(null);
+    setPartForm({ name: '', code: '', supplier: '', purchasePrice: '', salePrice: '', stock: '' });
+  };
+
+  const handleDeleteCatalogService = (id: string) => {
+    Alert.alert(
+      'Excluir Serviço',
+      'Deseja realmente excluir este serviço do catálogo?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Excluir', 
+          style: 'destructive',
+          onPress: () => {
+            setServices(prev => prev.filter(item => item.id !== id));
+            Alert.alert('Sucesso', 'Serviço excluído!');
+          }
+        }
+      ]
+    );
+  };
+
+  const handleDeleteCatalogPart = (id: string) => {
+    Alert.alert(
+      'Excluir Peça',
+      'Deseja realmente excluir esta peça do estoque?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Excluir', 
+          style: 'destructive',
+          onPress: () => {
+            setParts(prev => prev.filter(item => item.id !== id));
+            Alert.alert('Sucesso', 'Peça excluída!');
+          }
+        }
+      ]
+    );
   };
 
   // --- STATS CALCULATIONS ---
@@ -529,10 +678,290 @@ export default function App() {
           </View>
         )}
 
-        {/* TAB 5: SETTINGS */}
-        {currentTab === 'settings' && (
+        {/* TAB 5: MORE (MENU, CATALOG, SETTINGS) */}
+        {currentTab === 'more' && moreSubScreen === 'menu' && (
           <View style={styles.screenContainer}>
+            <Text style={styles.tabTitle}>Mais Opções</Text>
+            <Text style={[styles.menuCardSub, { marginBottom: 15 }]}>Acesse ferramentas extras de gerenciamento</Text>
+            
+            <TouchableOpacity 
+              style={[styles.card, styles.menuCard]} 
+              onPress={() => {
+                setMoreSubScreen('catalog');
+                setCatalogSegment('services');
+                setCatalogSearch('');
+              }}
+            >
+              <View style={styles.menuCardLeft}>
+                <View style={styles.menuIconContainer}>
+                  <Package size={18} color="#3b66ff" />
+                </View>
+                <View style={styles.menuTextContainer}>
+                  <Text style={styles.menuCardTitle}>Catálogo de Serviços e Peças</Text>
+                  <Text style={styles.menuCardSub}>Cadastre serviços, peças e controle seu estoque.</Text>
+                </View>
+              </View>
+              <ChevronRight size={16} color="#64748b" />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.card, styles.menuCard]} 
+              onPress={() => setMoreSubScreen('settings')}
+            >
+              <View style={styles.menuCardLeft}>
+                <View style={styles.menuIconContainer}>
+                  <Settings size={18} color="#3b66ff" />
+                </View>
+                <View style={styles.menuTextContainer}>
+                  <Text style={styles.menuCardTitle}>Configurações da Oficina</Text>
+                  <Text style={styles.menuCardSub}>Gerencie nome, CNPJ, telefone, e-mail e dados locais.</Text>
+                </View>
+              </View>
+              <ChevronRight size={16} color="#64748b" />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {currentTab === 'more' && moreSubScreen === 'catalog' && (
+          <View style={styles.screenContainer}>
+            {/* Header back & new */}
+            <View style={styles.screenHeader}>
+              <TouchableOpacity style={styles.backButton} onPress={() => setMoreSubScreen('menu')}>
+                <ArrowLeft size={16} color="#f8fafc" />
+                <Text style={styles.backButtonText}>Voltar</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.actionButton} 
+                onPress={() => {
+                  setEditingCatalogItemId(null);
+                  if (catalogSegment === 'services') {
+                    setServiceForm({ name: '', code: '', description: '', price: '' });
+                    setIsAddingCatalogService(true);
+                  } else {
+                    setPartForm({ name: '', code: '', supplier: '', purchasePrice: '', salePrice: '', stock: '' });
+                    setIsAddingCatalogPart(true);
+                  }
+                }}
+              >
+                <Plus size={14} color="#fff" />
+                <Text style={styles.actionButtonText}>Novo</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.tabTitle}>Catálogo da Oficina</Text>
+            <Text style={[styles.menuCardSub, { marginBottom: 12 }]}>Gerencie os itens oferecidos por sua oficina</Text>
+
+            {/* Sliding segment controller */}
+            <View style={styles.catalogSegmentContainer}>
+              <TouchableOpacity
+                onPress={() => {
+                  setCatalogSegment('services');
+                  setCatalogSearch('');
+                }}
+                style={[styles.catalogSegmentTab, catalogSegment === 'services' ? styles.catalogSegmentTabActive : null]}
+              >
+                <Tag size={12} color={catalogSegment === 'services' ? '#fff' : '#64748b'} />
+                <Text style={[styles.catalogSegmentTabText, catalogSegment === 'services' ? styles.catalogSegmentTabTextActive : null]}>
+                  Serviços ({services.length})
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                onPress={() => {
+                  setCatalogSegment('parts');
+                  setCatalogSearch('');
+                }}
+                style={[styles.catalogSegmentTab, catalogSegment === 'parts' ? styles.catalogSegmentTabActive : null]}
+              >
+                <Package size={12} color={catalogSegment === 'parts' ? '#fff' : '#64748b'} />
+                <Text style={[styles.catalogSegmentTabText, catalogSegment === 'parts' ? styles.catalogSegmentTabTextActive : null]}>
+                  Peças ({parts.length})
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Search bar */}
+            <View style={styles.catalogSearchWrapper}>
+              <Search size={14} color="#64748b" style={styles.catalogSearchIcon} />
+              <TextInput
+                placeholder={catalogSegment === 'services' ? "Buscar serviços..." : "Buscar peças..."}
+                placeholderTextColor="#475569"
+                value={catalogSearch}
+                onChangeText={t => setCatalogSearch(t)}
+                style={styles.catalogSearchInput}
+              />
+              {catalogSearch ? (
+                <TouchableOpacity onPress={() => setCatalogSearch('')} style={styles.catalogSearchClear}>
+                  <X size={14} color="#64748b" />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
+            {/* Lists content */}
+            <View style={{ marginTop: 10 }}>
+              {catalogSegment === 'services' ? (
+                services.filter(s => 
+                  s.name.toLowerCase().includes(catalogSearch.toLowerCase()) || 
+                  s.description.toLowerCase().includes(catalogSearch.toLowerCase()) ||
+                  s.code.toLowerCase().includes(catalogSearch.toLowerCase())
+                ).length === 0 ? (
+                  <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>Nenhum serviço catalogado</Text>
+                  </View>
+                ) : (
+                  services.filter(s => 
+                    s.name.toLowerCase().includes(catalogSearch.toLowerCase()) || 
+                    s.description.toLowerCase().includes(catalogSearch.toLowerCase()) ||
+                    s.code.toLowerCase().includes(catalogSearch.toLowerCase())
+                  ).map(item => (
+                    <View key={item.id} style={styles.catalogListItem}>
+                      <View style={styles.catalogListItemLeft}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+                          <Text style={styles.catalogItemName}>{item.name}</Text>
+                          {item.code ? (
+                            <Text style={styles.catalogItemCodeBadge}>{item.code}</Text>
+                          ) : null}
+                        </View>
+                        {item.description ? (
+                          <Text style={styles.catalogItemDesc}>{item.description}</Text>
+                        ) : null}
+                      </View>
+                      <View style={styles.catalogListItemRight}>
+                        <View style={{ alignItems: 'flex-end', marginRight: 10 }}>
+                          <Text style={styles.catalogItemPriceVal}>{formatCurrency(item.price)}</Text>
+                          <Text style={styles.catalogItemPriceLabel}>MÃO DE OBRA</Text>
+                        </View>
+                        <View style={styles.catalogActionsContainer}>
+                          <TouchableOpacity 
+                            onPress={() => {
+                              setEditingCatalogItemId(item.id);
+                              setServiceForm({
+                                name: item.name,
+                                code: item.code,
+                                description: item.description,
+                                price: item.price.toString()
+                              });
+                              setIsAddingCatalogService(true);
+                            }}
+                            style={styles.catalogActionButton}
+                          >
+                            <Edit2 size={13} color="#3b66ff" />
+                          </TouchableOpacity>
+                          <TouchableOpacity 
+                            onPress={() => handleDeleteCatalogService(item.id)}
+                            style={styles.catalogActionButton}
+                          >
+                            <Trash2 size={13} color="#ef4444" />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </View>
+                  ))
+                )
+              ) : (
+                parts.filter(p => 
+                  p.name.toLowerCase().includes(catalogSearch.toLowerCase()) ||
+                  p.code.toLowerCase().includes(catalogSearch.toLowerCase()) ||
+                  p.supplier.toLowerCase().includes(catalogSearch.toLowerCase())
+                ).length === 0 ? (
+                  <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>Nenhuma peça no estoque</Text>
+                  </View>
+                ) : (
+                  parts.filter(p => 
+                    p.name.toLowerCase().includes(catalogSearch.toLowerCase()) ||
+                    p.code.toLowerCase().includes(catalogSearch.toLowerCase()) ||
+                    p.supplier.toLowerCase().includes(catalogSearch.toLowerCase())
+                  ).map(item => {
+                    let stockColor = '#22c55e';
+                    let stockLabel = `Estoque: ${item.stock}`;
+                    if (item.stock === 0) {
+                      stockColor = '#ef4444';
+                      stockLabel = 'Sem estoque';
+                    } else if (item.stock <= 5) {
+                      stockColor = '#eab308';
+                      stockLabel = `Estoque Baixo: ${item.stock}`;
+                    }
+
+                    return (
+                      <View key={item.id} style={[styles.catalogListItem, { flexDirection: 'column', alignItems: 'stretch' }]}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <View style={{ flex: 1 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+                              <Text style={styles.catalogItemName}>{item.name}</Text>
+                              <Text style={styles.catalogItemCodeBadge}>{item.code}</Text>
+                            </View>
+                            <Text style={styles.catalogItemDesc}>Forn: {item.supplier}</Text>
+                          </View>
+                          <View style={[styles.stockBadge, { borderColor: stockColor + '33', backgroundColor: stockColor + '11' }]}>
+                            {item.stock <= 5 && <AlertTriangle size={9} color={stockColor} style={{ marginRight: 3 }} />}
+                            <Text style={[styles.stockBadgeText, { color: stockColor }]}>{stockLabel}</Text>
+                          </View>
+                        </View>
+                        
+                        <View style={styles.catalogPartFooter}>
+                          <View style={{ flexDirection: 'row', gap: 15 }}>
+                            <View>
+                              <Text style={styles.catalogItemPriceLabel}>COMPRA</Text>
+                              <Text style={[styles.catalogItemPriceVal, { fontSize: 10, color: '#94a3b8' }]}>{formatCurrency(item.purchasePrice)}</Text>
+                            </View>
+                            <View>
+                              <Text style={[styles.catalogItemPriceLabel, { color: '#3b66ff' }]}>VENDA</Text>
+                              <Text style={[styles.catalogItemPriceVal, { fontSize: 10, color: '#3b66ff' }]}>{formatCurrency(item.salePrice)}</Text>
+                            </View>
+                            <View>
+                              <Text style={[styles.catalogItemPriceLabel, { color: '#22c55e' }]}>LUCRO</Text>
+                              <Text style={[styles.catalogItemPriceVal, { fontSize: 10, color: '#22c55e' }]}>{formatCurrency(item.salePrice - item.purchasePrice)}</Text>
+                            </View>
+                          </View>
+                          
+                          <View style={styles.catalogActionsContainer}>
+                            <TouchableOpacity 
+                              onPress={() => {
+                                setEditingCatalogItemId(item.id);
+                                setPartForm({
+                                  name: item.name,
+                                  code: item.code,
+                                  supplier: item.supplier,
+                                  purchasePrice: item.purchasePrice.toString(),
+                                  salePrice: item.salePrice.toString(),
+                                  stock: item.stock.toString()
+                                });
+                                setIsAddingCatalogPart(true);
+                              }}
+                              style={styles.catalogActionButton}
+                            >
+                              <Edit2 size={13} color="#3b66ff" />
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                              onPress={() => handleDeleteCatalogPart(item.id)}
+                              style={styles.catalogActionButton}
+                            >
+                              <Trash2 size={13} color="#ef4444" />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  })
+                )
+              )}
+            </View>
+          </View>
+        )}
+
+        {currentTab === 'more' && moreSubScreen === 'settings' && (
+          <View style={styles.screenContainer}>
+            <View style={styles.screenHeader}>
+              <TouchableOpacity style={styles.backButton} onPress={() => setMoreSubScreen('menu')}>
+                <ArrowLeft size={16} color="#f8fafc" />
+                <Text style={styles.backButtonText}>Voltar</Text>
+              </TouchableOpacity>
+            </View>
+
             <Text style={styles.tabTitle}>Configurações da Oficina</Text>
+            <Text style={[styles.menuCardSub, { marginBottom: 12 }]}>Gerencie as informações comerciais e locais</Text>
             
             <View style={[styles.card, { marginTop: 10 }]}>
               <Text style={styles.formLabel}>Nome da Oficina / Razão Social</Text>
@@ -604,9 +1033,9 @@ export default function App() {
           <Text style={[styles.tabLabel, currentTab === 'finance' ? styles.tabLabelActive : null]}>Financeiro</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.tabItem} onPress={() => setCurrentTab('settings')}>
-          <Settings size={20} color={currentTab === 'settings' ? '#3b66ff' : '#64748b'} />
-          <Text style={[styles.tabLabel, currentTab === 'settings' ? styles.tabLabelActive : null]}>Ajustes</Text>
+        <TouchableOpacity style={styles.tabItem} onPress={() => { setCurrentTab('more'); setMoreSubScreen('menu'); }}>
+          <MoreHorizontal size={20} color={currentTab === 'more' ? '#3b66ff' : '#64748b'} />
+          <Text style={[styles.tabLabel, currentTab === 'more' ? styles.tabLabelActive : null]}>Mais</Text>
         </TouchableOpacity>
       </View>
 
@@ -736,6 +1165,23 @@ export default function App() {
                 )}
               </View>
 
+              {services.length > 0 && (
+                <View style={{ marginBottom: 6 }}>
+                  <Text style={styles.inputLabel}>Selecionar Serviço do Catálogo</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggestionScrollContent}>
+                    {services.map(s => (
+                      <TouchableOpacity
+                        key={s.id}
+                        onPress={() => setOsForm(prev => ({ ...prev, serviceName: s.name, servicePrice: s.price.toString() }))}
+                        style={styles.suggestionBadge}
+                      >
+                        <Text style={styles.suggestionBadgeText}>{s.name} ({formatCurrency(s.price)})</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+
               <Text style={styles.inputLabel}>Nome do Serviço Mecânico *</Text>
               <TextInput 
                 placeholder="Ex: Troca de Pastilhas de Freio" 
@@ -754,6 +1200,23 @@ export default function App() {
                 onChangeText={t => setOsForm(prev => ({ ...prev, servicePrice: t }))}
                 style={styles.modalInput} 
               />
+
+              {parts.length > 0 && (
+                <View style={{ marginBottom: 6 }}>
+                  <Text style={styles.inputLabel}>Selecionar Peça do Catálogo</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggestionScrollContent}>
+                    {parts.map(p => (
+                      <TouchableOpacity
+                        key={p.id}
+                        onPress={() => setOsForm(prev => ({ ...prev, partName: p.name, partPrice: p.salePrice.toString() }))}
+                        style={styles.suggestionBadge}
+                      >
+                        <Text style={styles.suggestionBadgeText}>{p.name} ({formatCurrency(p.salePrice)})</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
 
               <Text style={styles.inputLabel}>Peça Aplicada (Opcional)</Text>
               <TextInput 
@@ -830,6 +1293,144 @@ export default function App() {
             </TouchableOpacity>
           </View>
         </View>
+      </Modal>
+
+      {/* --- FORM MODAL: ADD CATALOG SERVICE --- */}
+      <Modal visible={isAddingCatalogService} animationType="slide" transparent>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalBg}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{editingCatalogItemId ? 'Editar Serviço' : 'Cadastrar Novo Serviço'}</Text>
+              <TouchableOpacity onPress={() => setIsAddingCatalogService(false)}>
+                <X size={20} color="#94a3b8" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.inputLabel}>Nome do Serviço *</Text>
+              <TextInput 
+                placeholder="Ex: Alinhamento de Direção 3D" 
+                placeholderTextColor="#555"
+                value={serviceForm.name} 
+                onChangeText={t => setServiceForm(prev => ({ ...prev, name: t }))}
+                style={styles.modalInput} 
+              />
+
+              <Text style={styles.inputLabel}>Código / Referência</Text>
+              <TextInput 
+                placeholder="Ex: SRV-ALIN" 
+                placeholderTextColor="#555"
+                autoCapitalize="characters"
+                value={serviceForm.code} 
+                onChangeText={t => setServiceForm(prev => ({ ...prev, code: t }))}
+                style={styles.modalInput} 
+              />
+
+              <Text style={styles.inputLabel}>Valor Cobrado (R$) *</Text>
+              <TextInput 
+                placeholder="Ex: 120.00" 
+                placeholderTextColor="#555"
+                keyboardType="numeric"
+                value={serviceForm.price} 
+                onChangeText={t => setServiceForm(prev => ({ ...prev, price: t }))}
+                style={styles.modalInput} 
+              />
+
+              <Text style={styles.inputLabel}>Descrição do Serviço</Text>
+              <TextInput 
+                placeholder="Descreva o que é executado..." 
+                placeholderTextColor="#555"
+                multiline
+                numberOfLines={3}
+                value={serviceForm.description} 
+                onChangeText={t => setServiceForm(prev => ({ ...prev, description: t }))}
+                style={[styles.modalInput, { height: 60, textAlignVertical: 'top' }]} 
+              />
+
+              <TouchableOpacity style={styles.submitButton} onPress={handleSaveCatalogService}>
+                <Text style={styles.submitButtonText}>{editingCatalogItemId ? 'Atualizar Serviço' : 'Salvar Serviço'}</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* --- FORM MODAL: ADD CATALOG PART --- */}
+      <Modal visible={isAddingCatalogPart} animationType="slide" transparent>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalBg}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{editingCatalogItemId ? 'Editar Peça' : 'Cadastrar Nova Peça'}</Text>
+              <TouchableOpacity onPress={() => setIsAddingCatalogPart(false)}>
+                <X size={20} color="#94a3b8" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.inputLabel}>Nome da Peça *</Text>
+              <TextInput 
+                placeholder="Ex: Pastilha de Freio Cobreq" 
+                placeholderTextColor="#555"
+                value={partForm.name} 
+                onChangeText={t => setPartForm(prev => ({ ...prev, name: t }))}
+                style={styles.modalInput} 
+              />
+
+              <Text style={styles.inputLabel}>Código SKU/Peça *</Text>
+              <TextInput 
+                placeholder="Ex: PAS-COB150" 
+                placeholderTextColor="#555"
+                autoCapitalize="characters"
+                value={partForm.code} 
+                onChangeText={t => setPartForm(prev => ({ ...prev, code: t }))}
+                style={styles.modalInput} 
+              />
+
+              <Text style={styles.inputLabel}>Fornecedor</Text>
+              <TextInput 
+                placeholder="Ex: Distribuidora Real de AutoPeças" 
+                placeholderTextColor="#555"
+                value={partForm.supplier} 
+                onChangeText={t => setPartForm(prev => ({ ...prev, supplier: t }))}
+                style={styles.modalInput} 
+              />
+
+              <Text style={styles.inputLabel}>Valor de Compra (R$)</Text>
+              <TextInput 
+                placeholder="Ex: 65.00" 
+                placeholderTextColor="#555"
+                keyboardType="numeric"
+                value={partForm.purchasePrice} 
+                onChangeText={t => setPartForm(prev => ({ ...prev, purchasePrice: t }))}
+                style={styles.modalInput} 
+              />
+
+              <Text style={styles.inputLabel}>Valor de Venda (R$) *</Text>
+              <TextInput 
+                placeholder="Ex: 130.00" 
+                placeholderTextColor="#555"
+                keyboardType="numeric"
+                value={partForm.salePrice} 
+                onChangeText={t => setPartForm(prev => ({ ...prev, salePrice: t }))}
+                style={styles.modalInput} 
+              />
+
+              <Text style={styles.inputLabel}>Estoque Inicial *</Text>
+              <TextInput 
+                placeholder="Ex: 10" 
+                placeholderTextColor="#555"
+                keyboardType="numeric"
+                value={partForm.stock} 
+                onChangeText={t => setPartForm(prev => ({ ...prev, stock: t }))}
+                style={styles.modalInput} 
+              />
+
+              <TouchableOpacity style={styles.submitButton} onPress={handleSaveCatalogPart}>
+                <Text style={styles.submitButtonText}>{editingCatalogItemId ? 'Atualizar Peça' : 'Salvar Peça'}</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
 
     </SafeAreaView>
@@ -1410,5 +2011,208 @@ const styles = StyleSheet.create({
   },
   pickerTagActiveText: {
     color: '#3b66ff',
+  },
+  // Catalog and More Tab styling
+  menuCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 14,
+  },
+  menuCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  menuIconContainer: {
+    backgroundColor: '#3b66ff11',
+    padding: 8,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  menuTextContainer: {
+    flex: 1,
+  },
+  menuCardTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#f8fafc',
+  },
+  menuCardSub: {
+    fontSize: 9,
+    color: '#64748b',
+    marginTop: 2,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1e293b',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  backButtonText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#f8fafc',
+    marginLeft: 5,
+  },
+  catalogSegmentContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#0a0c10',
+    borderWidth: 1,
+    borderColor: '#1e293b',
+    borderRadius: 10,
+    padding: 3,
+    gap: 4,
+    marginBottom: 12,
+  },
+  catalogSegmentTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  catalogSegmentTabActive: {
+    backgroundColor: '#3b66ff',
+  },
+  catalogSegmentTabText: {
+    fontSize: 9,
+    fontWeight: '900',
+    color: '#64748b',
+    textTransform: 'uppercase',
+  },
+  catalogSegmentTabTextActive: {
+    color: '#fff',
+  },
+  catalogSearchWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0a0c10',
+    borderWidth: 1,
+    borderColor: '#1e293b',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    marginBottom: 10,
+  },
+  catalogSearchIcon: {
+    marginRight: 8,
+  },
+  catalogSearchInput: {
+    flex: 1,
+    height: 36,
+    fontSize: 11,
+    color: '#f1f5f9',
+  },
+  catalogSearchClear: {
+    padding: 4,
+  },
+  catalogListItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#0f1115',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1e293b',
+    marginBottom: 8,
+  },
+  catalogListItemLeft: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  catalogListItemRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  catalogItemName: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#f8fafc',
+  },
+  catalogItemCodeBadge: {
+    fontSize: 7,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    backgroundColor: '#0a0c10',
+    borderWidth: 0.5,
+    borderColor: '#1e293b',
+    color: '#64748b',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
+    marginLeft: 6,
+    textTransform: 'uppercase',
+    fontWeight: 'bold',
+  },
+  catalogItemDesc: {
+    fontSize: 9,
+    color: '#64748b',
+    marginTop: 3,
+  },
+  catalogItemPriceVal: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#3b66ff',
+  },
+  catalogItemPriceLabel: {
+    fontSize: 7,
+    fontWeight: '900',
+    color: '#64748b',
+    textTransform: 'uppercase',
+    marginTop: 2,
+  },
+  catalogActionsContainer: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  catalogActionButton: {
+    padding: 6,
+    backgroundColor: '#0a0c10',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#1e293b',
+  },
+  stockBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  stockBadgeText: {
+    fontSize: 8,
+    fontWeight: 'bold',
+  },
+  catalogPartFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#1e293b33',
+    paddingTop: 8,
+    marginTop: 8,
+  },
+  suggestionScrollContent: {
+    paddingVertical: 4,
+  },
+  suggestionBadge: {
+    backgroundColor: '#3b66ff10',
+    borderColor: '#3b66ff33',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    marginRight: 6,
+  },
+  suggestionBadgeText: {
+    fontSize: 9,
+    color: '#3b66ff',
+    fontWeight: 'bold',
   }
 });

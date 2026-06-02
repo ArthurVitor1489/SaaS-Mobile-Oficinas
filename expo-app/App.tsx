@@ -164,8 +164,8 @@ export default function App() {
   };
 
   const handleAddOS = () => {
-    if (!osForm.clientId || !osForm.vehicleId || !osForm.serviceName) {
-      Alert.alert('Erro', 'Selecione o cliente, veículo e informe o serviço!');
+    if (!osForm.clientId || !osForm.serviceName) {
+      Alert.alert('Erro', 'Selecione o cliente e informe o serviço!');
       return;
     }
 
@@ -181,7 +181,7 @@ export default function App() {
       id: osId,
       osNumber,
       clientId: osForm.clientId,
-      vehicleId: osForm.vehicleId,
+      vehicleId: osForm.vehicleId || '',
       serviceName: osForm.serviceName,
       servicePrice: sPrice,
       partName: osForm.partName,
@@ -203,7 +203,7 @@ export default function App() {
         {
           id: `t-${Date.now()}`,
           type: 'Entrada',
-          description: `Pagamento ${osNumber} - ${client?.name} (${vehicle?.model})`,
+          description: `Pagamento ${osNumber} - ${client?.name}${vehicle ? ` (${vehicle.model})` : ''}`,
           amount: grandTotal,
           date
         }
@@ -463,7 +463,7 @@ export default function App() {
                   <View key={os.id} style={styles.listItem}>
                     <View style={styles.listItemLeft}>
                       <Text style={styles.osNum}>{os.osNumber}</Text>
-                      <Text style={styles.osDetails}>{client?.name} • {vehicle?.brand} {vehicle?.model}</Text>
+                      <Text style={styles.osDetails}>{client?.name}{vehicle ? ` • ${vehicle.brand} ${vehicle.model}` : ''}</Text>
                     </View>
                     <View style={styles.listItemRight}>
                       <Text style={styles.osTotal}>{formatCurrency(os.grandTotal)}</Text>
@@ -552,7 +552,9 @@ export default function App() {
                     </View>
                     
                     <Text style={styles.osLabel}>Cliente: <Text style={styles.osValue}>{client?.name}</Text></Text>
-                    <Text style={styles.osLabel}>Veículo: <Text style={styles.osValue}>{vehicle?.brand} {vehicle?.model} ({vehicle?.plate})</Text></Text>
+                    {vehicle ? (
+                      <Text style={styles.osLabel}>Veículo: <Text style={styles.osValue}>{vehicle.brand} {vehicle.model} ({vehicle.plate})</Text></Text>
+                    ) : null}
                     <Text style={styles.osLabel}>Serviço: <Text style={styles.osValue}>{os.serviceName} ({formatCurrency(os.servicePrice)})</Text></Text>
                     {os.partName ? <Text style={styles.osLabel}>Peça: <Text style={styles.osValue}>{os.partName} ({formatCurrency(os.partPrice)})</Text></Text> : null}
                     
@@ -1139,7 +1141,14 @@ export default function App() {
                   clients.map(c => (
                     <TouchableOpacity 
                       key={c.id} 
-                      onPress={() => setOsForm(prev => ({ ...prev, clientId: c.id }))}
+                      onPress={() => {
+                        const clientVehicles = vehicles.filter(v => v.clientId === c.id);
+                        setOsForm(prev => ({ 
+                          ...prev, 
+                          clientId: c.id,
+                          vehicleId: clientVehicles.length === 1 ? clientVehicles[0].id : ''
+                        }));
+                      }}
                       style={[styles.pickerItem, osForm.clientId === c.id ? styles.pickerItemActive : null]}
                     >
                       <Text style={[styles.pickerItemText, osForm.clientId === c.id ? styles.pickerItemActiveText : null]}>{c.name}</Text>

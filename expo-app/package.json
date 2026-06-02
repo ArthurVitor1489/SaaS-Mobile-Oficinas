@@ -9,6 +9,7 @@
     "ts:check": "tsc"
   },
   "dependencies": {
+    "@react-native-async-storage/async-storage": "^3.1.1",
     "@supabase/supabase-js": "^2.43.4",
     "expo": "~51.0.0",
     "expo-print": "~13.0.1",

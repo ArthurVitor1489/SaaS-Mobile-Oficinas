@@ -804,18 +804,18 @@ export default function App() {
             <View style={{ marginTop: 10 }}>
               {catalogSegment === 'services' ? (
                 services.filter(s => 
-                  s.name.toLowerCase().includes(catalogSearch.toLowerCase()) || 
-                  s.description.toLowerCase().includes(catalogSearch.toLowerCase()) ||
-                  s.code.toLowerCase().includes(catalogSearch.toLowerCase())
+                  (s.name || '').toLowerCase().includes(catalogSearch.toLowerCase()) || 
+                  (s.description || '').toLowerCase().includes(catalogSearch.toLowerCase()) ||
+                  (s.code || '').toLowerCase().includes(catalogSearch.toLowerCase())
                 ).length === 0 ? (
                   <View style={styles.emptyContainer}>
                     <Text style={styles.emptyText}>Nenhum serviço catalogado</Text>
                   </View>
                 ) : (
                   services.filter(s => 
-                    s.name.toLowerCase().includes(catalogSearch.toLowerCase()) || 
-                    s.description.toLowerCase().includes(catalogSearch.toLowerCase()) ||
-                    s.code.toLowerCase().includes(catalogSearch.toLowerCase())
+                    (s.name || '').toLowerCase().includes(catalogSearch.toLowerCase()) || 
+                    (s.description || '').toLowerCase().includes(catalogSearch.toLowerCase()) ||
+                    (s.code || '').toLowerCase().includes(catalogSearch.toLowerCase())
                   ).map(item => (
                     <View key={item.id} style={styles.catalogListItem}>
                       <View style={styles.catalogListItemLeft}>
@@ -840,8 +840,8 @@ export default function App() {
                               setEditingCatalogItemId(item.id);
                               setServiceForm({
                                 name: item.name,
-                                code: item.code,
-                                description: item.description,
+                                code: item.code || '',
+                                description: item.description || '',
                                 price: item.price.toString()
                               });
                               setIsAddingCatalogService(true);
@@ -863,18 +863,18 @@ export default function App() {
                 )
               ) : (
                 parts.filter(p => 
-                  p.name.toLowerCase().includes(catalogSearch.toLowerCase()) ||
-                  p.code.toLowerCase().includes(catalogSearch.toLowerCase()) ||
-                  p.supplier.toLowerCase().includes(catalogSearch.toLowerCase())
+                  (p.name || '').toLowerCase().includes(catalogSearch.toLowerCase()) ||
+                  (p.code || '').toLowerCase().includes(catalogSearch.toLowerCase()) ||
+                  (p.supplier || '').toLowerCase().includes(catalogSearch.toLowerCase())
                 ).length === 0 ? (
                   <View style={styles.emptyContainer}>
                     <Text style={styles.emptyText}>Nenhuma peça no estoque</Text>
                   </View>
                 ) : (
                   parts.filter(p => 
-                    p.name.toLowerCase().includes(catalogSearch.toLowerCase()) ||
-                    p.code.toLowerCase().includes(catalogSearch.toLowerCase()) ||
-                    p.supplier.toLowerCase().includes(catalogSearch.toLowerCase())
+                    (p.name || '').toLowerCase().includes(catalogSearch.toLowerCase()) ||
+                    (p.code || '').toLowerCase().includes(catalogSearch.toLowerCase()) ||
+                    (p.supplier || '').toLowerCase().includes(catalogSearch.toLowerCase())
                   ).map(item => {
                     let stockColor = '#22c55e';
                     let stockLabel = `Estoque: ${item.stock}`;
@@ -894,7 +894,9 @@ export default function App() {
                               <Text style={styles.catalogItemName}>{item.name}</Text>
                               <Text style={styles.catalogItemCodeBadge}>{item.code}</Text>
                             </View>
-                            <Text style={styles.catalogItemDesc}>Forn: {item.supplier}</Text>
+                            {item.supplier ? (
+                              <Text style={styles.catalogItemDesc}>Forn: {item.supplier}</Text>
+                            ) : null}
                           </View>
                           <View style={[styles.stockBadge, { borderColor: stockColor + '33', backgroundColor: stockColor + '11' }]}>
                             {item.stock <= 5 && <AlertTriangle size={9} color={stockColor} style={{ marginRight: 3 }} />}
@@ -925,7 +927,7 @@ export default function App() {
                                 setPartForm({
                                   name: item.name,
                                   code: item.code,
-                                  supplier: item.supplier,
+                                  supplier: item.supplier || '',
                                   purchasePrice: item.purchasePrice.toString(),
                                   salePrice: item.salePrice.toString(),
                                   stock: item.stock.toString()

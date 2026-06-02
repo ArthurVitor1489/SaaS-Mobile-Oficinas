@@ -79,14 +79,104 @@ export default function App() {
     nextOSNumber: 1
   });
 
-  const [clients, setClients] = useState<Client[]>([]);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const initialClients: Client[] = [
+    {
+      id: 'c-1',
+      name: 'Arthur Silva',
+      phone: '(11) 98765-4321',
+      email: 'arthur@email.com',
+      address: 'Rua das Oficinas, 123'
+    },
+    {
+      id: 'c-2',
+      name: 'Mariana Souza',
+      phone: '(21) 99999-8888',
+      email: 'mariana@email.com',
+      address: 'Av. Principal, 456'
+    }
+  ];
+
+  const initialVehicles: Vehicle[] = [
+    {
+      id: 'v-1',
+      clientId: 'c-1',
+      plate: 'ABC1D23',
+      brand: 'Toyota',
+      model: 'Corolla',
+      year: '2020'
+    },
+    {
+      id: 'v-2',
+      clientId: 'c-2',
+      plate: 'XYZ9E87',
+      brand: 'Honda',
+      model: 'Civic',
+      year: '2019'
+    }
+  ];
+
+  const initialServices: ServiceItem[] = [
+    {
+      id: 's-1',
+      name: 'Troca de Pastilhas de Freio',
+      code: 'SRV-FREIO',
+      description: 'Troca completa das pastilhas de freio dianteiras com sangria.',
+      price: 150
+    },
+    {
+      id: 's-2',
+      name: 'Alinhamento e Balanceamento 3D',
+      code: 'SRV-ALIN',
+      description: 'Alinhamento técnico 3D e balanceamento das 4 rodas.',
+      price: 120
+    },
+    {
+      id: 's-3',
+      name: 'Revisão Geral Preventiva',
+      code: 'SRV-REV',
+      description: 'Verificação de suspensão, freios, fluidos e injeção eletrônica.',
+      price: 250
+    }
+  ];
+
+  const initialParts: PartItem[] = [
+    {
+      id: 'p-1',
+      name: 'Pastilha de Freio Cobreq',
+      code: 'PAS-COB20',
+      supplier: 'Distribuidora Real',
+      purchasePrice: 75,
+      salePrice: 140,
+      stock: 12
+    },
+    {
+      id: 'p-2',
+      name: 'Filtro de Óleo Civic',
+      code: 'FIL-HON45',
+      supplier: 'AutoPeças Central',
+      purchasePrice: 20,
+      salePrice: 45,
+      stock: 8
+    },
+    {
+      id: 'p-3',
+      name: 'Amortecedor Dianteiro Monroe',
+      code: 'AMO-MON88',
+      supplier: 'Distribuidora Real',
+      purchasePrice: 220,
+      salePrice: 390,
+      stock: 4
+    }
+  ];
+
+  const [clients, setClients] = useState<Client[]>(initialClients);
+  const [vehicles, setVehicles] = useState<Vehicle[]>(initialVehicles);
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-
+  
   // Catalog State
-  const [services, setServices] = useState<ServiceItem[]>([]);
-  const [parts, setParts] = useState<PartItem[]>([]);
+  const [services, setServices] = useState<ServiceItem[]>(initialServices);
+  const [parts, setParts] = useState<PartItem[]>(initialParts);
 
   // Navigation: 'dashboard' | 'clients' | 'os' | 'finance' | 'more'
   const [currentTab, setCurrentTab] = useState<'dashboard' | 'clients' | 'os' | 'finance' | 'more'>('dashboard');

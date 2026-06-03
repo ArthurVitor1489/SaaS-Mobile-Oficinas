@@ -735,7 +735,7 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           category: 'Pagamento OS',
           amount: inst.amount,
           date: inst.paidAt?.split('T')[0] ?? new Date().toISOString().split('T')[0],
-          description: `Recebimento Parcela ${inst.number}/${billingData.installments.length} ${osNum} via ${billingData.paymentMethod} (${clientName})`,
+          description: `Parcela ${inst.number}/${billingData.installments.length} da ${osNum}`,
           createdAt: new Date().toISOString()
         };
 
@@ -799,7 +799,7 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           category: 'Pagamento OS',
           amount: amountPaid,
           date: todayDate,
-          description: `Recebimento Parcela ${installmentNumber}/${billing.installments.length} ${osNum} via ${billing.paymentMethod} (${clientName})`,
+          description: `Parcela ${installmentNumber}/${billing.installments.length} da ${osNum}`,
           createdAt: nowStr
         };
 

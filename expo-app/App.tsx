@@ -1,20 +1,26 @@
+import './src/services/polyfills';
+
 import React, { useState } from 'react';
 import { 
   StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, 
-  SafeAreaView, StatusBar, Alert, Modal, KeyboardAvoidingView, Platform,
+  StatusBar, Alert, Modal, KeyboardAvoidingView, Platform,
   ActivityIndicator, Clipboard
 } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { 
   Plus, Search, ArrowUpRight, ArrowDownRight, Trash2, Calendar, 
   Wallet, DollarSign, PiggyBank, Users, ClipboardList, Settings, Menu,
   CheckCircle, Clock, Play, ChevronRight, UserPlus, Car, Check, X,
   Tag, Package, Edit2, AlertTriangle, ArrowLeft, MoreHorizontal,
-  Share2, LogOut, FileText, Wifi, WifiOff
+  Share2, LogOut, FileText, Wifi, WifiOff, PenTool
 } from 'lucide-react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as DocumentPicker from 'expo-document-picker';
+import Svg, { Rect, Line, G, SvgXml } from 'react-native-svg';
 
-import { DatabaseProvider, useDatabase, Client, Vehicle, ServiceItem, PartItem, WorkOrder, Billing, FinancialTransaction, OSItemService, OSItemPart, OSStatus, PaymentMethod } from './src/context/DatabaseContext';
+import { DatabaseProvider, useDatabase, Client, Vehicle, ServiceItem, PartItem, WorkOrder, Billing, FinancialTransaction, OSItemService, OSItemPart, OSStatus, PaymentMethod, BillingStatus } from './src/context/DatabaseContext';
 import SignaturePad from './src/components/SignaturePad';
 
 // --- AUTHENTICATION SCREEN ---
@@ -137,12 +143,14 @@ function MainWorkshopApp() {
   const { 
     clients, vehicles, services, parts, workOrders, billings, transactions, settings, online, signOut,
     addClient, addVehicle, addService, addPart, addWorkOrder, updateWorkOrderStatus, saveWorkOrderSignature,
-    addTransaction, updateSettings, payInstallment, exportDatabaseJson, syncWithSupabase
+    addTransaction, updateSettings, payInstallment, exportDatabaseJson, syncWithSupabase, resetDatabase, restoreBackup,
+    addBilling, updateWorkOrder,
+    updateClient, deleteClient, updateVehicle, deleteVehicle, updateService, deleteService, updatePart, deletePart, deleteTransaction
   } = useDatabase();
 
   // Navigation: 'dashboard' | 'clients' | 'os' | 'finance' | 'more'
   const [currentTab, setCurrentTab] = useState<'dashboard' | 'clients' | 'os' | 'finance' | 'more'>('dashboard');
-  const [moreSubScreen, setMoreSubScreen] = useState<'menu' | 'catalog' | 'settings'>('menu');
+  const [moreSubScreen, setMoreSubScreen] = useState<'menu' | 'catalog' | 'settings' | 'billing'>('menu');
   const [summaryPeriod, setSummaryPeriod] = useState<'diario' | 'semanal' | 'mensal'>('mensal');
 
   // Search Filter state
@@ -152,11 +160,24 @@ function MainWorkshopApp() {
   // Clients view helper
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [activeClientTab, setActiveClientTab] = useState<'vehicles' | 'history'>('vehicles');
+  const [clientTabSearch, setClientTabSearch] = useState('');
   const [isAddingVehicle, setIsAddingVehicle] = useState(false);
   const [vehicleForm, setVehicleForm] = useState({ plate: '', brand: '', model: '', year: '', chassis: '', odometer: '' });
 
   // OS signature overlay
   const [signingOSId, setSigningOSId] = useState<string | null>(null);
+
+  // Editing state trackers
+  const [editingClientId, setEditingClientId] = useState<string | null>(null);
+  const [editingVehicleId, setEditingVehicleId] = useState<string | null>(null);
+  const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
+  const [editingPartId, setEditingPartId] = useState<string | null>(null);
+
+  // Finance and Billing state trackers
+  const [activeFinanceFilter, setActiveFinanceFilter] = useState<'Todos' | 'Entradas' | 'Saídas'>('Todos');
+  const [billingSearch, setBillingSearch] = useState('');
+  const [billingStatusFilter, setBillingStatusFilter] = useState<BillingStatus | 'Todos'>('Todos');
+  const [selectedBillingDetail, setSelectedBillingDetail] = useState<Billing | null>(null);
 
   // Modals Forms
   const [isAddingClient, setIsAddingClient] = useState(false);
@@ -168,8 +189,25 @@ function MainWorkshopApp() {
     selectedServices: [] as OSItemService[], selectedParts: [] as OSItemPart[]
   });
 
+  // OS Wizard Step States
+  const [wizardStep, setWizardStep] = useState(1);
+  const [clientSearch, setClientSearch] = useState('');
+  const [serviceSearch, setServiceSearch] = useState('');
+  const [partSearch, setPartSearch] = useState('');
+
+  // OS search and details states
+  const [selectedOS, setSelectedOS] = useState<WorkOrder | null>(null);
+  const [osSearch, setOsSearch] = useState('');
+  const [osStatusFilter, setOsStatusFilter] = useState<OSStatus | 'Todos'>('Todos');
+  const [showBillingPanel, setShowBillingPanel] = useState(false);
+  const [billingForm, setBillingForm] = useState<{ paymentMethod: PaymentMethod; installmentsCount: string }>({
+    paymentMethod: 'PIX',
+    installmentsCount: '1',
+  });
+  const [editingOSId, setEditingOSId] = useState<string | null>(null);
+
   const [isAddingExpense, setIsAddingExpense] = useState(false);
-  const [expenseForm, setExpenseForm] = useState({ description: '', amount: '', category: 'Operacional' as any });
+  const [expenseForm, setExpenseForm] = useState({ description: '', amount: '', category: 'Operacional' as any, date: new Date().toISOString().split('T')[0] });
 
   // Catalog Item forms
   const [isAddingCatalogService, setIsAddingCatalogService] = useState(false);
@@ -181,6 +219,11 @@ function MainWorkshopApp() {
     return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    return dateStr.split('-').reverse().join('/');
+  };
+
   // --- HANDLERS ---
 
   const handleCreateClient = async () => {
@@ -188,19 +231,38 @@ function MainWorkshopApp() {
       Alert.alert('Erro', 'Por favor, preencha o nome e telefone do cliente.');
       return;
     }
-    const res = await addClient({
-      name: clientForm.name,
-      cpfCnpj: clientForm.cpfCnpj,
-      phone: clientForm.phone,
-      whatsapp: clientForm.whatsapp || clientForm.phone,
-      email: clientForm.email,
-      address: clientForm.address,
-      notes: clientForm.notes
-    });
-    if (res) {
-      setIsAddingClient(false);
-      setClientForm({ name: '', cpfCnpj: '', phone: '', whatsapp: '', email: '', address: '', notes: '' });
-      Alert.alert('Sucesso', 'Cliente cadastrado com sucesso!');
+    if (editingClientId) {
+      const res = await updateClient(editingClientId, {
+        name: clientForm.name,
+        cpfCnpj: clientForm.cpfCnpj,
+        phone: clientForm.phone,
+        whatsapp: clientForm.whatsapp || clientForm.phone,
+        email: clientForm.email,
+        address: clientForm.address,
+        notes: clientForm.notes
+      });
+      if (res) {
+        setSelectedClient(prev => prev ? { ...prev, ...clientForm, whatsapp: clientForm.whatsapp || clientForm.phone } : null);
+        setIsAddingClient(false);
+        setEditingClientId(null);
+        setClientForm({ name: '', cpfCnpj: '', phone: '', whatsapp: '', email: '', address: '', notes: '' });
+        Alert.alert('Sucesso', 'Cliente atualizado com sucesso!');
+      }
+    } else {
+      const res = await addClient({
+        name: clientForm.name,
+        cpfCnpj: clientForm.cpfCnpj,
+        phone: clientForm.phone,
+        whatsapp: clientForm.whatsapp || clientForm.phone,
+        email: clientForm.email,
+        address: clientForm.address,
+        notes: clientForm.notes
+      });
+      if (res) {
+        setIsAddingClient(false);
+        setClientForm({ name: '', cpfCnpj: '', phone: '', whatsapp: '', email: '', address: '', notes: '' });
+        Alert.alert('Sucesso', 'Cliente cadastrado com sucesso!');
+      }
     }
   };
 
@@ -210,19 +272,37 @@ function MainWorkshopApp() {
       Alert.alert('Erro', 'Por favor, preencha placa, marca e modelo.');
       return;
     }
-    const res = await addVehicle({
-      clientId: selectedClient.id,
-      plate: vehicleForm.plate.toUpperCase(),
-      brand: vehicleForm.brand,
-      model: vehicleForm.model,
-      year: vehicleForm.year || new Date().getFullYear().toString(),
-      chassis: vehicleForm.chassis,
-      odometer: vehicleForm.odometer || '0'
-    });
-    if (res) {
-      setIsAddingVehicle(false);
-      setVehicleForm({ plate: '', brand: '', model: '', year: '', chassis: '', odometer: '' });
-      Alert.alert('Sucesso', 'Veículo associado com sucesso!');
+    if (editingVehicleId) {
+      const res = await updateVehicle(editingVehicleId, {
+        clientId: selectedClient.id,
+        plate: vehicleForm.plate.toUpperCase(),
+        brand: vehicleForm.brand,
+        model: vehicleForm.model,
+        year: vehicleForm.year || new Date().getFullYear().toString(),
+        chassis: vehicleForm.chassis,
+        odometer: vehicleForm.odometer || '0'
+      });
+      if (res) {
+        setIsAddingVehicle(false);
+        setEditingVehicleId(null);
+        setVehicleForm({ plate: '', brand: '', model: '', year: '', chassis: '', odometer: '' });
+        Alert.alert('Sucesso', 'Veículo atualizado com sucesso!');
+      }
+    } else {
+      const res = await addVehicle({
+        clientId: selectedClient.id,
+        plate: vehicleForm.plate.toUpperCase(),
+        brand: vehicleForm.brand,
+        model: vehicleForm.model,
+        year: vehicleForm.year || new Date().getFullYear().toString(),
+        chassis: vehicleForm.chassis,
+        odometer: vehicleForm.odometer || '0'
+      });
+      if (res) {
+        setIsAddingVehicle(false);
+        setVehicleForm({ plate: '', brand: '', model: '', year: '', chassis: '', odometer: '' });
+        Alert.alert('Sucesso', 'Veículo associado com sucesso!');
+      }
     }
   };
 
@@ -236,20 +316,170 @@ function MainWorkshopApp() {
       return;
     }
 
-    const res = await addWorkOrder({
-      clientId: osForm.clientId,
-      vehicleId: osForm.vehicleId,
-      services: osForm.selectedServices,
-      parts: osForm.selectedParts,
-      notes: osForm.notes,
-      status: osForm.status,
-      date: new Date().toISOString().split('T')[0]
+    if (editingOSId) {
+      const res = await updateWorkOrder(editingOSId, {
+        clientId: osForm.clientId,
+        vehicleId: osForm.vehicleId,
+        services: osForm.selectedServices,
+        parts: osForm.selectedParts,
+        notes: osForm.notes,
+        status: osForm.status
+      });
+      if (res) {
+        setIsAddingOS(false);
+        setEditingOSId(null);
+        setOsForm({ clientId: '', vehicleId: '', notes: '', status: 'Aberta', selectedServices: [], selectedParts: [] });
+        Alert.alert('Sucesso', 'Ordem de Serviço atualizada!');
+        setSelectedOS(prev => prev && prev.id === editingOSId ? {
+          ...prev,
+          clientId: osForm.clientId,
+          vehicleId: osForm.vehicleId,
+          services: osForm.selectedServices,
+          parts: osForm.selectedParts,
+          notes: osForm.notes,
+          status: osForm.status,
+          servicesTotal: osForm.selectedServices.reduce((sum, s) => sum + s.price * s.quantity, 0),
+          partsTotal: osForm.selectedParts.reduce((sum, p) => sum + p.salePrice * p.quantity, 0),
+          grandTotal: osForm.selectedServices.reduce((sum, s) => sum + s.price * s.quantity, 0) + osForm.selectedParts.reduce((sum, p) => sum + p.salePrice * p.quantity, 0)
+        } : prev);
+      }
+    } else {
+      const res = await addWorkOrder({
+        clientId: osForm.clientId,
+        vehicleId: osForm.vehicleId,
+        services: osForm.selectedServices,
+        parts: osForm.selectedParts,
+        notes: osForm.notes,
+        status: osForm.status,
+        date: new Date().toISOString().split('T')[0]
+      });
+
+      if (res) {
+        setIsAddingOS(false);
+        setOsForm({ clientId: '', vehicleId: '', notes: '', status: 'Aberta', selectedServices: [], selectedParts: [] });
+        Alert.alert('Sucesso', 'Ordem de Serviço criada!');
+      }
+    }
+  };
+
+  const handleNewOS = () => {
+    setEditingOSId(null);
+    setWizardStep(1);
+    setClientSearch('');
+    setServiceSearch('');
+    setPartSearch('');
+    setOsForm({
+      clientId: '',
+      vehicleId: '',
+      notes: '',
+      status: 'Aberta',
+      selectedServices: [],
+      selectedParts: []
+    });
+    setIsAddingOS(true);
+  };
+
+  const handleStartEditOS = (os: WorkOrder) => {
+    setEditingOSId(os.id);
+    setWizardStep(1);
+    setClientSearch('');
+    setServiceSearch('');
+    setPartSearch('');
+    setOsForm({
+      clientId: os.clientId,
+      vehicleId: os.vehicleId,
+      notes: os.notes || '',
+      status: os.status,
+      selectedServices: os.services,
+      selectedParts: os.parts
+    });
+    setIsAddingOS(true);
+  };
+
+  const handleUpdateServiceQty = (item: ServiceItem, qty: number) => {
+    if (qty <= 0) {
+      setOsForm(prev => ({
+        ...prev,
+        selectedServices: prev.selectedServices.filter(s => s.id !== item.id)
+      }));
+      return;
+    }
+    const exists = osForm.selectedServices.find(s => s.id === item.id);
+    if (exists) {
+      setOsForm(prev => ({
+        ...prev,
+        selectedServices: prev.selectedServices.map(s => s.id === item.id ? { ...s, quantity: qty } : s)
+      }));
+    } else {
+      setOsForm(prev => ({
+        ...prev,
+        selectedServices: [...prev.selectedServices, { id: item.id, name: item.name, price: item.price, quantity: qty, code: item.code }]
+      }));
+    }
+  };
+
+  const handleUpdatePartQty = (item: PartItem, qty: number) => {
+    if (qty <= 0) {
+      setOsForm(prev => ({
+        ...prev,
+        selectedParts: prev.selectedParts.filter(p => p.id !== item.id)
+      }));
+      return;
+    }
+    const exists = osForm.selectedParts.find(p => p.id === item.id);
+    if (exists) {
+      setOsForm(prev => ({
+        ...prev,
+        selectedParts: prev.selectedParts.map(p => p.id === item.id ? { ...p, quantity: qty } : p)
+      }));
+    } else {
+      setOsForm(prev => ({
+        ...prev,
+        selectedParts: [...prev.selectedParts, { id: item.id, name: item.name, code: item.code, salePrice: item.salePrice, quantity: qty }]
+      }));
+    }
+  };
+
+  const handleFaturarOS = async () => {
+    if (!selectedOS) return;
+
+    const amount = selectedOS.grandTotal;
+    const installmentsCount = parseInt(billingForm.installmentsCount);
+    
+    // Generate installments array
+    const installments = [];
+    const baseVal = Math.floor((amount / installmentsCount) * 100) / 100;
+    let diff = Math.round((amount - (baseVal * installmentsCount)) * 100) / 100;
+
+    for (let i = 1; i <= installmentsCount; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() + (30 * (i - 1)));
+      
+      // Pad exact cents diff to last installment
+      const instAmount = i === installmentsCount ? (baseVal + diff) : baseVal;
+
+      installments.push({
+        number: i,
+        amount: instAmount,
+        dueDate: d.toISOString().split('T')[0],
+        status: 'Pendente' as const
+      });
+    }
+
+    const success = await addBilling({
+      osId: selectedOS.id,
+      amount,
+      paymentMethod: billingForm.paymentMethod,
+      status: 'Pendente',
+      installments,
+      dueDate: installments[0].dueDate
     });
 
-    if (res) {
-      setIsAddingOS(false);
-      setOsForm({ clientId: '', vehicleId: '', notes: '', status: 'Aberta', selectedServices: [], selectedParts: [] });
-      Alert.alert('Sucesso', 'Ordem de Serviço criada!');
+    if (success) {
+      setShowBillingPanel(false);
+      Alert.alert('Sucesso', 'Ordem de serviço faturada com sucesso!');
+    } else {
+      Alert.alert('Erro', 'Não foi possível faturar esta ordem.');
     }
   };
 
@@ -262,12 +492,12 @@ function MainWorkshopApp() {
       type: 'Saída',
       category: expenseForm.category,
       amount: parseFloat(expenseForm.amount) || 0,
-      date: new Date().toISOString().split('T')[0],
+      date: expenseForm.date || new Date().toISOString().split('T')[0],
       description: expenseForm.description
     });
     if (res) {
       setIsAddingExpense(false);
-      setExpenseForm({ description: '', amount: '', category: 'Operacional' });
+      setExpenseForm({ description: '', amount: '', category: 'Operacional', date: new Date().toISOString().split('T')[0] });
       Alert.alert('Sucesso', 'Despesa lançada com sucesso.');
     }
   };
@@ -277,16 +507,31 @@ function MainWorkshopApp() {
       Alert.alert('Erro', 'Nome e valor de serviço são obrigatórios.');
       return;
     }
-    const res = await addService({
-      name: serviceForm.name,
-      code: serviceForm.code.toUpperCase(),
-      description: serviceForm.description,
-      price: parseFloat(serviceForm.price) || 0
-    });
-    if (res) {
-      setIsAddingCatalogService(false);
-      setServiceForm({ name: '', code: '', description: '', price: '' });
-      Alert.alert('Sucesso', 'Serviço catalogado!');
+    if (editingServiceId) {
+      const res = await updateService(editingServiceId, {
+        name: serviceForm.name,
+        code: serviceForm.code.toUpperCase(),
+        description: serviceForm.description,
+        price: parseFloat(serviceForm.price) || 0
+      });
+      if (res) {
+        setIsAddingCatalogService(false);
+        setEditingServiceId(null);
+        setServiceForm({ name: '', code: '', description: '', price: '' });
+        Alert.alert('Sucesso', 'Serviço atualizado com sucesso!');
+      }
+    } else {
+      const res = await addService({
+        name: serviceForm.name,
+        code: serviceForm.code.toUpperCase(),
+        description: serviceForm.description,
+        price: parseFloat(serviceForm.price) || 0
+      });
+      if (res) {
+        setIsAddingCatalogService(false);
+        setServiceForm({ name: '', code: '', description: '', price: '' });
+        Alert.alert('Sucesso', 'Serviço catalogado!');
+      }
     }
   };
 
@@ -295,18 +540,35 @@ function MainWorkshopApp() {
       Alert.alert('Erro', 'Preencha os campos obrigatórios (*).');
       return;
     }
-    const res = await addPart({
-      name: partForm.name,
-      code: partForm.code.toUpperCase(),
-      supplier: partForm.supplier || '',
-      purchasePrice: parseFloat(partForm.purchasePrice) || 0,
-      salePrice: parseFloat(partForm.salePrice) || 0,
-      stock: parseInt(partForm.stock) || 0
-    });
-    if (res) {
-      setIsAddingCatalogPart(false);
-      setPartForm({ name: '', code: '', supplier: '', purchasePrice: '', salePrice: '', stock: '' });
-      Alert.alert('Sucesso', 'Peça adicionada ao estoque.');
+    if (editingPartId) {
+      const res = await updatePart(editingPartId, {
+        name: partForm.name,
+        code: partForm.code.toUpperCase(),
+        supplier: partForm.supplier || '',
+        purchasePrice: parseFloat(partForm.purchasePrice) || 0,
+        salePrice: parseFloat(partForm.salePrice) || 0,
+        stock: parseInt(partForm.stock) || 0
+      });
+      if (res) {
+        setIsAddingCatalogPart(false);
+        setEditingPartId(null);
+        setPartForm({ name: '', code: '', supplier: '', purchasePrice: '', salePrice: '', stock: '' });
+        Alert.alert('Sucesso', 'Peça atualizada com sucesso!');
+      }
+    } else {
+      const res = await addPart({
+        name: partForm.name,
+        code: partForm.code.toUpperCase(),
+        supplier: partForm.supplier || '',
+        purchasePrice: parseFloat(partForm.purchasePrice) || 0,
+        salePrice: parseFloat(partForm.salePrice) || 0,
+        stock: parseInt(partForm.stock) || 0
+      });
+      if (res) {
+        setIsAddingCatalogPart(false);
+        setPartForm({ name: '', code: '', supplier: '', purchasePrice: '', salePrice: '', stock: '' });
+        Alert.alert('Sucesso', 'Peça adicionada ao estoque.');
+      }
     }
   };
 
@@ -336,103 +598,402 @@ function MainWorkshopApp() {
 
     const htmlContent = `
       <!DOCTYPE html>
-      <html>
+      <html lang="pt-BR">
       <head>
-        <meta charset="utf-8">
+        <meta charset="UTF-8">
         <title>Ordem de Serviço ${os.osNumber}</title>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
         <style>
-          body { font-family: 'Helvetica Neue', Arial, sans-serif; margin: 30px; color: #333; }
-          .header { border-bottom: 2px solid #3b66ff; padding-bottom: 10px; margin-bottom: 20px; }
-          .header-title { font-size: 20px; font-weight: bold; color: #3b66ff; text-transform: uppercase; }
-          .section-title { font-size: 11px; font-weight: bold; color: #7f8c8d; text-transform: uppercase; margin-top: 20px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
-          th { background-color: #f2f2f2; text-align: left; padding: 8px; font-weight: bold; color: #555; }
-          td { padding: 8px; border-bottom: 1px solid #eee; }
-          .total-box { margin-top: 30px; text-align: right; font-size: 12px; }
-          .total-row { display: flex; justify-content: flex-end; gap: 20px; margin-top: 5px; }
-          .total-val { font-weight: bold; color: #22c55e; }
-          .signature-box { margin-top: 40px; border-top: 1px solid #ccc; padding-top: 10px; max-width: 300px; }
-          .grid { display: grid; grid-template-cols: 1fr 1fr; gap: 15px; margin-top: 10px; font-size: 11px; }
+          @page {
+            size: A4 portrait;
+            margin: 15mm;
+          }
+          body {
+            font-family: 'Inter', sans-serif;
+            color: #0f172a;
+            line-height: 1.4;
+            padding: 0;
+            width: calc(100% - 8px);
+            margin: 0 auto;
+            background: #ffffff;
+            font-size: 11px;
+            box-sizing: border-box;
+          }
+          .header-grid {
+            display: grid;
+            grid-template-columns: 7fr 3fr;
+            gap: 12px;
+            margin-bottom: 12px;
+          }
+          .border-box {
+            border: 1.5px solid #0f172a;
+            border-radius: 8px;
+            padding: 12px;
+            background: #ffffff;
+            box-sizing: border-box;
+          }
+          .company-title {
+            font-size: 15px;
+            font-weight: 800;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            border-bottom: 1.5px solid #0f172a;
+            padding-bottom: 4px;
+            letter-spacing: 0.5px;
+            color: #0f172a;
+          }
+          .company-text {
+            font-size: 9.5px;
+            font-weight: 500;
+            margin-bottom: 3px;
+            color: #0f172a;
+          }
+          .center-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+          }
+          .os-tag {
+            border: 1.5px solid #0f172a;
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+            color: #0f172a;
+          }
+          .os-num {
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 6px;
+            letter-spacing: 0.5px;
+            color: #0f172a;
+          }
+          .os-meta {
+            font-size: 9.5px;
+            color: #334155;
+            font-weight: 500;
+            margin-top: 1px;
+          }
+          .section-box {
+            border: 1.5px solid #0f172a;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            box-sizing: border-box;
+            background: #ffffff;
+            overflow: hidden;
+          }
+          .section-title {
+            background: #f8fafc;
+            border-bottom: 1.5px solid #0f172a;
+            padding: 8px 12px;
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #0f172a;
+          }
+          .section-content {
+            padding: 10px;
+          }
+          .customer-grid {
+            display: grid;
+            grid-template-columns: 38fr 34fr 28fr;
+            gap: 10px;
+            font-size: 10px;
+          }
+          .customer-row {
+            margin-bottom: 4px;
+          }
+          .customer-label {
+            font-weight: 700;
+            color: #0f172a;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          th, td {
+            padding: 8px 12px;
+            font-size: 10px;
+            border-right: 1.5px solid #0f172a;
+            border-bottom: 1.5px solid #0f172a;
+            box-sizing: border-box;
+            color: #0f172a;
+          }
+          th {
+            background: #ffffff;
+            color: #0f172a;
+            font-weight: 800;
+            text-transform: uppercase;
+            text-align: left;
+          }
+          th:last-child, td:last-child {
+            border-right: none;
+          }
+          tr:last-child td {
+            border-bottom: none;
+          }
+          .center-col {
+            text-align: center;
+          }
+          .right-col {
+            text-align: right;
+          }
+          .totals-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 12px;
+          }
+          .total-card {
+            border: 1.5px solid #0f172a;
+            border-radius: 8px;
+            padding: 10px;
+            box-sizing: border-box;
+            background: #ffffff;
+          }
+          .total-card-label {
+            font-size: 8px;
+            font-weight: 800;
+            color: #64748b;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+          }
+          .total-card-value {
+            font-size: 14px;
+            font-weight: 800;
+            color: #0f172a;
+          }
+          .bottom-row {
+            display: grid;
+            grid-template-columns: 3fr 2fr;
+            gap: 12px;
+            margin-bottom: 25px;
+          }
+          .obs-box {
+            border: 1.5px solid #0f172a;
+            border-radius: 8px;
+            min-height: 85px;
+            box-sizing: border-box;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+          }
+          .obs-title {
+            background: #f8fafc;
+            border-bottom: 1.5px solid #0f172a;
+            padding: 8px 12px;
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #0f172a;
+          }
+          .obs-content {
+            padding: 10px;
+            font-size: 10px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            color: #0f172a;
+          }
+          .grand-total-box {
+            border: 1.5px solid #0f172a;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+            text-align: center;
+            box-sizing: border-box;
+            padding: 10px;
+          }
+          .grand-total-title {
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            color: #64748b;
+          }
+          .grand-total-price {
+            font-size: 26px;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+            color: #0f172a;
+          }
+          .signature-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-top: 40px;
+            margin-bottom: 20px;
+          }
+          .sig-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            text-align: center;
+          }
+          .sig-line {
+            width: 100%;
+            border-top: 1.5px solid #0f172a;
+            margin-top: 4px;
+            padding-top: 4px;
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: #0f172a;
+          }
+          .sig-img {
+            max-height: 45px;
+            object-fit: contain;
+            margin-bottom: 4px;
+          }
+          .print-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 8px;
+            font-weight: 700;
+            border-top: 1.5px solid #0f172a;
+            padding-top: 8px;
+            color: #64748b;
+            text-transform: uppercase;
+            margin-top: 20px;
+          }
         </style>
       </head>
       <body>
-        <div class="header">
-          <div class="header-title">${settings.name}</div>
-          <div style="font-size: 10px; color: #555; margin-top: 4px;">
-            CNPJ: ${settings.cnpj} | Fone/Whats: ${settings.phone} | Endereço: ${settings.address}
+        <div class="header-grid">
+          <div class="border-box">
+            <div class="company-title">${settings.name.toUpperCase()}</div>
+            <div class="company-text"><strong>CNPJ:</strong> ${settings.cnpj}</div>
+            <div class="company-text"><strong>TEL:</strong> ${settings.phone} / ${settings.whatsapp}</div>
+            <div class="company-text"><strong>END:</strong> ${settings.address.toUpperCase()}</div>
+          </div>
+          
+          <div class="border-box center-box">
+            <div class="os-tag">Ordem de Serviço</div>
+            <div class="os-num">${os.osNumber}</div>
+            <div class="os-meta"><strong>Data:</strong> ${formatDate(os.date)}</div>
+            <div class="os-meta" style="text-transform: uppercase;"><strong>Status:</strong> ${os.status}</div>
           </div>
         </div>
 
-        <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; margin-bottom: 20px;">
-          <span>ORDEM DE SERVIÇO: <span style="color: #3b66ff;">${os.osNumber}</span></span>
-          <span>DATA: ${os.date.split('-').reverse().join('/')}</span>
-          <span>STATUS: ${os.status.toUpperCase()}</span>
-        </div>
-
-        <div class="grid">
-          <div>
-            <div class="section-title">Dados do Cliente</div>
-            <div style="margin-top: 5px; line-height: 1.4;">
-              <strong>${client?.name}</strong><br>
-              CPF/CNPJ: ${client?.cpfCnpj}<br>
-              WhatsApp: ${client?.whatsapp}<br>
-              Endereço: ${client?.address}
+        <div class="section-box">
+          <div class="section-title">Dados do Cliente e Veículo</div>
+          <div class="section-content">
+            <div class="customer-grid">
+              <div>
+                <div class="customer-row"><span class="customer-label">Cliente:</span> ${client?.name?.toUpperCase() || ''}</div>
+                <div class="customer-row"><span class="customer-label">Placa:</span> ${vehicle?.plate?.toUpperCase() || ''}</div>
+              </div>
+              <div>
+                <div class="customer-row"><span class="customer-label">Telefone:</span> ${client?.phone || '-'}</div>
+                <div class="customer-row"><span class="customer-label">Endereço:</span> ${client?.address?.toUpperCase() || ''}</div>
+              </div>
+              <div>
+                <div class="customer-row"><span class="customer-label">Veículo:</span> ${vehicle?.brand?.toUpperCase() || ''} ${vehicle?.model?.toUpperCase() || ''}</div>
+              </div>
             </div>
           </div>
-          <div>
-            <div class="section-title">Dados do Veículo</div>
-            <div style="margin-top: 5px; line-height: 1.4;">
-              <strong>${vehicle?.brand} ${vehicle?.model}</strong><br>
-              Placa: <span style="font-weight: bold; background: #eee; padding: 2px 4px; border-radius: 3px;">${vehicle?.plate}</span><br>
-              Ano: ${vehicle?.year}<br>
-              Odomêtro: ${vehicle?.odometer} km ${vehicle?.chassis ? `| Chassi: ${vehicle.chassis}` : ''}
-            </div>
-          </div>
         </div>
-
-        ${os.services.length > 0 ? `
-          <div class="section-title">Mão de Obra e Serviços</div>
-          <table>
-            <thead>
-              <tr><th>Descrição do Serviço</th><th>Qtd</th><th>Unitário</th><th>Subtotal</th></tr>
-            </thead>
-            <tbody>${servicesListHTML}</tbody>
-          </table>
-        ` : ''}
 
         ${os.parts.length > 0 ? `
-          <div class="section-title">Peças e Componentes</div>
-          <table>
-            <thead>
-              <tr><th>Nome da Peça</th><th>Qtd</th><th>Unitário</th><th>Subtotal</th></tr>
-            </thead>
-            <tbody>${partsListHTML}</tbody>
-          </table>
+          <div class="section-box">
+            <div class="section-title">Peças Utilizadas</div>
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 55%;">Peça</th>
+                  <th style="width: 10%; text-align: center;">Qtd</th>
+                  <th style="width: 15%; text-align: right;">Valor Unit.</th>
+                  <th style="width: 20%; text-align: right;">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${partsListHTML}
+              </tbody>
+            </table>
+          </div>
         ` : ''}
 
-        ${os.notes ? `
-          <div class="section-title">Observações Técnicas / Diagnóstico</div>
-          <p style="font-size: 10px; line-height: 1.4; white-space: pre-wrap; font-style: italic; background: #fafafa; padding: 10px; border-radius: 6px;">
-            ${os.notes}
-          </p>
+        ${os.services.length > 0 ? `
+          <div class="section-box">
+            <div class="section-title">Serviços Executados</div>
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 55%;">Serviço</th>
+                  <th style="width: 10%; text-align: center;">Qtd</th>
+                  <th style="width: 15%; text-align: right;">Valor Unit.</th>
+                  <th style="width: 20%; text-align: right;">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${servicesListHTML}
+              </tbody>
+            </table>
+          </div>
         ` : ''}
 
-        <div class="total-box">
-          <div class="total-row"><span>Serviços:</span><span>${formatCurrency(os.servicesTotal)}</span></div>
-          <div class="total-row"><span>Peças:</span><span>${formatCurrency(os.partsTotal)}</span></div>
-          <div class="total-row" style="font-size: 14px; font-weight: bold; border-top: 1.5px solid #333; padding-top: 8px;">
-            <span>TOTAL GERAL:</span><span class="total-val">${formatCurrency(os.grandTotal)}</span>
+        <div class="totals-row">
+          <div class="total-card">
+            <div class="total-card-label">Total Peças</div>
+            <div class="total-card-value">${formatCurrency(os.partsTotal)}</div>
+          </div>
+          <div class="total-card">
+            <div class="total-card-label">Total Serviços</div>
+            <div class="total-card-value">${formatCurrency(os.servicesTotal)}</div>
+          </div>
+          <div class="total-card">
+            <div class="total-card-label">Subtotal</div>
+            <div class="total-card-value">${formatCurrency(os.grandTotal)}</div>
+          </div>
+          <div class="total-card">
+            <div class="total-card-label">Desconto</div>
+            <div class="total-card-value">-R$ 0,00</div>
           </div>
         </div>
 
-        ${os.signature ? `
-          <div class="signature-box">
-            <div style="font-size: 9px; color: #7f8c8d; margin-bottom: 5px;">Assinatura digital do Cliente:</div>
-            ${os.signature}
+        <div class="bottom-row">
+          <div class="obs-box">
+            <div class="obs-title">Observações</div>
+            <div class="obs-content">${os.notes || '-'}</div>
           </div>
-        ` : ''}
+          
+          <div class="grand-total-box">
+            <div class="grand-total-title">Total da Ordem de Serviço</div>
+            <div class="grand-total-price">${formatCurrency(os.grandTotal)}</div>
+          </div>
+        </div>
 
-        <div style="margin-top: 40px; font-size: 8px; color: #95a5a6; text-align: center;">
+        <div class="signature-row">
+          <div class="sig-container">
+            <div style="height: 45px; display: flex; align-items: flex-end; justify-content: center; width: 100%;">
+              ${os.signature ? (os.signature.startsWith('<svg') ? os.signature : `<img class="sig-img" src="${os.signature}" alt="Assinatura">`) : ''}
+            </div>
+            <div class="sig-line">Assinatura do Cliente</div>
+          </div>
+          <div class="sig-container">
+            <div style="height: 45px;"></div>
+            <div class="sig-line">Responsável pela Oficina</div>
+          </div>
+        </div>
+
+        <div class="print-footer">
+          <div>Documento Interno da Oficina</div>
+          <div>${os.osNumber}</div>
+        </div>
+
+        <div style="margin-top: 30px; font-size: 8.5px; color: #64748b; text-align: center; text-transform: uppercase; font-weight: 500; line-height: 1.4;">
           ${settings.pdfNotes}
         </div>
       </body>
@@ -452,24 +1013,21 @@ function MainWorkshopApp() {
     try {
       const json = exportDatabaseJson();
       const filename = `oficinapro_backup_${new Date().toISOString().slice(0, 10)}.json`;
-      const uri = `${Platform.OS === 'ios' ? '' : 'data:text/json;charset=utf-8,'}${encodeURIComponent(json)}`;
-      // Secure writing would require expo-file-system, but sharing as text is fully compatible using data URLs.
-      // Better: we call expo sharing.
-      const cacheUri = `${FileSystemCachePath(filename)}`;
-      // Swap out cache write simulation:
-      await Sharing.shareAsync(filename, { mimeType: 'application/json', UTI: 'public.json' });
+      const fileUri = `${FileSystem.cacheDirectory}${filename}`;
+      await FileSystem.writeAsStringAsync(fileUri, json, { encoding: FileSystem.EncodingType.UTF8 });
+      await Sharing.shareAsync(fileUri, { mimeType: 'application/json', UTI: 'public.json' });
     } catch (e) {
-      // Direct sharing bypass as raw JSON code block copy
+      console.error('Error sharing JSON backup', e);
       Alert.alert(
         'Exportar Backup',
-        'Seu backup JSON foi gerado com sucesso. Deseja copiar o código bruto para a área de transferência?',
+        'Não foi possível compartilhar o arquivo diretamente. Deseja copiar os dados brutos para a área de transferência?',
         [
           { text: 'Cancelar', style: 'cancel' },
           { 
             text: 'Copiar JSON', 
             onPress: () => {
               Clipboard.setString(exportDatabaseJson());
-              Alert.alert('Copiado!', 'Dados brutos salvos com sucesso.');
+              Alert.alert('Copiado!', 'Dados brutos copiados para a área de transferência.');
             }
           }
         ]
@@ -477,9 +1035,71 @@ function MainWorkshopApp() {
     }
   };
 
-  // Helper dynamic mock for filesystem cache write failure bypass
-  const FileSystemCachePath = (f: string) => {
-    return f;
+  const handleImportBackup = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'application/json',
+        copyToCacheDirectory: true
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        return;
+      }
+
+      const fileUri = result.assets[0].uri;
+      const fileContent = await FileSystem.readAsStringAsync(fileUri, { encoding: FileSystem.EncodingType.UTF8 });
+      
+      const success = await restoreBackup(fileContent);
+      if (success) {
+        Alert.alert('Sucesso', 'Backup restaurado e base de dados atualizada!');
+      } else {
+        Alert.alert('Erro', 'Arquivo de backup inválido. Certifique-se de selecionar um JSON válido da OficinaPro.');
+      }
+    } catch (e) {
+      console.error('Error importing backup', e);
+      Alert.alert('Erro', 'Não foi possível ler ou importar o arquivo de backup.');
+    }
+  };
+
+  const handleExportCsv = async () => {
+    try {
+      let csv = '\uFEFF'; // UTF-8 BOM for Excel
+      csv += 'Nº OS;Data;Cliente;Veículo;Placa;Serviços;Peças;Total;Status\n';
+
+      workOrders.forEach(os => {
+        const client = clients.find(c => c.id === os.clientId)?.name || '';
+        const vehicle = vehicles.find(v => v.id === os.vehicleId);
+        const vehicleStr = vehicle ? `${vehicle.brand} ${vehicle.model}` : '';
+        const plate = vehicle?.plate || '';
+        
+        csv += `${os.osNumber};${os.date};"${client}";"${vehicleStr}";${plate};${os.servicesTotal};${os.partsTotal};${os.grandTotal};${os.status}\n`;
+      });
+
+      const filename = `relatorio_os_${new Date().toISOString().slice(0, 10)}.csv`;
+      const fileUri = `${FileSystem.cacheDirectory}${filename}`;
+      await FileSystem.writeAsStringAsync(fileUri, csv, { encoding: FileSystem.EncodingType.UTF8 });
+      await Sharing.shareAsync(fileUri, { mimeType: 'text/csv', UTI: 'public.comma-separated-values-text' });
+    } catch (e) {
+      console.error('Error sharing CSV report', e);
+      Alert.alert('Erro', 'Não foi possível gerar ou exportar o relatório CSV.');
+    }
+  };
+
+  const handleResetDatabase = () => {
+    Alert.alert(
+      'Atenção',
+      'Isso irá apagar todos os dados cadastrados e redefinir a oficina para os valores originais de demonstração. Deseja continuar?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Resetar Tudo', 
+          style: 'destructive',
+          onPress: async () => {
+            await resetDatabase();
+          }
+        }
+      ]
+    );
   };
 
   // --- METRICS & FINANCE CALCULATIONS ---
@@ -489,9 +1109,76 @@ function MainWorkshopApp() {
   const osAndamento = workOrders.filter(o => o.status === 'Em andamento').length;
   const osConcluidas = workOrders.filter(o => o.status === 'Concluída' || o.status === 'Entregue').length;
 
-  const totalEntradas = transactions.filter(t => t.type === 'Entrada').reduce((sum, t) => sum + t.amount, 0);
-  const totalSaidas = transactions.filter(t => t.type === 'Saída').reduce((sum, t) => sum + t.amount, 0);
-  const saldoCaixa = totalEntradas - totalSaidas;
+  const totalRecebido = transactions.filter(t => t.type === 'Entrada').reduce((sum, t) => sum + t.amount, 0);
+  const totalDespesas = transactions.filter(t => t.type === 'Saída').reduce((sum, t) => sum + t.amount, 0);
+  const saldoAtual = totalRecebido - totalDespesas;
+
+  const totalAReceber = billings.reduce((acc, b) => {
+    if (b.status === 'Cancelado') return acc;
+    return acc + b.installments.filter(i => i.status === 'Pendente').reduce((s, i) => s + i.amount, 0);
+  }, 0);
+
+  const currentMonthStr = new Date().toISOString().substring(0, 7); // "YYYY-MM"
+  const faturamentoMes = workOrders
+    .filter(o => o.date.startsWith(currentMonthStr))
+    .reduce((acc, o) => acc + o.grandTotal, 0);
+
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  // 1. Daily Stats (Hoje)
+  const transactionsHoje = transactions.filter(t => t.date === todayStr);
+  const entradasHoje = transactionsHoje.filter(t => t.type === 'Entrada').reduce((sum, t) => sum + t.amount, 0);
+  const saidasHoje = transactionsHoje.filter(t => t.type === 'Saída').reduce((sum, t) => sum + t.amount, 0);
+  const saldoHoje = entradasHoje - saidasHoje;
+
+  // 2. Weekly Stats (Esta Semana)
+  const today = new Date();
+  const startOfWeek = new Date(today);
+  const dayIndex = today.getDay();
+  startOfWeek.setDate(today.getDate() - dayIndex);
+  startOfWeek.setHours(0, 0, 0, 0);
+
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
+  endOfWeek.setHours(23, 59, 59, 999);
+
+  const isThisWeek = (dateStr: string) => {
+    const tDate = new Date(dateStr + 'T00:00:00');
+    return tDate >= startOfWeek && tDate <= endOfWeek;
+  };
+
+  const transactionsSemana = transactions.filter(t => isThisWeek(t.date));
+  const entradasSemana = transactionsSemana.filter(t => t.type === 'Entrada').reduce((sum, t) => sum + t.amount, 0);
+  const saidasSemana = transactionsSemana.filter(t => t.type === 'Saída').reduce((sum, t) => sum + t.amount, 0);
+  const saldoSemana = entradasSemana - saidasSemana;
+
+  // 3. Monthly Stats (Este Mês)
+  const transactionsMes = transactions.filter(t => t.date.startsWith(currentMonthStr));
+  const entradasMes = transactionsMes.filter(t => t.type === 'Entrada').reduce((sum, t) => sum + t.amount, 0);
+  const saidasMes = transactionsMes.filter(t => t.type === 'Saída').reduce((sum, t) => sum + t.amount, 0);
+  const saldoMes = entradasMes - saidasMes;
+
+  // Chart data: last 5 days cash flow
+  const chartDays = Array.from({ length: 5 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (4 - i));
+    const dateStr = d.toISOString().split('T')[0];
+    const dayName = d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
+    
+    const dayInflows = transactions
+      .filter(t => t.type === 'Entrada' && t.date === dateStr)
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const dayOutflows = transactions
+      .filter(t => t.type === 'Saída' && t.date === dateStr)
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    return { dayName, inflows: dayInflows, outflows: dayOutflows };
+  });
+
+  const chartMaxVal = Math.max(...chartDays.map(d => Math.max(d.inflows, d.outflows, 300)));
+  const chartHeight = 100;
+  const chartPadding = 15;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -499,8 +1186,14 @@ function MainWorkshopApp() {
       
       {/* HEADER BAR */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>{settings.name.toUpperCase()}</Text>
+        <View style={{ flex: 1, marginRight: 16 }}>
+          <Text 
+            style={styles.headerTitle}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {settings.name.toUpperCase()}
+          </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
             <Text style={styles.headerSubtitle}>OFICINAPRO MOBILE</Text>
             <View style={{ marginLeft: 6 }}>
@@ -525,9 +1218,12 @@ function MainWorkshopApp() {
         {currentTab === 'dashboard' && (
           <View style={styles.screenContainer}>
             <View style={[styles.card, styles.heroCard]}>
-              <Text style={styles.heroCardLabel}>FATURAMENTO DO PLANO</Text>
-              <Text style={styles.heroCardValue}>{formatCurrency(faturamentoTotal)}</Text>
-              <Text style={styles.heroCardSub}>Faturamento consolidado das ordens</Text>
+              <Text style={styles.heroCardLabel}>FATURAMENTO DO MÊS</Text>
+              <Text style={styles.heroCardValue}>{formatCurrency(faturamentoMes)}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6, backgroundColor: 'rgba(0,0,0,0.15)', alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 }}>
+                <Text style={{ fontSize: 9, color: '#fff', fontWeight: 'bold' }}>{formatCurrency(entradasMes)}</Text>
+                <Text style={{ fontSize: 9, color: '#dbeafe' }}>recebido à vista/parcelas</Text>
+              </View>
             </View>
 
             {/* Metrics cards grid */}
@@ -560,10 +1256,101 @@ function MainWorkshopApp() {
 
               <View style={[styles.gridCol, styles.card]}>
                 <View style={styles.metricHeader}>
-                  <Text style={styles.metricTitle}>CLIENTES</Text>
+                  <Text style={styles.metricTitle}>A RECEBER</Text>
+                  <Wallet size={14} color="#3b66ff" />
+                </View>
+                <Text style={[styles.metricValue, { color: '#3b66ff' }]} numberOfLines={1}>
+                  {formatCurrency(totalAReceber)}
+                </Text>
+              </View>
+            </View>
+
+            {/* Quick counts grid */}
+            <View style={{ flexDirection: 'row', gap: 6, marginBottom: 12 }}>
+              <View style={{ flex: 1, backgroundColor: '#0f1115', borderWidth: 1, borderColor: '#1e293b', borderRadius: 12, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ backgroundColor: 'rgba(59, 102, 255, 0.1)', borderRadius: 8, padding: 6 }}>
                   <Users size={14} color="#3b66ff" />
                 </View>
-                <Text style={styles.metricValue}>{clients.length}</Text>
+                <View>
+                  <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#fff' }}>{clients.length}</Text>
+                  <Text style={{ fontSize: 7, color: '#64748b', fontWeight: 'bold' }}>CLIENTES</Text>
+                </View>
+              </View>
+              <View style={{ flex: 1, backgroundColor: '#0f1115', borderWidth: 1, borderColor: '#1e293b', borderRadius: 12, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ backgroundColor: 'rgba(59, 102, 255, 0.1)', borderRadius: 8, padding: 6 }}>
+                  <Car size={14} color="#3b66ff" />
+                </View>
+                <View>
+                  <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#fff' }}>{vehicles.length}</Text>
+                  <Text style={{ fontSize: 7, color: '#64748b', fontWeight: 'bold' }}>VEÍCULOS</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Cash Flow Interactive Chart */}
+            <View style={[styles.card, { padding: 14, marginBottom: 12 }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <View>
+                  <Text style={{ fontSize: 7, fontWeight: '900', color: '#64748b', letterSpacing: 0.8 }}>FLUXO DE CAIXA</Text>
+                  <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#f1f5f9', marginTop: 1 }}>Últimos 5 Dias</Text>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#3b66ff' }} />
+                    <Text style={{ fontSize: 8, color: '#94a3b8', fontWeight: 'bold' }}>Entradas</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#ef4444' }} />
+                    <Text style={{ fontSize: 8, color: '#94a3b8', fontWeight: 'bold' }}>Saídas</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={{ height: 100, width: '100%', alignItems: 'center', justifyContent: 'center' }}>
+                <Svg height="100%" width="100%" viewBox="0 0 200 100" preserveAspectRatio="none">
+                  {/* Grid Lines */}
+                  <Line x1="0" y1="20" x2="200" y2="20" stroke="#1e293b" strokeWidth="0.5" strokeDasharray="2" />
+                  <Line x1="0" y1="50" x2="200" y2="50" stroke="#1e293b" strokeWidth="0.5" strokeDasharray="2" />
+                  <Line x1="0" y1="80" x2="200" y2="80" stroke="#1e293b" strokeWidth="0.5" strokeDasharray="2" />
+
+                  {chartDays.map((d, index) => {
+                    const xPos = chartPadding + index * 36;
+                    const inflowHeight = chartMaxVal > 0 ? (d.inflows / chartMaxVal) * (chartHeight - 30) : 0;
+                    const outflowHeight = chartMaxVal > 0 ? (d.outflows / chartMaxVal) * (chartHeight - 30) : 0;
+
+                    return (
+                      <G key={index}>
+                        {/* Entrada Bar */}
+                        <Rect
+                          x={xPos}
+                          y={chartHeight - 18 - inflowHeight}
+                          width={5}
+                          height={Math.max(1, inflowHeight)}
+                          rx={1}
+                          fill="#3b66ff"
+                        />
+                        {/* Saída Bar */}
+                        <Rect
+                          x={xPos + 6}
+                          y={chartHeight - 18 - outflowHeight}
+                          width={5}
+                          height={Math.max(1, outflowHeight)}
+                          rx={1}
+                          fill="#ef4444"
+                        />
+                      </G>
+                    );
+                  })}
+                </Svg>
+                
+                {/* Labels at bottom */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', paddingHorizontal: 6, marginTop: 4 }}>
+                  {chartDays.map((d, i) => (
+                    <Text key={i} style={{ fontSize: 7, color: '#64748b', fontWeight: 'bold', width: 30, textAlign: 'center', textTransform: 'uppercase' }}>
+                      {d.dayName}
+                    </Text>
+                  ))}
+                </View>
               </View>
             </View>
 
@@ -574,7 +1361,7 @@ function MainWorkshopApp() {
                 <Text style={styles.emptyText}>Nenhuma Ordem de Serviço cadastrada.</Text>
               </View>
             ) : (
-              workOrders.slice(0, 5).map(os => {
+              workOrders.slice(0, 3).map(os => {
                 const client = clients.find(c => c.id === os.clientId);
                 const vehicle = vehicles.find(v => v.id === os.vehicleId);
                 return (
@@ -601,6 +1388,51 @@ function MainWorkshopApp() {
                 );
               })
             )}
+
+            {/* Recent Finance Transactions Feed */}
+            <Text style={styles.sectionTitle}>ÚLTIMOS LANÇAMENTOS</Text>
+            {transactions.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>Nenhum lançamento financeiro cadastrado.</Text>
+              </View>
+            ) : (
+              transactions.slice(0, 4).map(t => {
+                const isInflow = t.type === 'Entrada';
+                return (
+                  <View key={t.id} style={styles.listItem}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                      <View style={{ 
+                        backgroundColor: isInflow ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)', 
+                        paddingHorizontal: 6,
+                        paddingVertical: 4, 
+                        borderRadius: 8 
+                      }}>
+                        {isInflow ? (
+                          <ArrowUpRight size={12} color="#22c55e" />
+                        ) : (
+                          <ArrowDownRight size={12} color="#ef4444" />
+                        )}
+                      </View>
+                      <View style={{ flex: 1, paddingRight: 6 }}>
+                        <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#fff' }} numberOfLines={1}>
+                          {t.description}
+                        </Text>
+                        <Text style={{ fontSize: 7, color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase', marginTop: 2 }}>
+                          {t.category} • {t.date.split('-').reverse().join('/')}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={{ 
+                      fontSize: 10, 
+                      fontWeight: 'bold', 
+                      color: isInflow ? '#22c55e' : '#ef4444' 
+                    }}>
+                      {isInflow ? '+' : '-'}{formatCurrency(t.amount)}
+                    </Text>
+                  </View>
+                );
+              })
+            )}
           </View>
         )}
 
@@ -616,49 +1448,131 @@ function MainWorkshopApp() {
             </View>
 
             {!selectedClient ? (
-              clients.length === 0 ? (
-                <View style={styles.emptyContainer}>
-                  <Text style={styles.emptyText}>Nenhum cliente cadastrado.</Text>
-                </View>
-              ) : (
-                clients.map(client => {
-                  const clientCars = vehicles.filter(v => v.clientId === client.id);
-                  return (
-                    <TouchableOpacity 
-                      key={client.id} 
-                      style={[styles.card, styles.clientCard]}
-                      onPress={() => {
-                        setSelectedClient(client);
-                        setActiveClientTab('vehicles');
-                      }}
-                    >
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Text style={styles.clientName}>{client.name}</Text>
-                        <ChevronRight size={16} color="#64748b" />
-                      </View>
-                      <Text style={styles.clientDetails}>Telefone: {client.phone}</Text>
-                      <Text style={styles.clientDetails}>WhatsApp: {client.whatsapp}</Text>
-                      {clientCars.length > 0 && (
-                        <View style={{ flexDirection: 'row', gap: 5, marginTop: 6 }}>
-                          {clientCars.map(c => (
-                            <Text key={c.id} style={styles.catalogItemCodeBadge}>{c.plate}</Text>
-                          ))}
-                        </View>
-                      )}
+              <View style={{ flex: 1 }}>
+                {/* Client Search Bar */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e293b', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 2, marginBottom: 10 }}>
+                  <Search size={14} color="#64748b" style={{ marginRight: 6 }} />
+                  <TextInput
+                    placeholder="Buscar por nome, telefone, CPF/CNPJ..."
+                    placeholderTextColor="#475569"
+                    value={clientTabSearch}
+                    onChangeText={setClientTabSearch}
+                    style={{ flex: 1, color: '#f1f5f9', fontSize: 11, paddingVertical: 6 }}
+                  />
+                  {clientTabSearch !== '' && (
+                    <TouchableOpacity onPress={() => setClientTabSearch('')}>
+                      <X size={14} color="#64748b" />
                     </TouchableOpacity>
-                  );
-                })
-              )
+                  )}
+                </View>
+
+                {/* Clients List */}
+                <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+                  {(() => {
+                    const filtered = clients.filter(c => 
+                      c.name.toLowerCase().includes(clientTabSearch.toLowerCase()) ||
+                      (c.phone && c.phone.toLowerCase().includes(clientTabSearch.toLowerCase())) ||
+                      (c.email && c.email.toLowerCase().includes(clientTabSearch.toLowerCase())) ||
+                      (c.cpfCnpj && c.cpfCnpj.includes(clientTabSearch))
+                    );
+
+                    if (filtered.length === 0) {
+                      return (
+                        <View style={styles.emptyContainer}>
+                          <Text style={styles.emptyText}>
+                            {clients.length === 0 ? 'Nenhum cliente cadastrado.' : 'Nenhum cliente encontrado.'}
+                          </Text>
+                        </View>
+                      );
+                    }
+
+                    return filtered.map(client => {
+                      const clientCars = vehicles.filter(v => v.clientId === client.id);
+                      return (
+                        <TouchableOpacity 
+                          key={client.id} 
+                          style={[styles.card, styles.clientCard]}
+                          onPress={() => {
+                            setSelectedClient(client);
+                            setActiveClientTab('vehicles');
+                          }}
+                        >
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Text style={styles.clientName}>{client.name}</Text>
+                            <ChevronRight size={16} color="#64748b" />
+                          </View>
+                          <Text style={styles.clientDetails}>Telefone: {client.phone}</Text>
+                          <Text style={styles.clientDetails}>WhatsApp: {client.whatsapp}</Text>
+                          {clientCars.length > 0 && (
+                            <View style={{ flexDirection: 'row', gap: 5, marginTop: 6 }}>
+                              {clientCars.map(c => (
+                                <Text key={c.id} style={styles.catalogItemCodeBadge}>{c.plate}</Text>
+                              ))}
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                      );
+                    });
+                  })()}
+                </ScrollView>
+              </View>
             ) : (
               // Client Profile Details
               <View style={[styles.card, { padding: 14 }]}>
-                <TouchableOpacity 
-                  onPress={() => setSelectedClient(null)} 
-                  style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}
-                >
-                  <ArrowLeft size={16} color="#3b66ff" />
-                  <Text style={{ fontSize: 11, color: '#3b66ff', fontWeight: 'bold', marginLeft: 4 }}>Voltar à Lista</Text>
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <TouchableOpacity 
+                    onPress={() => setSelectedClient(null)} 
+                    style={{ flexDirection: 'row', alignItems: 'center' }}
+                  >
+                    <ArrowLeft size={16} color="#3b66ff" />
+                    <Text style={{ fontSize: 11, color: '#3b66ff', fontWeight: 'bold', marginLeft: 4 }}>Voltar à Lista</Text>
+                  </TouchableOpacity>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <TouchableOpacity
+                      style={{ padding: 6, backgroundColor: '#3b66ff', borderRadius: 8 }}
+                      onPress={() => {
+                        setEditingClientId(selectedClient.id);
+                        setClientForm({
+                          name: selectedClient.name,
+                          cpfCnpj: selectedClient.cpfCnpj || '',
+                          phone: selectedClient.phone,
+                          whatsapp: selectedClient.whatsapp || '',
+                          email: selectedClient.email || '',
+                          address: selectedClient.address || '',
+                          notes: selectedClient.notes || ''
+                        });
+                        setIsAddingClient(true);
+                      }}
+                    >
+                      <Edit2 size={12} color="#fff" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={{ padding: 6, backgroundColor: '#ef4444', borderRadius: 8 }}
+                      onPress={() => {
+                        Alert.alert(
+                          'Excluir Cliente',
+                          'Tem certeza que deseja excluir este cliente e todos os seus veículos?',
+                          [
+                            { text: 'Cancelar', style: 'cancel' },
+                            {
+                              text: 'Excluir',
+                              style: 'destructive',
+                              onPress: async () => {
+                                const success = await deleteClient(selectedClient.id);
+                                if (success) {
+                                  setSelectedClient(null);
+                                  Alert.alert('Sucesso', 'Cliente excluído com sucesso!');
+                                }
+                              }
+                            }
+                          ]
+                        );
+                      }}
+                    >
+                      <Trash2 size={12} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
 
                 <Text style={styles.clientName}>{selectedClient.name}</Text>
                 <Text style={styles.clientDetails}>Tel: {selectedClient.phone} | WhatsApp: {selectedClient.whatsapp}</Text>
@@ -701,11 +1615,57 @@ function MainWorkshopApp() {
                       <Text style={styles.emptyText}>Nenhum veículo associado.</Text>
                     ) : (
                       vehicles.filter(v => v.clientId === selectedClient.id).map(car => (
-                        <View key={car.id} style={styles.carRow}>
-                          <Car size={14} color="#3b66ff" />
-                          <View style={{ marginLeft: 8 }}>
-                            <Text style={styles.carText}>{car.brand} {car.model} ({car.year})</Text>
-                            <Text style={{ fontSize: 8, color: '#64748b' }}>Placa: {car.plate} | Km: {car.odometer}</Text>
+                        <View key={car.id} style={[styles.carRow, { justifyContent: 'space-between', alignItems: 'center' }]}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                            <Car size={14} color="#3b66ff" />
+                            <View style={{ marginLeft: 8, flex: 1 }}>
+                              <Text style={styles.carText}>{car.brand} {car.model} ({car.year})</Text>
+                              <Text style={{ fontSize: 8, color: '#64748b' }}>Placa: {car.plate} | Km: {car.odometer}</Text>
+                            </View>
+                          </View>
+                          
+                          <View style={{ flexDirection: 'row', gap: 6 }}>
+                            <TouchableOpacity
+                              style={{ padding: 6, backgroundColor: 'rgba(59, 102, 255, 0.1)', borderRadius: 6 }}
+                              onPress={() => {
+                                setEditingVehicleId(car.id);
+                                setVehicleForm({
+                                  plate: car.plate,
+                                  brand: car.brand,
+                                  model: car.model,
+                                  year: car.year,
+                                  chassis: car.chassis || '',
+                                  odometer: car.odometer
+                                });
+                                setIsAddingVehicle(true);
+                              }}
+                            >
+                              <Edit2 size={10} color="#3b66ff" />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={{ padding: 6, backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: 6 }}
+                              onPress={() => {
+                                Alert.alert(
+                                  'Excluir Veículo',
+                                  'Deseja desvincular este veículo da frota?',
+                                  [
+                                    { text: 'Cancelar', style: 'cancel' },
+                                    {
+                                      text: 'Excluir',
+                                      style: 'destructive',
+                                      onPress: async () => {
+                                        const success = await deleteVehicle(car.id);
+                                        if (success) {
+                                          Alert.alert('Sucesso', 'Veículo removido com sucesso!');
+                                        }
+                                      }
+                                    }
+                                  ]
+                                );
+                              }}
+                            >
+                              <Trash2 size={10} color="#ef4444" />
+                            </TouchableOpacity>
                           </View>
                         </View>
                       ))
@@ -744,96 +1704,437 @@ function MainWorkshopApp() {
         {/* TAB 3: WORK ORDERS */}
         {currentTab === 'os' && (
           <View style={styles.screenContainer}>
-            <View style={styles.screenHeader}>
-              <Text style={styles.tabTitle}>Ordens de Serviço</Text>
-              <TouchableOpacity style={styles.actionButton} onPress={() => setIsAddingOS(true)}>
-                <Plus size={16} color="#fff" />
-                <Text style={styles.actionButtonText}>Nova OS</Text>
-              </TouchableOpacity>
-            </View>
+            {!selectedOS ? (
+              // 1. OS LIST VIEW
+              <View style={{ flex: 1 }}>
+                <View style={styles.screenHeader}>
+                  <Text style={styles.tabTitle}>Ordens de Serviço</Text>
+                  <TouchableOpacity style={styles.actionButton} onPress={handleNewOS}>
+                    <Plus size={16} color="#fff" />
+                    <Text style={styles.actionButtonText}>Nova OS</Text>
+                  </TouchableOpacity>
+                </View>
 
-            {workOrders.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>Nenhuma OS cadastrada.</Text>
-              </View>
-            ) : (
-              workOrders.map(os => {
-                const client = clients.find(c => c.id === os.clientId);
-                const vehicle = vehicles.find(v => v.id === os.vehicleId);
-                return (
-                  <View key={os.id} style={[styles.card, styles.osCard]}>
-                    <View style={styles.osHeaderRow}>
-                      <Text style={styles.osNumberLabel}>{os.osNumber}</Text>
-                      <Text style={[styles.statusBadge, 
-                        os.status === 'Aberta' ? styles.statusOpen :
-                        os.status === 'Em andamento' ? styles.statusProgress :
-                        styles.statusDone
-                      ]}>{os.status.toUpperCase()}</Text>
-                    </View>
-                    
-                    <Text style={styles.osLabel}>Cliente: <Text style={styles.osValue}>{client?.name}</Text></Text>
-                    <Text style={styles.osLabel}>Veículo: <Text style={styles.osValue}>{vehicle ? `${vehicle.brand} ${vehicle.model} (${vehicle.plate})` : 'N/A'}</Text></Text>
-                    
-                    {os.services.length > 0 && (
-                      <Text style={styles.osLabel}>Serviços: <Text style={styles.osValue}>{os.services.map(s => s.name).join(', ')}</Text></Text>
-                    )}
-                    {os.parts.length > 0 && (
-                      <Text style={styles.osLabel}>Peças: <Text style={styles.osValue}>{os.parts.map(p => p.name).join(', ')}</Text></Text>
-                    )}
+                {/* OS Search Bar */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e293b', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 2, marginBottom: 10 }}>
+                  <Search size={14} color="#64748b" style={{ marginRight: 6 }} />
+                  <TextInput
+                    placeholder="Buscar por OS, cliente, placa..."
+                    placeholderTextColor="#475569"
+                    value={osSearch}
+                    onChangeText={setOsSearch}
+                    style={{ flex: 1, color: '#f1f5f9', fontSize: 11, paddingVertical: 6 }}
+                  />
+                  {osSearch !== '' && (
+                    <TouchableOpacity onPress={() => setOsSearch('')}>
+                      <X size={14} color="#64748b" />
+                    </TouchableOpacity>
+                  )}
+                </View>
 
-                    <View style={styles.divider} />
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Text style={styles.osDate}>{os.date.split('-').reverse().join('/')}</Text>
-                      <Text style={styles.osTotalVal}>{formatCurrency(os.grandTotal)}</Text>
-                    </View>
-
-                    <View style={{ flexDirection: 'row', gap: 6, marginTop: 10 }}>
-                      <TouchableOpacity 
-                        style={[styles.catalogActionButton, { flex: 1, flexDirection: 'row', gap: 4, alignItems: 'center', justifyContent: 'center' }]}
-                        onPress={() => handleShareOS(os)}
-                      >
-                        <FileText size={12} color="#3b66ff" />
-                        <Text style={{ fontSize: 9, color: '#3b66ff', fontWeight: 'bold' }}>Gerar PDF</Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity 
-                        style={[styles.catalogActionButton, { flex: 1, flexDirection: 'row', gap: 4, alignItems: 'center', justifyContent: 'center' }]}
-                        onPress={() => {
-                          if (os.status === 'Concluída' || os.status === 'Entregue') {
-                            Alert.alert('Aviso', 'Esta OS já foi finalizada e não pode ser assinada.');
-                          } else {
-                            setSigningOSId(os.id);
-                          }
+                {/* OS Status Horizontal Slider Filter */}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, marginBottom: 10, height: 26 }}>
+                  {['Todos', 'Aberta', 'Em andamento', 'Concluída', 'Entregue'].map(st => {
+                    const isActive = osStatusFilter === st;
+                    return (
+                      <TouchableOpacity
+                        key={st}
+                        onPress={() => setOsStatusFilter(st as any)}
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 4,
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          borderColor: isActive ? '#3b66ff' : '#1e293b',
+                          backgroundColor: isActive ? '#3b66ff' : '#0f172a',
+                          marginRight: 6
                         }}
                       >
-                        <Edit2 size={12} color="#3b66ff" />
-                        <Text style={{ fontSize: 9, color: '#3b66ff', fontWeight: 'bold' }}>
-                          {os.signature ? 'Assinado ✓' : 'Assinar'}
+                        <Text style={{ fontSize: 8, fontWeight: 'bold', textTransform: 'uppercase', color: isActive ? '#fff' : '#64748b' }}>
+                          {st}
                         </Text>
                       </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
 
-                      <TouchableOpacity 
-                        style={[styles.catalogActionButton, { paddingHorizontal: 10 }]}
-                        onPress={() => {
-                          Alert.alert(
-                            'Finalizar OS',
-                            'Mudar status para Entregue e dar baixa?',
-                            [
-                              { text: 'Cancelar', style: 'cancel' },
-                              { text: 'Mudar para Curso', onPress: () => updateWorkOrderStatus(os.id, 'Em andamento') },
-                              { text: 'Concluir', onPress: () => updateWorkOrderStatus(os.id, 'Concluída') },
-                              { text: 'Entregar (Finalizada)', onPress: () => updateWorkOrderStatus(os.id, 'Entregue') }
-                            ]
-                          );
+                {/* OS List */}
+                <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+                  {workOrders.filter(os => {
+                    const client = clients.find(c => c.id === os.clientId);
+                    const vehicle = vehicles.find(v => v.id === os.vehicleId);
+                    
+                    const matchesSearch = 
+                      os.osNumber.toLowerCase().includes(osSearch.toLowerCase()) ||
+                      (client?.name || '').toLowerCase().includes(osSearch.toLowerCase()) ||
+                      (vehicle?.plate || '').toLowerCase().includes(osSearch.toLowerCase());
+
+                    const matchesStatus = osStatusFilter === 'Todos' || os.status === osStatusFilter;
+
+                    return matchesSearch && matchesStatus;
+                  }).length === 0 ? (
+                    <View style={styles.emptyContainer}>
+                      <Text style={styles.emptyText}>Nenhuma OS encontrada.</Text>
+                    </View>
+                  ) : (
+                    workOrders.filter(os => {
+                      const client = clients.find(c => c.id === os.clientId);
+                      const vehicle = vehicles.find(v => v.id === os.vehicleId);
+                      
+                      const matchesSearch = 
+                        os.osNumber.toLowerCase().includes(osSearch.toLowerCase()) ||
+                        (client?.name || '').toLowerCase().includes(osSearch.toLowerCase()) ||
+                        (vehicle?.plate || '').toLowerCase().includes(osSearch.toLowerCase());
+
+                      const matchesStatus = osStatusFilter === 'Todos' || os.status === osStatusFilter;
+
+                      return matchesSearch && matchesStatus;
+                    }).map(os => {
+                      const client = clients.find(c => c.id === os.clientId);
+                      const vehicle = vehicles.find(v => v.id === os.vehicleId);
+                      const billing = billings.find(b => b.osId === os.id);
+
+                      let badgeColor = 'rgba(59, 102, 255, 0.1)';
+                      let badgeTextColor = '#3b66ff';
+                      if (os.status === 'Concluída') {
+                        badgeColor = 'rgba(34, 197, 94, 0.1)';
+                        badgeTextColor = '#22c55e';
+                      } else if (os.status === 'Em andamento') {
+                        badgeColor = 'rgba(234, 179, 8, 0.1)';
+                        badgeTextColor = '#eab308';
+                      } else if (os.status === 'Entregue') {
+                        badgeColor = 'rgba(100, 116, 139, 0.1)';
+                        badgeTextColor = '#64748b';
+                      }
+
+                      return (
+                        <TouchableOpacity
+                          key={os.id}
+                          onPress={() => setSelectedOS(os)}
+                          style={[styles.card, styles.osCard, { padding: 12, marginBottom: 8 }]}
+                        >
+                          <View style={styles.osHeaderRow}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <Text style={styles.osNumberLabel}>{os.osNumber}</Text>
+                              <View style={{ backgroundColor: badgeColor, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 }}>
+                                <Text style={{ fontSize: 7, fontWeight: 'bold', color: badgeTextColor }}>{os.status.toUpperCase()}</Text>
+                              </View>
+                            </View>
+                            <Text style={styles.osDate}>{os.date.split('-').reverse().join('/')}</Text>
+                          </View>
+                          
+                          <Text style={[styles.osLabel, { marginTop: 4 }]}>
+                            Cliente: <Text style={styles.osValue}>{client?.name}</Text>
+                          </Text>
+                          <Text style={[styles.osLabel, { marginTop: 2 }]}>
+                            Veículo: <Text style={styles.osValue}>{vehicle ? `${vehicle.brand} ${vehicle.model} (${vehicle.plate})` : 'N/A'}</Text>
+                          </Text>
+
+                          <View style={styles.divider} />
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                              {billing ? (
+                                <View style={{ backgroundColor: billing.status === 'Pago' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(234, 179, 8, 0.1)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                                  <Text style={{ fontSize: 7, fontWeight: 'bold', color: billing.status === 'Pago' ? '#22c55e' : '#eab308' }}>💰 FATURADA ({billing.status.toUpperCase()})</Text>
+                                </View>
+                              ) : (
+                                <View style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                                  <Text style={{ fontSize: 7, fontWeight: 'bold', color: '#ef4444' }}>💸 NÃO FATURADA</Text>
+                                </View>
+                              )}
+                            </View>
+                            <Text style={styles.osTotalVal}>{formatCurrency(os.grandTotal)}</Text>
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })
+                  )}
+                </ScrollView>
+              </View>
+            ) : (
+              // 2. OS DETAILED VIEW
+              <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+                {/* Header Actions */}
+                <View style={[styles.screenHeader, { marginBottom: 12 }]}>
+                  <TouchableOpacity 
+                    onPress={() => setSelectedOS(null)} 
+                    style={{ flexDirection: 'row', alignItems: 'center' }}
+                  >
+                    <ArrowLeft size={16} color="#3b66ff" style={{ marginRight: 2 }} />
+                    <Text style={{ fontSize: 11, color: '#3b66ff', fontWeight: 'bold' }}>Voltar</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    onPress={() => handleStartEditOS(selectedOS)} 
+                    style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(59, 102, 255, 0.1)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 }}
+                  >
+                    <Edit2 size={12} color="#3b66ff" style={{ marginRight: 4 }} />
+                    <Text style={{ fontSize: 10, color: '#3b66ff', fontWeight: 'bold' }}>Editar</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Status selector badges */}
+                <Text style={{ fontSize: 8, fontWeight: '900', color: '#64748b', letterSpacing: 0.5, marginBottom: 6 }}>STATUS DA ORDEM</Text>
+                <View style={{ flexDirection: 'row', gap: 4, marginBottom: 12 }}>
+                  {['Aberta', 'Em andamento', 'Concluída', 'Entregue'].map(st => {
+                    const isActive = selectedOS.status === st;
+                    let activeColor = '#3b66ff';
+                    if (st === 'Em andamento') activeColor = '#eab308';
+                    else if (st === 'Concluída') activeColor = '#22c55e';
+                    else if (st === 'Entregue') activeColor = '#64748b';
+
+                    return (
+                      <TouchableOpacity
+                        key={st}
+                        onPress={async () => {
+                          const success = await updateWorkOrderStatus(selectedOS.id, st as OSStatus);
+                          if (success) {
+                            setSelectedOS(prev => prev ? { ...prev, status: st as OSStatus } : null);
+                          }
+                        }}
+                        style={{
+                          flex: 1,
+                          paddingVertical: 5,
+                          borderRadius: 6,
+                          backgroundColor: isActive ? activeColor : '#0f1115',
+                          borderWidth: 1,
+                          borderColor: isActive ? activeColor : '#1e293b',
+                          alignItems: 'center'
                         }}
                       >
-                        <Check size={12} color="#22c55e" />
+                        <Text style={{ fontSize: 7, fontWeight: 'bold', color: isActive ? '#fff' : '#64748b', textTransform: 'uppercase' }}>{st}</Text>
                       </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {/* Info Card */}
+                <View style={[styles.card, { padding: 12, marginBottom: 12 }]}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '900', color: '#3b66ff' }}>{selectedOS.osNumber}</Text>
+                    <Text style={{ fontSize: 9, color: '#64748b' }}>Data: {selectedOS.date.split('-').reverse().join('/')}</Text>
+                  </View>
+                  <View style={{ borderTopWidth: 1, borderTopColor: '#1e293b', paddingTop: 8, gap: 4 }}>
+                    <Text style={{ fontSize: 9, color: '#94a3b8' }}>
+                      Cliente: <Text style={{ color: '#fff', fontWeight: 'bold' }}>{clients.find(c => c.id === selectedOS.clientId)?.name}</Text>
+                    </Text>
+                    <Text style={{ fontSize: 9, color: '#94a3b8' }}>
+                      Veículo: <Text style={{ color: '#fff', fontWeight: 'bold' }}>
+                        {(() => {
+                          const v = vehicles.find(veh => veh.id === selectedOS.vehicleId);
+                          return v ? `${v.brand} ${v.model} (${v.plate})` : 'N/A';
+                        })()}
+                      </Text>
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Services details */}
+                {selectedOS.services.length > 0 && (
+                  <View style={{ marginBottom: 12 }}>
+                    <Text style={{ fontSize: 8, fontWeight: '900', color: '#64748b', letterSpacing: 0.5, marginBottom: 6 }}>SERVIÇOS EXECUTADOS</Text>
+                    <View style={{ backgroundColor: '#0f1115', borderRadius: 12, borderWidth: 1, borderColor: '#1e293b', overflow: 'hidden' }}>
+                      {selectedOS.services.map((s, idx) => (
+                        <View key={idx} style={{ padding: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: idx === selectedOS.services.length - 1 ? 0 : 1, borderBottomColor: '#1e293b' }}>
+                          <View style={{ flex: 1, paddingRight: 8 }}>
+                            <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#fff' }}>{s.name}</Text>
+                            {s.code ? <Text style={{ fontSize: 7, color: '#64748b', marginTop: 2, fontFamily: 'monospace' }}>CÓD: {s.code}</Text> : null}
+                          </View>
+                          <View style={{ alignItems: 'flex-end' }}>
+                            <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#fff' }}>{formatCurrency(s.price * (s.quantity || 1))}</Text>
+                            {(s.quantity || 1) > 1 ? (
+                              <Text style={{ fontSize: 7, color: '#64748b', marginTop: 1 }}>{(s.quantity || 1)}x {formatCurrency(s.price)}</Text>
+                            ) : null}
+                          </View>
+                        </View>
+                      ))}
                     </View>
                   </View>
-                );
-              })
+                )}
+
+                {/* Parts details */}
+                {selectedOS.parts.length > 0 && (
+                  <View style={{ marginBottom: 12 }}>
+                    <Text style={{ fontSize: 8, fontWeight: '900', color: '#64748b', letterSpacing: 0.5, marginBottom: 6 }}>PEÇAS SUBSTITUÍDAS</Text>
+                    <View style={{ backgroundColor: '#0f1115', borderRadius: 12, borderWidth: 1, borderColor: '#1e293b', overflow: 'hidden' }}>
+                      {selectedOS.parts.map((p, idx) => (
+                        <View key={idx} style={{ padding: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: idx === selectedOS.parts.length - 1 ? 0 : 1, borderBottomColor: '#1e293b' }}>
+                          <View style={{ flex: 1, paddingRight: 8 }}>
+                            <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#fff' }}>{p.name}</Text>
+                            {p.code ? <Text style={{ fontSize: 7, color: '#64748b', marginTop: 2, fontFamily: 'monospace' }}>SKU: {p.code}</Text> : null}
+                          </View>
+                          <View style={{ alignItems: 'flex-end' }}>
+                            <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#fff' }}>{formatCurrency(p.salePrice * p.quantity)}</Text>
+                            {p.quantity > 1 ? (
+                              <Text style={{ fontSize: 7, color: '#64748b', marginTop: 1 }}>{p.quantity}x {formatCurrency(p.salePrice)}</Text>
+                            ) : null}
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                {/* Summary totals */}
+                <View style={[styles.card, { padding: 12, gap: 4, marginBottom: 12 }]}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ fontSize: 9, color: '#64748b' }}>Mão de Obra:</Text>
+                    <Text style={{ fontSize: 9, color: '#f1f5f9', fontWeight: 'bold' }}>{formatCurrency(selectedOS.servicesTotal)}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ fontSize: 9, color: '#64748b' }}>Peças:</Text>
+                    <Text style={{ fontSize: 9, color: '#f1f5f9', fontWeight: 'bold' }}>{formatCurrency(selectedOS.partsTotal)}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: '#1e293b', paddingTop: 6, marginTop: 4 }}>
+                    <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#3b66ff' }}>TOTAL GERAL:</Text>
+                    <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#fff' }}>{formatCurrency(selectedOS.grandTotal)}</Text>
+                  </View>
+                </View>
+
+                {/* Observations */}
+                {selectedOS.notes ? (
+                  <View style={{ marginBottom: 12 }}>
+                    <Text style={{ fontSize: 8, fontWeight: '900', color: '#64748b', letterSpacing: 0.5, marginBottom: 4 }}>OBSERVAÇÕES</Text>
+                    <View style={{ backgroundColor: '#0f1115', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#1e293b' }}>
+                      <Text style={{ fontSize: 9, color: '#cbd5e1', lineHeight: 12 }}>{selectedOS.notes}</Text>
+                    </View>
+                  </View>
+                ) : null}
+
+                {/* Client Signature display */}
+                <View style={{ marginBottom: 14 }}>
+                  <Text style={{ fontSize: 8, fontWeight: '900', color: '#64748b', letterSpacing: 0.5, marginBottom: 6 }}>ASSINATURA DIGITAL DO CLIENTE</Text>
+                  {selectedOS.signature ? (
+                    <View style={{ backgroundColor: '#0f1115', padding: 10, borderRadius: 12, borderWidth: 1, borderColor: '#1e293b', alignItems: 'center', justifyContent: 'center' }}>
+                      <SvgXml xml={selectedOS.signature} width="200" height="80" />
+                      <Text style={{ fontSize: 7, color: '#64748b', marginTop: 4 }}>ASSINADO DIGITALMENTE</Text>
+                    </View>
+                  ) : (
+                    <TouchableOpacity 
+                      onPress={() => setSigningOSId(selectedOS.id)}
+                      style={{ backgroundColor: '#0f1115', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#1e293b', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 }}
+                    >
+                      <PenTool size={12} color="#64748b" />
+                      <Text style={{ fontSize: 9, color: '#64748b', fontWeight: 'bold' }}>Coletar Assinatura do Cliente</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {/* Actions Panel */}
+                <View style={{ flexDirection: 'row', gap: 6, marginBottom: 16 }}>
+                  <TouchableOpacity 
+                    onPress={() => handleShareOS(selectedOS)}
+                    style={{ flex: 1, backgroundColor: '#3b66ff', paddingVertical: 12, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 }}
+                  >
+                    <FileText size={14} color="#fff" />
+                    <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#fff' }}>Imprimir / PDF</Text>
+                  </TouchableOpacity>
+
+                  {(() => {
+                    const billing = billings.find(b => b.osId === selectedOS.id);
+                    if (billing) {
+                      return (
+                        <View style={{ flex: 1, backgroundColor: 'rgba(34, 197, 94, 0.1)', paddingVertical: 12, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(34, 197, 94, 0.3)' }}>
+                          <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#22c55e', textTransform: 'uppercase' }}>💰 FATURADA ({billing.status})</Text>
+                        </View>
+                      );
+                    } else {
+                      return (
+                        <TouchableOpacity 
+                          onPress={() => setShowBillingPanel(true)}
+                          style={{ flex: 1, backgroundColor: '#10b981', paddingVertical: 12, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 }}
+                        >
+                          <DollarSign size={14} color="#fff" />
+                          <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#fff' }}>Faturar OS</Text>
+                        </TouchableOpacity>
+                      );
+                    }
+                  })()}
+                </View>
+              </ScrollView>
             )}
+
+            {/* MODAL: BILLING PANEL */}
+            <Modal visible={showBillingPanel && !!selectedOS} animationType="slide" transparent>
+              <View style={styles.modalBg}>
+                <View style={styles.modalContent}>
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Faturamento da OS</Text>
+                    <TouchableOpacity onPress={() => setShowBillingPanel(false)}>
+                      <X size={20} color="#94a3b8" />
+                    </TouchableOpacity>
+                  </View>
+
+                  <ScrollView showsVerticalScrollIndicator={false}>
+                    <View style={{ marginBottom: 12 }}>
+                      <Text style={{ fontSize: 9, color: '#64748b', fontWeight: 'bold' }}>VALOR TOTAL A FATURAR</Text>
+                      <Text style={{ fontSize: 20, fontWeight: '900', color: '#22c55e', marginTop: 2 }}>
+                        {selectedOS ? formatCurrency(selectedOS.grandTotal) : ''}
+                      </Text>
+                    </View>
+
+                    <Text style={styles.inputLabel}>Forma de Pagamento</Text>
+                    <View style={styles.pickerFakeRow}>
+                      {['PIX', 'Dinheiro', 'Débito', 'Crédito', 'Boleto'].map(method => (
+                        <TouchableOpacity 
+                          key={method}
+                          onPress={() => setBillingForm(prev => ({ ...prev, paymentMethod: method as any }))}
+                          style={[styles.pickerTag, billingForm.paymentMethod === method ? styles.pickerTagActive : null]}
+                        >
+                          <Text style={[styles.pickerTagText, billingForm.paymentMethod === method ? styles.pickerTagActiveText : null]}>{method}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+
+                    <Text style={styles.inputLabel}>Número de Parcelas</Text>
+                    <View style={styles.pickerFake}>
+                      {['1', '2', '3', '4', '6', '12'].map(count => {
+                        const label = count === '1' ? 'À vista (1x)' : `${count} parcelas`;
+                        return (
+                          <TouchableOpacity 
+                            key={count} 
+                            onPress={() => setBillingForm(prev => ({ ...prev, installmentsCount: count }))}
+                            style={[styles.pickerItem, billingForm.installmentsCount === count ? styles.pickerItemActive : null]}
+                          >
+                            <Text style={[styles.pickerItemText, billingForm.installmentsCount === count ? styles.pickerItemActiveText : null]}>
+                              {label}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+
+                    {/* Prévia das Parcelas */}
+                    <Text style={styles.inputLabel}>Prévia das Parcelas</Text>
+                    <View style={{ backgroundColor: '#0a0c10', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#1e293b', marginBottom: 15 }}>
+                      {(() => {
+                        if (!selectedOS) return null;
+                        const arr = [];
+                        const count = parseInt(billingForm.installmentsCount);
+                        const baseVal = selectedOS.grandTotal / count;
+                        for (let i = 1; i <= count; i++) {
+                          const d = new Date();
+                          d.setDate(d.getDate() + (30 * (i - 1)));
+                          arr.push(
+                            <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', marginVertical: 2 }}>
+                              <Text style={{ fontSize: 9, color: '#94a3b8', fontFamily: 'monospace' }}>Parcela {i}:</Text>
+                              <Text style={{ fontSize: 9, color: '#f1f5f9', fontFamily: 'monospace', fontWeight: 'bold' }}>
+                                {formatCurrency(baseVal)} • Venc: {d.toLocaleDateString('pt-BR')}
+                              </Text>
+                            </View>
+                          );
+                        }
+                        return arr;
+                      })()}
+                    </View>
+
+                    <TouchableOpacity style={styles.submitButton} onPress={handleFaturarOS}>
+                      <Text style={styles.submitButtonText}>Confirmar e Faturar OS</Text>
+                    </TouchableOpacity>
+                  </ScrollView>
+                </View>
+              </View>
+            </Modal>
           </View>
         )}
 
@@ -848,75 +2149,176 @@ function MainWorkshopApp() {
               </TouchableOpacity>
             </View>
 
-            <View style={[styles.card, styles.balanceCard]}>
-              <Text style={styles.balanceLabel}>SALDO EM CAIXA</Text>
-              <Text style={[styles.balanceValue, saldoCaixa >= 0 ? styles.textGreen : styles.textRed]}>
-                {formatCurrency(saldoCaixa)}
-              </Text>
-              <View style={styles.balanceSummary}>
-                <Text style={styles.balanceSubText}>Entradas: <Text style={styles.textGreen}>{formatCurrency(totalEntradas)}</Text></Text>
-                <Text style={styles.balanceSubText}>Saídas: <Text style={styles.textRed}>{formatCurrency(totalSaidas)}</Text></Text>
+            <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }}>
+              {/* Balanço Geral */}
+              <View style={[styles.card, styles.balanceCard, { paddingVertical: 14 }]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View>
+                    <Text style={styles.balanceLabel}>SALDO EM CAIXA (ATUAL)</Text>
+                    <Text style={[styles.balanceValue, saldoAtual >= 0 ? styles.textGreen : styles.textRed, { fontSize: 22, marginTop: 4 }]}>
+                      {formatCurrency(saldoAtual)}
+                    </Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end', gap: 2 }}>
+                    <Text style={{ fontSize: 9, color: '#94a3b8', fontWeight: 'bold' }}>
+                      Faturamento: <Text style={{ color: '#f1f5f9' }}>{formatCurrency(faturamentoMes)}</Text>
+                    </Text>
+                    <Text style={{ fontSize: 9, color: '#94a3b8', fontWeight: 'bold' }}>
+                      A Receber: <Text style={{ color: '#3b66ff' }}>{formatCurrency(totalAReceber)}</Text>
+                    </Text>
+                  </View>
+                </View>
+                <View style={[styles.balanceSummary, { borderTopWidth: 1, borderTopColor: '#1e293b', marginTop: 10, paddingTop: 10, flexDirection: 'row', justifyContent: 'space-between' }]}>
+                  <Text style={styles.balanceSubText}>Total Entradas: <Text style={styles.textGreen}>{formatCurrency(totalRecebido)}</Text></Text>
+                  <Text style={styles.balanceSubText}>Total Saídas: <Text style={styles.textRed}>{formatCurrency(totalDespesas)}</Text></Text>
+                </View>
               </View>
-            </View>
 
-            <Text style={styles.sectionTitle}>HISTÓRICO DE COBRANÇAS</Text>
-            {billings.length === 0 ? (
-              <Text style={styles.emptyText}>Nenhuma cobrança registrada.</Text>
-            ) : (
-              billings.map(bill => {
-                const linkOS = workOrders.find(o => o.id === bill.osId);
-                const client = linkOS ? clients.find(c => c.id === linkOS.clientId) : null;
-                return (
-                  <View key={bill.id} style={styles.listItem}>
-                    <View>
-                      <Text style={styles.osNum}>Cobrança {linkOS?.osNumber || ''}</Text>
-                      <Text style={{ fontSize: 8, color: '#64748b' }}>Cliente: {client?.name}</Text>
-                      <Text style={{ fontSize: 8, color: '#64748b' }}>Vencimento: {bill.dueDate.split('-').reverse().join('/')}</Text>
-                    </View>
-                    <View style={{ alignItems: 'flex-end' }}>
-                      <Text style={styles.osTotal}>{formatCurrency(bill.amount)}</Text>
-                      <TouchableOpacity 
-                        style={[styles.statusBadge, 
-                          bill.status === 'Pago' ? styles.statusDone : styles.statusOpen,
-                          { marginTop: 4 }
-                        ]}
-                        onPress={() => {
-                          if (bill.status !== 'Pago') {
-                            Alert.alert(
-                              'Dar Baixa',
-                              'Registrar recebimento desta cobrança?',
-                              [
-                                { text: 'Cancelar', style: 'cancel' },
-                                { text: 'Sim, Baixar', onPress: () => payInstallment(bill.id, 1) }
-                              ]
-                            );
-                          }
+              {/* Resumo por Período */}
+              <View style={[styles.card, { padding: 12, marginBottom: 12 }]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <View>
+                    <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#f1f5f9' }}>RESUMO POR PERÍODO</Text>
+                    <Text style={{ fontSize: 7, color: '#64748b' }}>Entradas, saídas e resultado líquido</Text>
+                  </View>
+                  
+                  {/* Seletores de Período */}
+                  <View style={{ flexDirection: 'row', backgroundColor: '#0f172a', borderRadius: 8, padding: 2 }}>
+                    {(['diario', 'semanal', 'mensal'] as const).map(period => (
+                      <TouchableOpacity
+                        key={period}
+                        onPress={() => setSummaryPeriod(period)}
+                        style={{
+                          paddingHorizontal: 8,
+                          paddingVertical: 4,
+                          borderRadius: 6,
+                          backgroundColor: summaryPeriod === period ? '#3b66ff' : 'transparent',
                         }}
                       >
-                        <Text style={{ fontSize: 7, fontWeight: 'bold' }}>{bill.status.toUpperCase()}</Text>
+                        <Text style={{ fontSize: 8, fontWeight: 'bold', color: summaryPeriod === period ? '#fff' : '#64748b' }}>
+                          {period === 'diario' ? 'Diário' : period === 'semanal' ? 'Semanal' : 'Mensal'}
+                        </Text>
                       </TouchableOpacity>
-                    </View>
+                    ))}
                   </View>
-                );
-              })
-            )}
-
-            <Text style={styles.sectionTitle}>ÚLTIMAS TRANSAÇÕES</Text>
-            {transactions.length === 0 ? (
-              <Text style={styles.emptyText}>Nenhum lançamento no extrato.</Text>
-            ) : (
-              transactions.map(t => (
-                <View key={t.id} style={styles.listItem}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.tDesc}>{t.description}</Text>
-                    <Text style={styles.tDate}>{t.date.split('-').reverse().join('/')} | {t.category}</Text>
-                  </View>
-                  <Text style={[styles.tAmount, t.type === 'Entrada' ? styles.textGreen : styles.textRed]}>
-                    {t.type === 'Entrada' ? '+' : '-'}{formatCurrency(t.amount)}
-                  </Text>
                 </View>
-              ))
-            )}
+
+                {/* Grid de Período */}
+                <View style={{ flexDirection: 'row', gap: 6 }}>
+                  {/* Entradas */}
+                  <View style={{ flex: 1, backgroundColor: '#0f172a', borderRadius: 8, padding: 8 }}>
+                    <Text style={{ fontSize: 7, fontWeight: 'bold', color: '#22c55e' }}>ENTRADAS</Text>
+                    <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#fff', marginTop: 4 }}>
+                      {formatCurrency(
+                        summaryPeriod === 'diario' ? entradasHoje :
+                        summaryPeriod === 'semanal' ? entradasSemana :
+                        entradasMes
+                      )}
+                    </Text>
+                  </View>
+                  {/* Saídas */}
+                  <View style={{ flex: 1, backgroundColor: '#0f172a', borderRadius: 8, padding: 8 }}>
+                    <Text style={{ fontSize: 7, fontWeight: 'bold', color: '#ef4444' }}>SAÍDAS</Text>
+                    <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#fff', marginTop: 4 }}>
+                      {formatCurrency(
+                        summaryPeriod === 'diario' ? saidasHoje :
+                        summaryPeriod === 'semanal' ? saidasSemana :
+                        saidasMes
+                      )}
+                    </Text>
+                  </View>
+                  {/* Líquido */}
+                  <View style={{ flex: 1, backgroundColor: '#0f172a', borderRadius: 8, padding: 8 }}>
+                    <Text style={{ fontSize: 7, fontWeight: 'bold', color: '#3b66ff' }}>LÍQUIDO</Text>
+                    <Text style={[
+                      { fontSize: 10, fontWeight: 'bold', marginTop: 4 },
+                      (summaryPeriod === 'diario' ? saldoHoje : summaryPeriod === 'semanal' ? saldoSemana : saldoMes) >= 0
+                        ? styles.textGreen
+                        : styles.textRed
+                    ]}>
+                      {formatCurrency(
+                        summaryPeriod === 'diario' ? saldoHoje :
+                        summaryPeriod === 'semanal' ? saldoSemana :
+                        saldoMes
+                      )}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Listagem de Transações com Filtro */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, marginTop: 4 }}>
+                <Text style={styles.sectionTitle}>TRANSAÇÕES</Text>
+                
+                <View style={{ flexDirection: 'row', backgroundColor: '#1e293b', borderRadius: 8, padding: 2 }}>
+                  {(['Todos', 'Entradas', 'Saídas'] as const).map(fl => (
+                    <TouchableOpacity
+                      key={fl}
+                      onPress={() => setActiveFinanceFilter(fl)}
+                      style={{
+                        paddingHorizontal: 8,
+                        paddingVertical: 3,
+                        borderRadius: 6,
+                        backgroundColor: activeFinanceFilter === fl ? '#3b66ff' : 'transparent',
+                      }}
+                    >
+                      <Text style={{ fontSize: 8, fontWeight: 'bold', color: activeFinanceFilter === fl ? '#fff' : '#94a3b8' }}>
+                        {fl}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Lista de Transações */}
+              {transactions.filter(t => {
+                if (activeFinanceFilter === 'Todos') return true;
+                return activeFinanceFilter === 'Entradas' ? t.type === 'Entrada' : t.type === 'Saída';
+              }).length === 0 ? (
+                <Text style={styles.emptyText}>Nenhum lançamento encontrado.</Text>
+              ) : (
+                transactions.filter(t => {
+                  if (activeFinanceFilter === 'Todos') return true;
+                  return activeFinanceFilter === 'Entradas' ? t.type === 'Entrada' : t.type === 'Saída';
+                }).map(t => {
+                  const isInflow = t.type === 'Entrada';
+                  return (
+                    <View key={t.id} style={[styles.listItem, { justifyContent: 'space-between', alignItems: 'center' }]}>
+                      <View style={{ flex: 1, paddingRight: 8 }}>
+                        <Text style={styles.tDesc}>{t.description}</Text>
+                        <Text style={styles.tDate}>{t.date.split('-').reverse().join('/')} | {t.category}</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        <Text style={[styles.tAmount, isInflow ? styles.textGreen : styles.textRed, { fontWeight: 'bold' }]}>
+                          {isInflow ? '+' : '-'}{formatCurrency(t.amount)}
+                        </Text>
+                        <TouchableOpacity
+                          style={{ padding: 6, backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: 6 }}
+                          onPress={() => {
+                            Alert.alert(
+                              'Excluir Transação',
+                              'Deseja excluir este lançamento financeiro? O saldo será recalculado.',
+                              [
+                                { text: 'Cancelar', style: 'cancel' },
+                                {
+                                  text: 'Excluir',
+                                  style: 'destructive',
+                                  onPress: async () => {
+                                    await deleteTransaction(t.id);
+                                  }
+                                }
+                              ]
+                            );
+                          }}
+                        >
+                          <Trash2 size={10} color="#ef4444" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  );
+                })
+              )}
+            </ScrollView>
           </View>
         )}
 
@@ -940,6 +2342,27 @@ function MainWorkshopApp() {
                 <View style={styles.menuTextContainer}>
                   <Text style={styles.menuCardTitle}>Catálogo de Serviços e Peças</Text>
                   <Text style={styles.menuCardSub}>Configure preços e quantidade em estoque.</Text>
+                </View>
+              </View>
+              <ChevronRight size={16} color="#64748b" />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.card, styles.menuCard]} 
+              onPress={() => {
+                setMoreSubScreen('billing');
+                setSelectedBillingDetail(null);
+                setBillingSearch('');
+                setBillingStatusFilter('Todos');
+              }}
+            >
+              <View style={styles.menuCardLeft}>
+                <View style={styles.menuIconContainer}>
+                  <Wallet size={18} color="#3b66ff" />
+                </View>
+                <View style={styles.menuTextContainer}>
+                  <Text style={styles.menuCardTitle}>Cobranças & Parcelamentos</Text>
+                  <Text style={styles.menuCardSub}>Controle de recebimentos de OS e parcelas.</Text>
                 </View>
               </View>
               <ChevronRight size={16} color="#64748b" />
@@ -1012,24 +2435,112 @@ function MainWorkshopApp() {
             <View style={{ marginTop: 8 }}>
               {catalogSegment === 'services' ? (
                 services.filter(s => s.name.toLowerCase().includes(catalogSearch.toLowerCase())).map(item => (
-                  <View key={item.id} style={styles.catalogListItem}>
-                    <View>
+                  <View key={item.id} style={[styles.catalogListItem, { justifyContent: 'space-between', alignItems: 'center' }]}>
+                    <View style={{ flex: 1, paddingRight: 8 }}>
                       <Text style={styles.catalogItemName}>{item.name}</Text>
                       {item.code ? <Text style={styles.catalogItemCodeBadge}>{item.code}</Text> : null}
                     </View>
-                    <Text style={styles.catalogItemPriceVal}>{formatCurrency(item.price)}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      <Text style={styles.catalogItemPriceVal}>{formatCurrency(item.price)}</Text>
+                      <View style={{ flexDirection: 'row', gap: 4 }}>
+                        <TouchableOpacity
+                          style={{ padding: 6, backgroundColor: 'rgba(59, 102, 255, 0.1)', borderRadius: 6 }}
+                          onPress={() => {
+                            setEditingServiceId(item.id);
+                            setServiceForm({
+                              name: item.name,
+                              code: item.code || '',
+                              description: item.description || '',
+                              price: item.price.toString()
+                            });
+                            setIsAddingCatalogService(true);
+                          }}
+                        >
+                          <Edit2 size={10} color="#3b66ff" />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={{ padding: 6, backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: 6 }}
+                          onPress={() => {
+                            Alert.alert(
+                              'Excluir Serviço',
+                              'Tem certeza que deseja remover este serviço do catálogo?',
+                              [
+                                { text: 'Cancelar', style: 'cancel' },
+                                {
+                                  text: 'Excluir',
+                                  style: 'destructive',
+                                  onPress: async () => {
+                                    const success = await deleteService(item.id);
+                                    if (success) {
+                                      Alert.alert('Sucesso', 'Serviço removido com sucesso!');
+                                    }
+                                  }
+                                }
+                              ]
+                            );
+                          }}
+                        >
+                          <Trash2 size={10} color="#ef4444" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
                   </View>
                 ))
               ) : (
                 parts.filter(p => p.name.toLowerCase().includes(catalogSearch.toLowerCase())).map(item => (
-                  <View key={item.id} style={styles.catalogListItem}>
-                    <View>
+                  <View key={item.id} style={[styles.catalogListItem, { justifyContent: 'space-between', alignItems: 'center' }]}>
+                    <View style={{ flex: 1, paddingRight: 8 }}>
                       <Text style={styles.catalogItemName}>{item.name}</Text>
                       <Text style={styles.clientDetails}>SKU: {item.code} | Forn: {item.supplier}</Text>
                     </View>
-                    <View style={{ alignItems: 'flex-end' }}>
-                      <Text style={styles.catalogItemPriceVal}>{formatCurrency(item.salePrice)}</Text>
-                      <Text style={{ fontSize: 8, color: '#64748b', marginTop: 2 }}>Estoque: {item.stock}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={styles.catalogItemPriceVal}>{formatCurrency(item.salePrice)}</Text>
+                        <Text style={{ fontSize: 8, color: '#64748b', marginTop: 2 }}>Estoque: {item.stock}</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', gap: 4 }}>
+                        <TouchableOpacity
+                          style={{ padding: 6, backgroundColor: 'rgba(59, 102, 255, 0.1)', borderRadius: 6 }}
+                          onPress={() => {
+                            setEditingPartId(item.id);
+                            setPartForm({
+                              name: item.name,
+                              code: item.code,
+                              supplier: item.supplier || '',
+                              purchasePrice: item.purchasePrice.toString(),
+                              salePrice: item.salePrice.toString(),
+                              stock: item.stock.toString()
+                            });
+                            setIsAddingCatalogPart(true);
+                          }}
+                        >
+                          <Edit2 size={10} color="#3b66ff" />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={{ padding: 6, backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: 6 }}
+                          onPress={() => {
+                            Alert.alert(
+                              'Excluir Peça',
+                              'Tem certeza que deseja remover esta peça do catálogo?',
+                              [
+                                { text: 'Cancelar', style: 'cancel' },
+                                {
+                                  text: 'Excluir',
+                                  style: 'destructive',
+                                  onPress: async () => {
+                                    const success = await deletePart(item.id);
+                                    if (success) {
+                                      Alert.alert('Sucesso', 'Peça removida com sucesso!');
+                                    }
+                                  }
+                                }
+                              ]
+                            );
+                          }}
+                        >
+                          <Trash2 size={10} color="#ef4444" />
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   </View>
                 ))
@@ -1070,11 +2581,40 @@ function MainWorkshopApp() {
                 style={styles.formInput} 
               />
 
-              <Text style={styles.formLabel}>Telefone / WhatsApp</Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.formLabel}>Telefone Comercial</Text>
+                  <TextInput 
+                    value={settings.phone} 
+                    onChangeText={t => updateSettings({ phone: t })}
+                    style={styles.formInput} 
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.formLabel}>WhatsApp</Text>
+                  <TextInput 
+                    value={settings.whatsapp} 
+                    onChangeText={t => updateSettings({ whatsapp: t })}
+                    style={styles.formInput} 
+                  />
+                </View>
+              </View>
+
+              <Text style={styles.formLabel}>E-mail de Contato</Text>
               <TextInput 
-                value={settings.phone} 
-                onChangeText={t => updateSettings({ phone: t, whatsapp: t })}
+                value={settings.email} 
+                onChangeText={t => updateSettings({ email: t })}
                 style={styles.formInput} 
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+
+              <Text style={styles.formLabel}>URL do Logotipo (.png/.jpg)</Text>
+              <TextInput 
+                value={settings.logoUrl} 
+                onChangeText={t => updateSettings({ logoUrl: t })}
+                style={styles.formInput} 
+                autoCapitalize="none"
               />
 
               <Text style={styles.formLabel}>Notas de Rodapé do PDF</Text>
@@ -1083,18 +2623,321 @@ function MainWorkshopApp() {
                 onChangeText={t => updateSettings({ pdfNotes: t })}
                 style={styles.formInput} 
               />
+
+              {/* Toggle autoSequence */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 8, borderTopWidth: 1, borderTopColor: '#1e293b', paddingTop: 10, marginTop: 4 }}>
+                <View style={{ flex: 1, paddingRight: 8 }}>
+                  <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>Numeração de OS automática</Text>
+                  <Text style={{ color: '#64748b', fontSize: 8 }}>Gera OS-0001, OS-0002 em sequência</Text>
+                </View>
+                <TouchableOpacity 
+                  onPress={() => updateSettings({ autoSequence: !settings.autoSequence })}
+                  style={{ 
+                    width: 40, 
+                    height: 22, 
+                    borderRadius: 11, 
+                    backgroundColor: settings.autoSequence ? '#3b66ff' : '#1e293b', 
+                    padding: 2, 
+                    justifyContent: 'center', 
+                    alignItems: settings.autoSequence ? 'flex-end' : 'flex-start' 
+                  }}
+                >
+                  <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: '#fff' }} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <View style={styles.card}>
-              <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#fff', marginBottom: 6 }}>Exportar Cópia de Segurança</Text>
-              <Text style={styles.clientDetails}>Salve ou envie todos os seus clientes, veículos e ordens como arquivo JSON.</Text>
+              <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#fff', marginBottom: 6 }}>Backup & Segurança</Text>
+              <Text style={styles.clientDetails}>Exporte seus cadastros de clientes, carros e finanças para segurança física offline, permitindo restaurar a qualquer momento.</Text>
+              
+              <View style={{ flexDirection: 'row', gap: 6, marginTop: 10 }}>
+                <TouchableOpacity 
+                  style={{ flex: 1, backgroundColor: '#1e293b', paddingVertical: 10, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#334155' }} 
+                  onPress={handleExportBackup}
+                >
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>Exportar JSON</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={{ flex: 1, backgroundColor: '#1e293b', paddingVertical: 10, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#334155' }} 
+                  onPress={handleImportBackup}
+                >
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>Importar JSON</Text>
+                </TouchableOpacity>
+              </View>
+
               <TouchableOpacity 
-                style={[styles.saveSettingsButton, { backgroundColor: '#10b981' }]} 
-                onPress={handleExportBackup}
+                style={{ backgroundColor: '#1e293b', paddingVertical: 10, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginTop: 8, borderWidth: 1, borderColor: '#10b981' }} 
+                onPress={handleExportCsv}
               >
-                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>Compartilhar Backup JSON</Text>
+                <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 11 }}>Exportar Ordens (Excel .CSV)</Text>
+              </TouchableOpacity>
+
+              <View style={{ height: 1, backgroundColor: '#1e293b', marginVertical: 12 }} />
+
+              <TouchableOpacity 
+                style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', paddingVertical: 10, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.3)' }} 
+                onPress={handleResetDatabase}
+              >
+                <Text style={{ color: '#ef4444', fontWeight: 'bold', fontSize: 11 }}>Resetar Base de Dados (Limpar Tudo)</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        )}
+
+        {/* SUB MORE: BILLINGS & INSTALLMENTS */}
+        {currentTab === 'more' && moreSubScreen === 'billing' && (
+          <View style={styles.screenContainer}>
+            {!selectedBillingDetail ? (
+              <View style={{ flex: 1 }}>
+                <View style={[styles.screenHeader, { marginBottom: 12 }]}>
+                  <TouchableOpacity style={styles.backButton} onPress={() => setMoreSubScreen('menu')}>
+                    <ArrowLeft size={14} color="#fff" style={{ marginRight: 2 }} />
+                    <Text style={styles.backButtonText}>Menu</Text>
+                  </TouchableOpacity>
+                  <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#fff' }}>Cobranças</Text>
+                </View>
+
+                {/* Busca */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e293b', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 2, marginBottom: 10 }}>
+                  <Search size={14} color="#64748b" style={{ marginRight: 6 }} />
+                  <TextInput
+                    placeholder="Buscar por OS ou cliente..."
+                    placeholderTextColor="#475569"
+                    value={billingSearch}
+                    onChangeText={setBillingSearch}
+                    style={{ flex: 1, color: '#f1f5f9', fontSize: 11, paddingVertical: 6 }}
+                  />
+                  {billingSearch !== '' && (
+                    <TouchableOpacity onPress={() => setBillingSearch('')}>
+                      <X size={14} color="#64748b" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {/* Filtro de Status horizontal */}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, marginBottom: 10 }}>
+                  {['Todos', 'Pendente', 'Parcialmente pago', 'Pago', 'Cancelado'].map(st => {
+                    const isActive = billingStatusFilter === st;
+                    return (
+                      <TouchableOpacity
+                        key={st}
+                        onPress={() => setBillingStatusFilter(st as any)}
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 5,
+                          borderRadius: 15,
+                          borderWidth: 1,
+                          borderColor: isActive ? '#3b66ff' : '#1e293b',
+                          backgroundColor: isActive ? '#3b66ff' : '#0f172a',
+                          marginRight: 6
+                        }}
+                      >
+                        <Text style={{ fontSize: 8, fontWeight: 'bold', textTransform: 'uppercase', color: isActive ? '#fff' : '#64748b' }}>
+                          {st}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+
+                {/* Lista */}
+                <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+                  {billings.filter(b => {
+                    const os = workOrders.find(o => o.id === b.osId);
+                    const client = os ? clients.find(c => c.id === os.clientId) : null;
+                    const matchesSearch = 
+                      (os?.osNumber || '').toLowerCase().includes(billingSearch.toLowerCase()) ||
+                      (client?.name || '').toLowerCase().includes(billingSearch.toLowerCase());
+                    const matchesStatus = billingStatusFilter === 'Todos' || b.status === billingStatusFilter;
+                    return matchesSearch && matchesStatus;
+                  }).length === 0 ? (
+                    <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                      <Text style={styles.emptyText}>Nenhuma cobrança encontrada.</Text>
+                    </View>
+                  ) : (
+                    billings.filter(b => {
+                      const os = workOrders.find(o => o.id === b.osId);
+                      const client = os ? clients.find(c => c.id === os.clientId) : null;
+                      const matchesSearch = 
+                        (os?.osNumber || '').toLowerCase().includes(billingSearch.toLowerCase()) ||
+                        (client?.name || '').toLowerCase().includes(billingSearch.toLowerCase());
+                      const matchesStatus = billingStatusFilter === 'Todos' || b.status === billingStatusFilter;
+                      return matchesSearch && matchesStatus;
+                    }).map(b => {
+                      const os = workOrders.find(o => o.id === b.osId);
+                      const client = os ? clients.find(c => c.id === os.clientId) : null;
+                      const paidCount = b.installments.filter(i => i.status === 'Pago').length;
+                      
+                      let badgeColor = 'rgba(59, 102, 255, 0.1)';
+                      let badgeTextColor = '#3b66ff';
+                      if (b.status === 'Pago') {
+                        badgeColor = 'rgba(34, 197, 94, 0.1)';
+                        badgeTextColor = '#22c55e';
+                      } else if (b.status === 'Parcialmente pago') {
+                        badgeColor = 'rgba(234, 179, 8, 0.1)';
+                        badgeTextColor = '#eab308';
+                      } else if (b.status === 'Cancelado') {
+                        badgeColor = 'rgba(100, 116, 139, 0.1)';
+                        badgeTextColor = '#64748b';
+                      }
+
+                      return (
+                        <TouchableOpacity
+                          key={b.id}
+                          onPress={() => setSelectedBillingDetail(b)}
+                          style={[styles.card, { padding: 12, marginBottom: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
+                        >
+                          <View style={{ flex: 1, paddingRight: 8 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                              <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#fff' }}>OS-{os?.osNumber || 'S/N'}</Text>
+                              <View style={{ backgroundColor: badgeColor, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 }}>
+                                <Text style={{ fontSize: 7, fontWeight: 'bold', color: badgeTextColor }}>{b.status.toUpperCase()}</Text>
+                              </View>
+                            </View>
+                            <Text style={{ fontSize: 9, color: '#94a3b8', marginBottom: 2 }} numberOfLines={1}>{client?.name}</Text>
+                            <Text style={{ fontSize: 8, color: '#64748b' }}>
+                              Método: {b.paymentMethod} • Parcelas: <Text style={{ color: '#3b66ff', fontWeight: 'bold' }}>{paidCount}/{b.installments.length}</Text>
+                            </Text>
+                          </View>
+                          <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                            <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#fff' }}>{formatCurrency(b.amount)}</Text>
+                            <Text style={{ fontSize: 8, color: '#64748b' }}>Venc: {b.dueDate.split('-').reverse().join('/')}</Text>
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })
+                  )}
+                </ScrollView>
+              </View>
+            ) : (
+              <View style={{ flex: 1 }}>
+                <TouchableOpacity
+                  onPress={() => setSelectedBillingDetail(null)}
+                  style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}
+                >
+                  <ArrowLeft size={16} color="#3b66ff" />
+                  <Text style={{ fontSize: 11, color: '#3b66ff', fontWeight: 'bold', marginLeft: 4 }}>Voltar</Text>
+                </TouchableOpacity>
+
+                {/* Detalhes Cabeçalho */}
+                <View style={[styles.card, { padding: 14, marginBottom: 14 }]}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <View>
+                      <Text style={{ fontSize: 8, color: '#64748b', fontWeight: 'bold' }}>COBRANÇA DA ORDEM</Text>
+                      <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#3b66ff' }}>
+                        OS-{workOrders.find(o => o.id === selectedBillingDetail.osId)?.osNumber || 'S/N'}
+                      </Text>
+                    </View>
+                    <View style={{
+                      backgroundColor: selectedBillingDetail.status === 'Pago' ? 'rgba(34, 197, 94, 0.1)' : selectedBillingDetail.status === 'Parcialmente pago' ? 'rgba(234, 179, 8, 0.1)' : 'rgba(59, 102, 255, 0.1)',
+                      paddingHorizontal: 8,
+                      paddingVertical: 4,
+                      borderRadius: 12
+                    }}>
+                      <Text style={{
+                        fontSize: 8,
+                        fontWeight: 'bold',
+                        color: selectedBillingDetail.status === 'Pago' ? '#22c55e' : selectedBillingDetail.status === 'Parcialmente pago' ? '#eab308' : '#3b66ff'
+                      }}>{selectedBillingDetail.status.toUpperCase()}</Text>
+                    </View>
+                  </View>
+
+                  <View style={{ borderTopWidth: 1, borderTopColor: '#1e293b', paddingTop: 8, gap: 4 }}>
+                    <Text style={{ fontSize: 9, color: '#94a3b8' }}>
+                      Cliente: <Text style={{ color: '#fff', fontWeight: 'bold' }}>
+                        {(() => {
+                          const os = workOrders.find(o => o.id === selectedBillingDetail.osId);
+                          const client = os ? clients.find(c => c.id === os.clientId) : null;
+                          return client ? client.name : 'Cliente';
+                        })()}
+                      </Text>
+                    </Text>
+                    <Text style={{ fontSize: 9, color: '#94a3b8' }}>
+                      Forma de Recebimento: <Text style={{ color: '#fff', fontWeight: 'bold' }}>{selectedBillingDetail.paymentMethod}</Text>
+                    </Text>
+                    <Text style={{ fontSize: 9, color: '#94a3b8' }}>
+                      Valor Total: <Text style={{ color: '#22c55e', fontWeight: 'bold' }}>{formatCurrency(selectedBillingDetail.amount)}</Text>
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Lista de Parcelas */}
+                <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#64748b', marginBottom: 8 }}>
+                  LISTA CRONOLÓGICA DE PARCELAS
+                </Text>
+                <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+                  {selectedBillingDetail.installments.map((inst, index) => {
+                    const isPaid = inst.status === 'Pago';
+                    return (
+                      <View
+                        key={index}
+                        style={[
+                          styles.card,
+                          {
+                            padding: 12,
+                            marginBottom: 8,
+                            flexDirection: 'row',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            borderColor: isPaid ? 'rgba(34, 197, 94, 0.2)' : '#1e293b',
+                            borderWidth: 1
+                          }
+                        ]}
+                      >
+                        <View style={{ flex: 1, paddingRight: 8 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                            <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#fff' }}>Parcela {inst.number} de {selectedBillingDetail.installments.length}</Text>
+                            <View style={{ backgroundColor: isPaid ? 'rgba(34, 197, 94, 0.1)' : 'rgba(234, 179, 8, 0.1)', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4 }}>
+                              <Text style={{ fontSize: 7, fontWeight: 'bold', color: isPaid ? '#22c55e' : '#eab308' }}>{inst.status.toUpperCase()}</Text>
+                            </View>
+                          </View>
+                          <Text style={{ fontSize: 8, color: '#64748b' }}>
+                            Vencimento: {inst.dueDate.split('-').reverse().join('/')}
+                            {isPaid && inst.paidAt && ` • Pago em: ${inst.paidAt.split('T')[0].split('-').reverse().join('/')}`}
+                          </Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                          <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#fff' }}>{formatCurrency(inst.amount)}</Text>
+                          {!isPaid ? (
+                            <TouchableOpacity
+                              onPress={async () => {
+                                const success = await payInstallment(selectedBillingDetail.id, inst.number);
+                                if (success) {
+                                  setSelectedBillingDetail(prev => {
+                                    if (!prev) return null;
+                                    const updatedInstallments = prev.installments.map(i => 
+                                      i.number === inst.number ? { ...i, status: 'Pago' as const, paidAt: new Date().toISOString() } : i
+                                    );
+                                    const paidCount = updatedInstallments.filter(i => i.status === 'Pago').length;
+                                    const newStatus = paidCount === updatedInstallments.length ? 'Pago' as const : 'Parcialmente pago' as const;
+                                    return { ...prev, status: newStatus, installments: updatedInstallments };
+                                  });
+                                  Alert.alert('Sucesso', 'Baixa realizada com sucesso!');
+                                }
+                              }}
+                              style={{
+                                backgroundColor: '#10b981',
+                                paddingHorizontal: 8,
+                                paddingVertical: 5,
+                                borderRadius: 6
+                              }}
+                            >
+                              <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#fff' }}>BAIXAR</Text>
+                            </TouchableOpacity>
+                          ) : (
+                            <View style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)', padding: 4, borderRadius: 12 }}>
+                              <Check size={10} color="#22c55e" />
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
           </View>
         )}
 
@@ -1137,6 +2980,9 @@ function MainWorkshopApp() {
                 onSave={async (svg) => {
                   const success = await saveWorkOrderSignature(signingOSId, svg);
                   if (success) {
+                    if (selectedOS && selectedOS.id === signingOSId) {
+                      setSelectedOS(prev => prev ? { ...prev, signature: svg } : null);
+                    }
                     setSigningOSId(null);
                     Alert.alert('Sucesso', 'Assinatura registrada!');
                   }
@@ -1153,8 +2999,12 @@ function MainWorkshopApp() {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalBg}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Cadastrar Novo Cliente</Text>
-              <TouchableOpacity onPress={() => setIsAddingClient(false)}>
+              <Text style={styles.modalTitle}>{editingClientId ? 'Editar Cliente' : 'Cadastrar Novo Cliente'}</Text>
+              <TouchableOpacity onPress={() => {
+                setIsAddingClient(false);
+                setEditingClientId(null);
+                setClientForm({ name: '', cpfCnpj: '', phone: '', whatsapp: '', email: '', address: '', notes: '' });
+              }}>
                 <X size={20} color="#94a3b8" />
               </TouchableOpacity>
             </View>
@@ -1224,7 +3074,7 @@ function MainWorkshopApp() {
               />
 
               <TouchableOpacity style={styles.submitButton} onPress={handleCreateClient}>
-                <Text style={styles.submitButtonText}>Salvar Cadastro</Text>
+                <Text style={styles.submitButtonText}>{editingClientId ? 'Salvar Alterações' : 'Salvar Cadastro'}</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -1236,8 +3086,12 @@ function MainWorkshopApp() {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalBg}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Novo Veículo</Text>
-              <TouchableOpacity onPress={() => setIsAddingVehicle(false)}>
+              <Text style={styles.modalTitle}>{editingVehicleId ? 'Editar Veículo' : 'Novo Veículo'}</Text>
+              <TouchableOpacity onPress={() => {
+                setIsAddingVehicle(false);
+                setEditingVehicleId(null);
+                setVehicleForm({ plate: '', brand: '', model: '', year: '', chassis: '', odometer: '' });
+              }}>
                 <X size={20} color="#94a3b8" />
               </TouchableOpacity>
             </View>
@@ -1301,7 +3155,7 @@ function MainWorkshopApp() {
               />
 
               <TouchableOpacity style={styles.submitButton} onPress={handleCreateVehicle}>
-                <Text style={styles.submitButtonText}>Salvar Veículo</Text>
+                <Text style={styles.submitButtonText}>{editingVehicleId ? 'Salvar Alterações' : 'Salvar Veículo'}</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -1313,132 +3167,484 @@ function MainWorkshopApp() {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalBg}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Gerar Nova OS</Text>
+              <View>
+                <Text style={styles.modalTitle}>{editingOSId ? 'Editar OS' : 'Gerar Nova OS'}</Text>
+                <Text style={{ fontSize: 9, color: '#64748b', marginTop: 2, fontWeight: 'bold' }}>
+                  Passo {wizardStep} de 4
+                </Text>
+              </View>
               <TouchableOpacity onPress={() => setIsAddingOS(false)}>
                 <X size={20} color="#94a3b8" />
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.inputLabel}>Selecione o Cliente *</Text>
-              <View style={styles.pickerFake}>
-                {clients.map(c => (
-                  <TouchableOpacity 
-                    key={c.id} 
-                    onPress={() => {
-                      const clientCars = vehicles.filter(v => v.clientId === c.id);
-                      setOsForm(prev => ({ 
-                        ...prev, 
-                        clientId: c.id,
-                        vehicleId: clientCars.length === 1 ? clientCars[0].id : ''
-                      }));
-                    }}
-                    style={[styles.pickerItem, osForm.clientId === c.id ? styles.pickerItemActive : null]}
-                  >
-                    <Text style={[styles.pickerItemText, osForm.clientId === c.id ? styles.pickerItemActiveText : null]}>{c.name}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+            {/* Stepper indicator line */}
+            <View style={{ flexDirection: 'row', gap: 4, height: 3, width: '100%', backgroundColor: '#1e293b', marginBottom: 12, borderRadius: 2 }}>
+              <View style={{ height: '100%', borderRadius: 2, flex: 1, backgroundColor: wizardStep >= 1 ? '#3b66ff' : 'transparent' }} />
+              <View style={{ height: '100%', borderRadius: 2, flex: 1, backgroundColor: wizardStep >= 2 ? '#3b66ff' : 'transparent' }} />
+              <View style={{ height: '100%', borderRadius: 2, flex: 1, backgroundColor: wizardStep >= 3 ? '#3b66ff' : 'transparent' }} />
+              <View style={{ height: '100%', borderRadius: 2, flex: 1, backgroundColor: wizardStep >= 4 ? '#3b66ff' : 'transparent' }} />
+            </View>
 
-              {osForm.clientId ? (
-                <>
-                  <Text style={styles.inputLabel}>Selecione o Veículo *</Text>
-                  <View style={styles.pickerFake}>
-                    {vehicles.filter(v => v.clientId === osForm.clientId).map(v => (
-                      <TouchableOpacity 
-                        key={v.id} 
-                        onPress={() => setOsForm(prev => ({ ...prev, vehicleId: v.id }))}
-                        style={[styles.pickerItem, osForm.vehicleId === v.id ? styles.pickerItemActive : null]}
-                      >
-                        <Text style={[styles.pickerItemText, osForm.vehicleId === v.id ? styles.pickerItemActiveText : null]}>
-                          {v.brand} {v.model} ({v.plate})
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
+            {/* STEP 1: SELECT CLIENT & VEHICLE */}
+            {wizardStep === 1 && (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <Text style={styles.inputLabel}>1. Selecionar Cliente *</Text>
+                
+                {/* Client Search input */}
+                <View style={styles.catalogSearchWrapper}>
+                  <Search size={14} color="#64748b" style={styles.catalogSearchIcon} />
+                  <TextInput
+                    placeholder="Buscar por nome ou CPF..."
+                    placeholderTextColor="#475569"
+                    value={clientSearch}
+                    onChangeText={setClientSearch}
+                    style={styles.catalogSearchInput}
+                  />
+                  {clientSearch !== '' && (
+                    <TouchableOpacity onPress={() => setClientSearch('')}>
+                      <X size={14} color="#64748b" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {/* Client selection picker */}
+                <View style={[styles.pickerFake, { maxHeight: 180 }]}>
+                  <ScrollView nestedScrollEnabled showsVerticalScrollIndicator>
+                    {(() => {
+                      const filtered = clients.filter(c => 
+                        c.name.toLowerCase().includes(clientSearch.toLowerCase()) || 
+                        (c.cpfCnpj && c.cpfCnpj.includes(clientSearch))
+                      );
+
+                      if (filtered.length === 0) {
+                        return (
+                          <View style={{ padding: 10, alignItems: 'center' }}>
+                            <Text style={{ fontSize: 10, color: '#64748b' }}>Nenhum cliente encontrado</Text>
+                          </View>
+                        );
+                      }
+
+                      return filtered.map(c => {
+                        const isSelected = osForm.clientId === c.id;
+                        return (
+                          <TouchableOpacity 
+                            key={c.id} 
+                            onPress={() => {
+                              const clientCars = vehicles.filter(v => v.clientId === c.id);
+                              setOsForm(prev => ({ 
+                                ...prev, 
+                                clientId: c.id,
+                                vehicleId: clientCars.length === 1 ? clientCars[0].id : ''
+                              }));
+                            }}
+                            style={[styles.pickerItem, isSelected ? styles.pickerItemActive : null]}
+                          >
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <View>
+                                <Text style={[styles.pickerItemText, isSelected ? styles.pickerItemActiveText : null, { fontWeight: 'bold' }]}>
+                                  {c.name}
+                                </Text>
+                                {c.cpfCnpj ? (
+                                  <Text style={{ fontSize: 7, color: '#64748b', marginTop: 1 }}>CPF/CNPJ: {c.cpfCnpj}</Text>
+                                ) : null}
+                              </View>
+                              {isSelected && <Check size={12} color="#3b66ff" />}
+                            </View>
+                          </TouchableOpacity>
+                        );
+                      });
+                    })()}
+                  </ScrollView>
+                </View>
+
+                {/* Vehicle Selection Section */}
+                {osForm.clientId ? (
+                  <View style={{ marginTop: 8 }}>
+                    <Text style={styles.inputLabel}>2. Selecionar Veículo *</Text>
+                    
+                    {(() => {
+                      const selectionVehicles = vehicles.filter(v => v.clientId === osForm.clientId);
+                      
+                      if (selectionVehicles.length === 0) {
+                        return (
+                          <View style={{ padding: 12, backgroundColor: 'rgba(239, 68, 68, 0.05)', borderRadius: 10, borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.2)', borderStyle: 'dashed', alignItems: 'center', marginVertical: 6 }}>
+                            <Text style={{ fontSize: 9, color: '#ef4444', textAlign: 'center', fontWeight: 'bold' }}>
+                              Nenhum veículo cadastrado para este cliente. Vá no menu "Clientes" e adicione um veículo primeiro.
+                            </Text>
+                          </View>
+                        );
+                      }
+
+                      return (
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginVertical: 6 }}>
+                          {selectionVehicles.map(v => {
+                            const isSelected = osForm.vehicleId === v.id;
+                            return (
+                              <TouchableOpacity 
+                                key={v.id} 
+                                onPress={() => setOsForm(prev => ({ ...prev, vehicleId: v.id }))}
+                                style={{
+                                  backgroundColor: isSelected ? 'rgba(59, 102, 255, 0.1)' : '#0a0c10',
+                                  borderColor: isSelected ? '#3b66ff' : '#1e293b',
+                                  borderWidth: 1,
+                                  borderRadius: 10,
+                                  padding: 10,
+                                  minWidth: '47%',
+                                  flexGrow: 1,
+                                }}
+                              >
+                                <Text style={{ fontSize: 10, color: isSelected ? '#3b66ff' : '#cbd5e1', fontWeight: 'bold' }}>
+                                  {v.brand} {v.model}
+                                </Text>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+                                  <View style={{ backgroundColor: isSelected ? '#3b66ff' : '#334155', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 3 }}>
+                                    <Text style={{ fontSize: 7, color: '#fff', fontWeight: 'bold' }}>{v.plate}</Text>
+                                  </View>
+                                  {isSelected && <Check size={10} color="#3b66ff" />}
+                                </View>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      );
+                    })()}
                   </View>
-                </>
-              ) : null}
+                ) : null}
 
-              {services.length > 0 && (
-                <View style={{ marginBottom: 10 }}>
-                  <Text style={styles.inputLabel}>Adicionar Serviços Mão de Obra</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    {services.map(s => {
-                      const isAdded = osForm.selectedServices.some(i => i.name === s.name);
-                      return (
-                        <TouchableOpacity 
-                          key={s.id} 
-                          style={[styles.suggestionBadge, isAdded ? { borderColor: '#22c55e' } : null]}
-                          onPress={() => {
-                            if (isAdded) {
-                              setOsForm(prev => ({ ...prev, selectedServices: prev.selectedServices.filter(i => i.name !== s.name) }));
-                            } else {
-                              setOsForm(prev => ({ ...prev, selectedServices: [...prev.selectedServices, { id: s.id, name: s.name, price: s.price, quantity: 1, code: s.code }] }));
-                            }
-                          }}
-                        >
-                          <Text style={[styles.suggestionBadgeText, isAdded ? { color: '#22c55e' } : null]}>{s.name} ({formatCurrency(s.price)})</Text>
-                        </TouchableOpacity>
+                {/* Navigation Button */}
+                <TouchableOpacity 
+                  disabled={!osForm.clientId || !osForm.vehicleId}
+                  style={[
+                    styles.submitButton, 
+                    (!osForm.clientId || !osForm.vehicleId) ? { backgroundColor: '#1e293b', opacity: 0.5 } : null
+                  ]} 
+                  onPress={() => setWizardStep(2)}
+                >
+                  <Text style={styles.submitButtonText}>Avançar Serviços</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            )}
+
+            {/* STEP 2: ADD SERVICES */}
+            {wizardStep === 2 && (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <Text style={styles.inputLabel}>Adicionar Serviços ao Orçamento</Text>
+
+                {/* Service Search Input */}
+                <View style={styles.catalogSearchWrapper}>
+                  <Search size={14} color="#64748b" style={styles.catalogSearchIcon} />
+                  <TextInput
+                    placeholder="Filtrar serviços do catálogo..."
+                    placeholderTextColor="#475569"
+                    value={serviceSearch}
+                    onChangeText={setServiceSearch}
+                    style={styles.catalogSearchInput}
+                  />
+                  {serviceSearch !== '' && (
+                    <TouchableOpacity onPress={() => setServiceSearch('')}>
+                      <X size={14} color="#64748b" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {/* Services Catalog List */}
+                <View style={[styles.pickerFake, { maxHeight: 220, padding: 0 }]}>
+                  <ScrollView nestedScrollEnabled showsVerticalScrollIndicator>
+                    {(() => {
+                      const filteredServices = services.filter(s => 
+                        s.name.toLowerCase().includes(serviceSearch.toLowerCase())
                       );
-                    })}
+
+                      if (filteredServices.length === 0) {
+                        return (
+                          <View style={{ padding: 16, alignItems: 'center' }}>
+                            <Text style={{ fontSize: 10, color: '#64748b' }}>Nenhum serviço disponível</Text>
+                          </View>
+                        );
+                      }
+
+                      return filteredServices.map(s => {
+                        const addedItem = osForm.selectedServices.find(item => item.id === s.id);
+                        const qty = addedItem ? addedItem.quantity : 0;
+                        const isSelected = qty > 0;
+
+                        return (
+                          <View 
+                            key={s.id} 
+                            style={{ 
+                              flexDirection: 'row', 
+                              justifyContent: 'space-between', 
+                              alignItems: 'center', 
+                              padding: 10, 
+                              backgroundColor: isSelected ? 'rgba(59, 102, 255, 0.05)' : 'transparent',
+                              borderBottomWidth: 0.5,
+                              borderBottomColor: '#1e293b22'
+                            }}
+                          >
+                            <View style={{ flex: 1, paddingRight: 8 }}>
+                              <Text style={{ fontSize: 10, color: isSelected ? '#3b66ff' : '#f8fafc', fontWeight: 'bold' }}>
+                                {s.name}
+                              </Text>
+                              {s.code ? (
+                                <Text style={{ fontSize: 7, color: '#64748b', marginTop: 2, fontFamily: 'monospace' }}>CÓD: {s.code}</Text>
+                              ) : null}
+                            </View>
+
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                              <View style={{ alignItems: 'flex-end' }}>
+                                <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#fff' }}>{formatCurrency(s.price)}</Text>
+                                {qty > 1 && (
+                                  <Text style={{ fontSize: 7, color: '#64748b', marginTop: 1 }}>{qty}x {formatCurrency(s.price)}</Text>
+                                )}
+                              </View>
+
+                              {/* Qty controller buttons */}
+                              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#0a0c10', borderWidth: 1, borderColor: '#1e293b', borderRadius: 8, padding: 2 }}>
+                                <TouchableOpacity 
+                                  onPress={() => handleUpdateServiceQty(s, qty - 1)}
+                                  style={{ width: 18, height: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0f1115', borderRadius: 4 }}
+                                >
+                                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>-</Text>
+                                </TouchableOpacity>
+                                <Text style={{ width: 22, textAlign: 'center', color: '#fff', fontSize: 10, fontWeight: 'bold', fontFamily: 'monospace' }}>{qty}</Text>
+                                <TouchableOpacity 
+                                  onPress={() => handleUpdateServiceQty(s, qty + 1)}
+                                  style={{ width: 18, height: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0f1115', borderRadius: 4 }}
+                                >
+                                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>+</Text>
+                                </TouchableOpacity>
+                              </View>
+                            </View>
+                          </View>
+                        );
+                      });
+                    })()}
                   </ScrollView>
                 </View>
-              )}
 
-              {parts.length > 0 && (
-                <View style={{ marginBottom: 10 }}>
-                  <Text style={styles.inputLabel}>Adicionar Peças do Catálogo</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    {parts.map(p => {
-                      const isAdded = osForm.selectedParts.some(i => i.name === p.name);
-                      return (
-                        <TouchableOpacity 
-                          key={p.id} 
-                          style={[styles.suggestionBadge, isAdded ? { borderColor: '#22c55e' } : null]}
-                          onPress={() => {
-                            if (isAdded) {
-                              setOsForm(prev => ({ ...prev, selectedParts: prev.selectedParts.filter(i => i.name !== p.name) }));
-                            } else {
-                              setOsForm(prev => ({ ...prev, selectedParts: [...prev.selectedParts, { id: p.id, name: p.name, code: p.code, salePrice: p.salePrice, quantity: 1 }] }));
-                            }
-                          }}
-                        >
-                          <Text style={[styles.suggestionBadgeText, isAdded ? { color: '#22c55e' } : null]}>{p.name} ({formatCurrency(p.salePrice)})</Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </ScrollView>
+                {/* Subtotal Display */}
+                <View style={{ backgroundColor: '#0a0c10', borderWidth: 1, borderColor: '#1e293b', borderRadius: 10, padding: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 6 }}>
+                  <Text style={{ fontSize: 9, color: '#64748b', fontWeight: 'bold' }}>Total em Serviços:</Text>
+                  <Text style={{ fontSize: 11, color: '#fff', fontWeight: 'bold' }}>
+                    {formatCurrency(osForm.selectedServices.reduce((acc, s) => acc + (s.price * s.quantity), 0))}
+                  </Text>
                 </View>
-              )}
 
-              <Text style={styles.inputLabel}>Observações / Sintomas / Diagnóstico</Text>
-              <TextInput 
-                placeholder="Descreva problemas observados ou detalhes adicionais..." 
-                placeholderTextColor="#475569"
-                multiline
-                numberOfLines={3}
-                value={osForm.notes} 
-                onChangeText={t => setOsForm(prev => ({ ...prev, notes: t }))}
-                style={[styles.modalInput, { height: 60, textAlignVertical: 'top' }]} 
-              />
-
-              <Text style={styles.inputLabel}>Status Inicial</Text>
-              <View style={styles.pickerFakeRow}>
-                {['Aberta', 'Em andamento', 'Concluída', 'Entregue'].map(st => (
+                {/* Navigation Row */}
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
                   <TouchableOpacity 
-                    key={st}
-                    onPress={() => setOsForm(prev => ({ ...prev, status: st as any }))}
-                    style={[styles.pickerTag, osForm.status === st ? styles.pickerTagActive : null]}
+                    style={[styles.submitButton, { flex: 1, backgroundColor: '#1e293b', marginTop: 0 }]} 
+                    onPress={() => setWizardStep(1)}
                   >
-                    <Text style={[styles.pickerTagText, osForm.status === st ? styles.pickerTagActiveText : null]}>{st}</Text>
+                    <Text style={styles.submitButtonText}>Voltar</Text>
                   </TouchableOpacity>
-                ))}
-              </View>
+                  <TouchableOpacity 
+                    style={[styles.submitButton, { flex: 1, marginTop: 0 }]} 
+                    onPress={() => setWizardStep(3)}
+                  >
+                    <Text style={styles.submitButtonText}>Avançar Peças</Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            )}
 
-              <TouchableOpacity style={styles.submitButton} onPress={handleCreateOS}>
-                <Text style={styles.submitButtonText}>Criar Ordem de Serviço</Text>
-              </TouchableOpacity>
-            </ScrollView>
+            {/* STEP 3: ADD PARTS */}
+            {wizardStep === 3 && (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <Text style={styles.inputLabel}>Adicionar Peças ao Orçamento</Text>
+
+                {/* Parts Search Input */}
+                <View style={styles.catalogSearchWrapper}>
+                  <Search size={14} color="#64748b" style={styles.catalogSearchIcon} />
+                  <TextInput
+                    placeholder="Filtrar peças do catálogo..."
+                    placeholderTextColor="#475569"
+                    value={partSearch}
+                    onChangeText={setPartSearch}
+                    style={styles.catalogSearchInput}
+                  />
+                  {partSearch !== '' && (
+                    <TouchableOpacity onPress={() => setPartSearch('')}>
+                      <X size={14} color="#64748b" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {/* Parts Catalog List */}
+                <View style={[styles.pickerFake, { maxHeight: 220, padding: 0 }]}>
+                  <ScrollView nestedScrollEnabled showsVerticalScrollIndicator>
+                    {(() => {
+                      const filteredParts = parts.filter(p => 
+                        p.name.toLowerCase().includes(partSearch.toLowerCase())
+                      );
+
+                      if (filteredParts.length === 0) {
+                        return (
+                          <View style={{ padding: 16, alignItems: 'center' }}>
+                            <Text style={{ fontSize: 10, color: '#64748b' }}>Nenhuma peça disponível</Text>
+                          </View>
+                        );
+                      }
+
+                      return filteredParts.map(p => {
+                        const addedItem = osForm.selectedParts.find(item => item.id === p.id);
+                        const qty = addedItem ? addedItem.quantity : 0;
+                        const isSelected = qty > 0;
+
+                        return (
+                          <View 
+                            key={p.id} 
+                            style={{ 
+                              flexDirection: 'row', 
+                              justifyContent: 'space-between', 
+                              alignItems: 'center', 
+                              padding: 10, 
+                              backgroundColor: isSelected ? 'rgba(59, 102, 255, 0.05)' : 'transparent',
+                              borderBottomWidth: 0.5,
+                              borderBottomColor: '#1e293b22'
+                            }}
+                          >
+                            <View style={{ flex: 1, paddingRight: 8 }}>
+                              <Text style={{ fontSize: 10, color: isSelected ? '#3b66ff' : '#f8fafc', fontWeight: 'bold' }}>
+                                {p.name}
+                              </Text>
+                              {p.code ? (
+                                <Text style={{ fontSize: 7, color: '#64748b', marginTop: 2, fontFamily: 'monospace' }}>SKU: {p.code} {p.stock !== undefined ? `• Est: ${p.stock}` : ''}</Text>
+                              ) : null}
+                            </View>
+
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                              <View style={{ alignItems: 'flex-end' }}>
+                                <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#fff' }}>{formatCurrency(p.salePrice)}</Text>
+                                {qty > 1 && (
+                                  <Text style={{ fontSize: 7, color: '#64748b', marginTop: 1 }}>{qty}x {formatCurrency(p.salePrice)}</Text>
+                                )}
+                              </View>
+
+                              {/* Qty controller buttons */}
+                              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#0a0c10', borderWidth: 1, borderColor: '#1e293b', borderRadius: 8, padding: 2 }}>
+                                <TouchableOpacity 
+                                  onPress={() => handleUpdatePartQty(p, qty - 1)}
+                                  style={{ width: 18, height: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0f1115', borderRadius: 4 }}
+                                >
+                                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>-</Text>
+                                </TouchableOpacity>
+                                <Text style={{ width: 22, textAlign: 'center', color: '#fff', fontSize: 10, fontWeight: 'bold', fontFamily: 'monospace' }}>{qty}</Text>
+                                <TouchableOpacity 
+                                  onPress={() => handleUpdatePartQty(p, qty + 1)}
+                                  style={{ width: 18, height: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0f1115', borderRadius: 4 }}
+                                >
+                                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>+</Text>
+                                </TouchableOpacity>
+                              </View>
+                            </View>
+                          </View>
+                        );
+                      });
+                    })()}
+                  </ScrollView>
+                </View>
+
+                {/* Subtotal Display */}
+                <View style={{ backgroundColor: '#0a0c10', borderWidth: 1, borderColor: '#1e293b', borderRadius: 10, padding: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 6 }}>
+                  <Text style={{ fontSize: 9, color: '#64748b', fontWeight: 'bold' }}>Total em Peças:</Text>
+                  <Text style={{ fontSize: 11, color: '#fff', fontWeight: 'bold' }}>
+                    {formatCurrency(osForm.selectedParts.reduce((acc, p) => acc + (p.salePrice * p.quantity), 0))}
+                  </Text>
+                </View>
+
+                {/* Navigation Row */}
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+                  <TouchableOpacity 
+                    style={[styles.submitButton, { flex: 1, backgroundColor: '#1e293b', marginTop: 0 }]} 
+                    onPress={() => setWizardStep(2)}
+                  >
+                    <Text style={styles.submitButtonText}>Voltar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.submitButton, { flex: 1, marginTop: 0 }]} 
+                    onPress={() => setWizardStep(4)}
+                  >
+                    <Text style={styles.submitButtonText}>Avançar Revisão</Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            )}
+
+            {/* STEP 4: REVISION & OBSERVATIONS */}
+            {wizardStep === 4 && (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <Text style={styles.inputLabel}>Observações / Diagnóstico Técnico</Text>
+                <TextInput 
+                  placeholder="Escreva problemas observados ou detalhes adicionais..." 
+                  placeholderTextColor="#475569"
+                  multiline
+                  numberOfLines={3}
+                  value={osForm.notes} 
+                  onChangeText={t => setOsForm(prev => ({ ...prev, notes: t }))}
+                  style={[styles.modalInput, { height: 60, textAlignVertical: 'top', marginBottom: 12 }]} 
+                />
+
+                <Text style={styles.inputLabel}>Status da Ordem de Serviço</Text>
+                <View style={styles.pickerFakeRow}>
+                  {['Aberta', 'Em andamento', 'Concluída', 'Entregue'].map(st => (
+                    <TouchableOpacity 
+                      key={st}
+                      onPress={() => setOsForm(prev => ({ ...prev, status: st as any }))}
+                      style={[styles.pickerTag, osForm.status === st ? styles.pickerTagActive : null]}
+                    >
+                      <Text style={[styles.pickerTagText, osForm.status === st ? styles.pickerTagActiveText : null]}>{st}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Totals & Costs Review Card */}
+                <Text style={styles.inputLabel}>Revisão de Custos e Totais</Text>
+                <View style={[styles.card, { padding: 12, backgroundColor: '#0a0c10', gap: 4, marginBottom: 10 }]}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginVertical: 1 }}>
+                    <Text style={{ fontSize: 9, color: '#64748b' }}>Soma de Serviços:</Text>
+                    <Text style={{ fontSize: 9, color: '#f1f5f9', fontWeight: 'bold' }}>
+                      {formatCurrency(osForm.selectedServices.reduce((acc, s) => acc + (s.price * s.quantity), 0))}
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginVertical: 1 }}>
+                    <Text style={{ fontSize: 9, color: '#64748b' }}>Soma de Peças:</Text>
+                    <Text style={{ fontSize: 9, color: '#f1f5f9', fontWeight: 'bold' }}>
+                      {formatCurrency(osForm.selectedParts.reduce((acc, p) => acc + (p.salePrice * p.quantity), 0))}
+                    </Text>
+                  </View>
+                  <View style={styles.divider} />
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
+                    <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#3b66ff' }}>TOTAL GERAL:</Text>
+                    <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#22c55e' }}>
+                      {formatCurrency(
+                        osForm.selectedServices.reduce((acc, s) => acc + (s.price * s.quantity), 0) +
+                        osForm.selectedParts.reduce((acc, p) => acc + (p.salePrice * p.quantity), 0)
+                      )}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Navigation Row */}
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+                  <TouchableOpacity 
+                    style={[styles.submitButton, { flex: 1, backgroundColor: '#1e293b', marginTop: 0 }]} 
+                    onPress={() => setWizardStep(3)}
+                  >
+                    <Text style={styles.submitButtonText}>Voltar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.submitButton, { flex: 1, backgroundColor: '#10b981', marginTop: 0 }]} 
+                    onPress={handleCreateOS}
+                  >
+                    <Text style={styles.submitButtonText}>
+                      {editingOSId ? 'Salvar Alterações' : 'Criar Ordem'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            )}
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -1449,7 +3655,10 @@ function MainWorkshopApp() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Lançar Despesa de Caixa</Text>
-              <TouchableOpacity onPress={() => setIsAddingExpense(false)}>
+              <TouchableOpacity onPress={() => {
+                setIsAddingExpense(false);
+                setExpenseForm({ description: '', amount: '', category: 'Operacional', date: new Date().toISOString().split('T')[0] });
+              }}>
                 <X size={20} color="#94a3b8" />
               </TouchableOpacity>
             </View>
@@ -1470,6 +3679,15 @@ function MainWorkshopApp() {
               keyboardType="numeric"
               value={expenseForm.amount} 
               onChangeText={t => setExpenseForm(prev => ({ ...prev, amount: t }))}
+              style={styles.modalInput} 
+            />
+
+            <Text style={styles.inputLabel}>Data do Pagamento (AAAA-MM-DD) *</Text>
+            <TextInput 
+              placeholder="Ex: 2026-06-03" 
+              placeholderTextColor="#475569"
+              value={expenseForm.date} 
+              onChangeText={t => setExpenseForm(prev => ({ ...prev, date: t }))}
               style={styles.modalInput} 
             />
 
@@ -1498,8 +3716,12 @@ function MainWorkshopApp() {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalBg}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Adicionar Mão de Obra</Text>
-              <TouchableOpacity onPress={() => setIsAddingCatalogService(false)}>
+              <Text style={styles.modalTitle}>{editingServiceId ? 'Editar Mão de Obra' : 'Adicionar Mão de Obra'}</Text>
+              <TouchableOpacity onPress={() => {
+                setIsAddingCatalogService(false);
+                setEditingServiceId(null);
+                setServiceForm({ name: '', code: '', description: '', price: '' });
+              }}>
                 <X size={20} color="#94a3b8" />
               </TouchableOpacity>
             </View>
@@ -1544,7 +3766,7 @@ function MainWorkshopApp() {
               />
 
               <TouchableOpacity style={styles.submitButton} onPress={handleSaveCatalogService}>
-                <Text style={styles.submitButtonText}>Salvar Serviço</Text>
+                <Text style={styles.submitButtonText}>{editingServiceId ? 'Salvar Alterações' : 'Salvar Serviço'}</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -1556,8 +3778,12 @@ function MainWorkshopApp() {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalBg}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Adicionar Peça ao Catálogo</Text>
-              <TouchableOpacity onPress={() => setIsAddingCatalogPart(false)}>
+              <Text style={styles.modalTitle}>{editingPartId ? 'Editar Peça' : 'Adicionar Peça ao Catálogo'}</Text>
+              <TouchableOpacity onPress={() => {
+                setIsAddingCatalogPart(false);
+                setEditingPartId(null);
+                setPartForm({ name: '', code: '', supplier: '', purchasePrice: '', salePrice: '', stock: '' });
+              }}>
                 <X size={20} color="#94a3b8" />
               </TouchableOpacity>
             </View>
@@ -1622,7 +3848,7 @@ function MainWorkshopApp() {
               />
 
               <TouchableOpacity style={styles.submitButton} onPress={handleSaveCatalogPart}>
-                <Text style={styles.submitButtonText}>Salvar no Estoque</Text>
+                <Text style={styles.submitButtonText}>{editingPartId ? 'Salvar Alterações' : 'Salvar no Estoque'}</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -1656,9 +3882,11 @@ function AppContent() {
 
 export default function App() {
   return (
-    <DatabaseProvider>
-      <AppContent />
-    </DatabaseProvider>
+    <SafeAreaProvider>
+      <DatabaseProvider>
+        <AppContent />
+      </DatabaseProvider>
+    </SafeAreaProvider>
   );
 }
 
@@ -1684,6 +3912,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#fff',
     letterSpacing: 1.5,
+    flexShrink: 1,
   },
   headerSubtitle: {
     fontSize: 9,
@@ -2006,7 +4235,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   tabBar: {
-    height: 52,
+    height: 56,
     backgroundColor: '#0f1115',
     borderTopWidth: 1,
     borderTopColor: '#1e293b',

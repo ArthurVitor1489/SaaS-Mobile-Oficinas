@@ -1,6 +1,26 @@
--- SCHEMA DE BANCO DE DADOS POSTGRESQL (SUPABASE)
--- MECÂNICAPRO SAAS - GESTÃO DE OFICINAS MECÂNICAS
--- Habilita extensão de geração de UUIDs se não ativada
+-- LIMPEZA DE ESTRUTURAS ANTERIORES (EVITA ERRO DE RELAÇÃO JÁ EXISTENTE)
+DROP TABLE IF EXISTS financial_transactions CASCADE;
+DROP TABLE IF EXISTS billing_installments CASCADE;
+DROP TABLE IF EXISTS billings CASCADE;
+DROP TABLE IF EXISTS work_order_parts CASCADE;
+DROP TABLE IF EXISTS work_order_services CASCADE;
+DROP TABLE IF EXISTS work_orders CASCADE;
+DROP TABLE IF EXISTS catalog_parts CASCADE;
+DROP TABLE IF EXISTS catalog_services CASCADE;
+DROP TABLE IF EXISTS parts CASCADE;
+DROP TABLE IF EXISTS services CASCADE;
+DROP TABLE IF EXISTS vehicles CASCADE;
+DROP TABLE IF EXISTS clients CASCADE;
+DROP TABLE IF EXISTS workshops CASCADE;
+DROP TYPE IF EXISTS os_status_enum CASCADE;
+DROP TYPE IF EXISTS billing_status_enum CASCADE;
+DROP TYPE IF EXISTS payment_method_enum CASCADE;
+DROP TYPE IF EXISTS transaction_type_enum CASCADE;
+DROP TYPE IF EXISTS transaction_category_enum CASCADE;
+
+-- SCHEMA DE BANCO DE DADOS POSTGRESQL (SUPABASE) - CORRIGIDO
+-- OFICINA SAAS MOBILE - COMPATÍVEL COM O CÓDIGO FONTE DO APLICATIVO
+
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- 1. TABELA DE EMPRESAS / OFICINAS (TENANTS DO SAAS)
@@ -19,7 +39,7 @@ CREATE TABLE workshops (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 2. TABELA DE CLIENTES (RELACIONADO À OFICINA)
+-- 2. TABELA DE CLIENTES
 CREATE TABLE clients (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     workshop_id UUID REFERENCES workshops(id) ON DELETE CASCADE NOT NULL,
@@ -33,7 +53,7 @@ CREATE TABLE clients (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 3. TABELA DE VEÍCULOS (RELACIONADO AO CLIENTE)
+-- 3. TABELA DE VEÍCULOS
 CREATE TABLE vehicles (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     client_id UUID REFERENCES clients(id) ON DELETE CASCADE NOT NULL,
@@ -46,22 +66,23 @@ CREATE TABLE vehicles (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 4. TABELA DE SERVIÇOS DO CATÁLOGO (RELACIONADO À OFICINA)
-CREATE TABLE services (
+-- 4. TABELA DE SERVIÇOS DO CATÁLOGO
+CREATE TABLE catalog_services (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     workshop_id UUID REFERENCES workshops(id) ON DELETE CASCADE NOT NULL,
     name VARCHAR(255) NOT NULL,
     description TEXT,
     price DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    code VARCHAR(100),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 5. TABELA DE PEÇAS EM ESTOQUE (RELACIONADO À OFICINA)
-CREATE TABLE parts (
+-- 5. TABELA DE PEÇAS EM ESTOQUE
+CREATE TABLE catalog_parts (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     workshop_id UUID REFERENCES workshops(id) ON DELETE CASCADE NOT NULL,
     name VARCHAR(255) NOT NULL,
-    code VARCHAR(100) NOT NULL, -- SKU / Código de barras
+    code VARCHAR(100) NOT NULL,
     supplier VARCHAR(255),
     purchase_price DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
     sale_price DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
@@ -69,7 +90,7 @@ CREATE TABLE parts (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 6. TABELA DE ORDENS DE SERVIÇO (RELACIONADO À OFICINA E CLIENTE)
+-- 6. TABELA DE ORDENS DE SERVIÇO
 CREATE TYPE os_status_enum AS ENUM ('Aberta', 'Em andamento', 'Concluída', 'Entregue');
 
 CREATE TABLE work_orders (
@@ -84,31 +105,33 @@ CREATE TABLE work_orders (
     parts_total DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
     grand_total DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
     notes TEXT,
-    signature TEXT, -- Assinatura digital do cliente em formato Base64 DataURL
+    signature TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 6b. ITENS DE SERVIÇO NA OS (N:N)
+-- 6b. ITENS DE SERVIÇO NA OS
 CREATE TABLE work_order_services (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    work_order_id UUID REFERENCES work_orders(id) ON DELETE CASCADE NOT NULL,
-    service_id UUID REFERENCES services(id) ON DELETE RESTRICT NOT NULL,
-    name VARCHAR(255) NOT NULL, -- Cópia descritiva na data de execução
-    price DECIMAL(10, 2) NOT NULL
+    os_id UUID REFERENCES work_orders(id) ON DELETE CASCADE NOT NULL,
+    service_id UUID REFERENCES catalog_services(id) ON DELETE SET NULL,
+    name VARCHAR(255) NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,
+    quantity INT NOT NULL DEFAULT 1,
+    code VARCHAR(100)
 );
 
--- 6c. ITENS DE PEÇA NA OS (N:N)
+-- 6c. ITENS DE PEÇA NA OS
 CREATE TABLE work_order_parts (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    work_order_id UUID REFERENCES work_orders(id) ON DELETE CASCADE NOT NULL,
-    part_id UUID REFERENCES parts(id) ON DELETE RESTRICT NOT NULL,
+    os_id UUID REFERENCES work_orders(id) ON DELETE CASCADE NOT NULL,
+    part_id UUID REFERENCES catalog_parts(id) ON DELETE SET NULL,
     name VARCHAR(255) NOT NULL,
     code VARCHAR(100) NOT NULL,
     sale_price DECIMAL(10, 2) NOT NULL,
     quantity INT NOT NULL DEFAULT 1
 );
 
--- 7. TABELA DE COBRANÇAS FINANCEIRAS DE CADA OS
+-- 7. TABELA DE COBRANÇAS FINANCEIRAS
 CREATE TYPE billing_status_enum AS ENUM ('Pendente', 'Parcialmente pago', 'Pago', 'Cancelado');
 CREATE TYPE payment_method_enum AS ENUM ('PIX', 'Dinheiro', 'Débito', 'Crédito', 'Boleto');
 
@@ -120,11 +143,23 @@ CREATE TABLE billings (
     payment_method payment_method_enum NOT NULL DEFAULT 'PIX',
     status billing_status_enum NOT NULL DEFAULT 'Pendente',
     due_date DATE NOT NULL,
-    installments JSONB NOT NULL, -- Estrutura de parcelamento [{number: 1, amount: 100.0, dueDate: "2026-06-01", status: "Pendente/Pago"}]
+    installments JSONB NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 8. TABELA DO FLUXO FINANCEIRO DA OFICINA (LIVRO CAIXA GERAL)
+-- 7b. PARCELAS DA COBRANÇA
+CREATE TABLE billing_installments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    billing_id UUID REFERENCES billings(id) ON DELETE CASCADE NOT NULL,
+    number INT NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    due_date DATE NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'Pendente',
+    paid_at VARCHAR(100),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 8. TABELA DO FLUXO FINANCEIRO DA OFICINA
 CREATE TYPE transaction_type_enum AS ENUM ('Entrada', 'Saída');
 CREATE TYPE transaction_category_enum AS ENUM ('Pagamento OS', 'Compra Peças', 'Salário', 'Operacional', 'Outros');
 
@@ -139,9 +174,10 @@ CREATE TABLE financial_transactions (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- CRIE ÍNDICES PARA BUSCA OTIMIZADA EM PRODUÇÃO
+-- ÍNDICES
 CREATE INDEX idx_clients_workshop ON clients(workshop_id);
 CREATE INDEX idx_vehicles_client ON vehicles(client_id);
 CREATE INDEX idx_work_orders_workshop ON work_orders(workshop_id);
 CREATE INDEX idx_billings_os ON billings(os_id);
+CREATE INDEX idx_installments_billing ON billing_installments(billing_id);
 CREATE INDEX idx_transactions_workshop ON financial_transactions(workshop_id);

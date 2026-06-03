@@ -1,4 +1,4 @@
--- FUNÇÕES PL/pgSQL E TRIGGERS DO POSTGRESQL
+-- FUNÇÕES PL/pgSQL E TRIGGERS DO POSTGRESQL - CORRIGIDO
 -- AUTOMATIZAÇÕES DE NEGÓCIO NO BANCO DE DADOS (SUPABASE)
 
 -- =====================================================================
@@ -31,7 +31,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Ativa o trigger ANTES de salvar a OS (se o workshop estiver com auto_sequence ativado)
+-- Ativa o trigger ANTES de salvar a OS
 CREATE OR REPLACE TRIGGER tr_os_auto_numbering
     BEFORE INSERT ON work_orders
     FOR EACH ROW
@@ -46,8 +46,8 @@ CREATE OR REPLACE TRIGGER tr_os_auto_numbering
 CREATE OR REPLACE FUNCTION fn_reduce_stock_on_os_parts()
 RETURNS TRIGGER AS $$
 BEGIN
-    -- Diminui a quantidade da peça cadastrada do estoque total da tabela "parts"
-    UPDATE parts
+    -- Diminui a quantidade da peça cadastrada do estoque total da tabela "catalog_parts"
+    UPDATE catalog_parts
     SET stock = GREATEST(0, stock - NEW.quantity)
     WHERE id = NEW.part_id;
     
@@ -74,6 +74,7 @@ BEGIN
     IF (NEW.status = 'Concluída' OR NEW.status = 'Entregue') THEN
         -- Verifica se já não existe uma fatura criada para esta OS
         IF NOT EXISTS (SELECT 1 FROM billings WHERE os_id = NEW.id) THEN
+            -- Inserção da cobrança principal
             INSERT INTO billings (workshop_id, os_id, amount, payment_method, status, due_date, installments, created_at)
             VALUES (
                 NEW.workshop_id,

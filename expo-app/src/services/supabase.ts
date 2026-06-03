@@ -1,3 +1,5 @@
+import './polyfills';
+
 import { createClient } from '@supabase/supabase-js';
 
 // Swaps in public Expo environment variables dynamically

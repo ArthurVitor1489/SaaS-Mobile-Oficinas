@@ -195,6 +195,8 @@ interface DatabaseContextProps extends DatabaseState {
   // Cache sync
   syncWithSupabase: () => Promise<void>;
   exportDatabaseJson: () => string;
+  resetDatabase: () => Promise<void>;
+  restoreBackup: (jsonStr: string) => Promise<boolean>;
 }
 
 const DatabaseContext = createContext<DatabaseContextProps | undefined>(undefined);
@@ -213,6 +215,257 @@ const defaultSettings: CompanySettings = {
   nextOSNumber: 1,
   pdfNotes: 'Garantia de 90 dias para serviços e peças aplicadas. Obrigado pela preferência!'
 };
+
+const seedClients: Client[] = [
+  {
+    id: 'c-1',
+    name: 'Cláudio Abreu',
+    cpfCnpj: '123.456.789-00',
+    phone: '(11) 98765-4321',
+    whatsapp: '(11) 98765-4321',
+    email: 'claudio.abreu@gmail.com',
+    address: 'Av. Paulista, 1000 - Bela Vista, São Paulo - SP',
+    notes: 'Cliente muito cuidadoso com o carro. Solicita sempre peças originais.',
+    createdAt: '2026-05-01T10:00:00Z'
+  },
+  {
+    id: 'c-2',
+    name: 'Lojas Santos Comércio Ltda',
+    cpfCnpj: '12.345.678/0001-99',
+    phone: '(11) 3211-4040',
+    whatsapp: '(11) 97654-3210',
+    email: 'frota@lojassantos.com.br',
+    address: 'Rua das Indústrias, 84 - Tamboré, Barueri - SP',
+    notes: 'Frota comercial de entregas. Exige faturamento em boleto para 15 dias.',
+    createdAt: '2026-05-05T14:30:00Z'
+  },
+  {
+    id: 'c-3',
+    name: 'Ricardo Oliveira',
+    cpfCnpj: '987.654.321-11',
+    phone: '(19) 99876-5432',
+    whatsapp: '(19) 99876-5432',
+    email: 'ricardo.oliver@outlook.com',
+    address: 'Rua General Osório, 300 - Centro, Campinas - SP',
+    notes: 'Colecionador de carros antigos. Cuidado redobrado ao manobrar.',
+    createdAt: '2026-05-12T09:15:00Z'
+  }
+];
+
+const seedVehicles: Vehicle[] = [
+  {
+    id: 'v-1',
+    clientId: 'c-1',
+    plate: 'QWE-1B23',
+    brand: 'Toyota',
+    model: 'Corolla XEi 2.0',
+    year: '2021',
+    chassis: '9BR1234567890ABCD',
+    odometer: '42350',
+    createdAt: '2026-05-01T10:15:00Z'
+  },
+  {
+    id: 'v-2',
+    clientId: 'c-2',
+    plate: 'ABC-9A88',
+    brand: 'Chevrolet',
+    model: 'Onix Hatch 1.0 Turbo',
+    year: '2020',
+    chassis: '9BR876543210EDCBA',
+    odometer: '65800',
+    createdAt: '2026-05-05T14:45:00Z'
+  },
+  {
+    id: 'v-3',
+    clientId: 'c-2',
+    plate: 'FIO-0F99',
+    brand: 'Fiat',
+    model: 'Fiorino 1.4 Hard Working',
+    year: '2018',
+    chassis: '9BR789012345XYZAB',
+    odometer: '112400',
+    createdAt: '2026-05-05T14:50:00Z'
+  },
+  {
+    id: 'v-4',
+    clientId: 'c-3',
+    plate: 'OPA-1978',
+    brand: 'Chevrolet',
+    model: 'Opala Comodoro 4.1 Coupe',
+    year: '1978',
+    chassis: '9BR444555666ZZZZZ',
+    odometer: '154100',
+    createdAt: '2026-05-12T09:30:00Z'
+  }
+];
+
+const seedServices: ServiceItem[] = [
+  { id: 's-1', name: 'Troca de Óleo e Filtro', code: 'SRV-OLEO', description: 'Substituição do óleo lubrificante do motor 5W30 sintético e filtro de óleo original', price: 180.00 },
+  { id: 's-2', name: 'Revisão Geral Preventiva', code: 'SRV-REVISAO', description: 'Inspeção mecânica geral de 40 itens, alinhamento de direção 3D e balanceamento das 4 rodas', price: 350.00 },
+  { id: 's-3', name: 'Substituição de Pastilhas de Freio', code: 'SRV-FREIO', description: 'Troca das pastilhas de freio do eixo dianteiro com higienização do sistema e teste de frenagem', price: 120.00 },
+  { id: 's-4', name: 'Serviço de Suspensão Avançada', code: 'SRV-SUSPENSAO', description: 'Troca de amortecedores, buchas de bandeja, pivôs e regulagem final', price: 450.00 },
+  { id: 's-5', name: 'Troca de Kit de Embreagem', code: 'SRV-EMBREAGEM', description: 'Remoção do câmbio, substituição do disco, platô, rolamento e óleo de transmissão', price: 800.00 }
+];
+
+const seedParts: PartItem[] = [
+  { id: 'p-1', name: 'Óleo Motor 5W30 Sintético 1L', code: 'OLE-5W30', supplier: 'LubriMax Distribuidora', purchasePrice: 32.00, salePrice: 55.00, stock: 24 },
+  { id: 'p-2', name: 'Filtro de Óleo Corolla', code: 'FIL-COR2.0', supplier: 'AutoPeças Central', purchasePrice: 20.00, salePrice: 45.00, stock: 8 },
+  { id: 'p-3', name: 'Pastilhas de Freio Cobreq', code: 'PAS-COB150', supplier: 'Real Distribuidora', purchasePrice: 65.00, salePrice: 130.00, stock: 12 },
+  { id: 'p-4', name: 'Amortecedor Dianteiro Cofap Corolla', code: 'AMO-COF201', supplier: 'Real Distribuidora', purchasePrice: 180.00, salePrice: 340.00, stock: 4 },
+  { id: 'p-5', name: 'Kit Embreagem Sachs Opala 4.1', code: 'EMB-SAC78', supplier: 'Sachs Peças do Brasil', purchasePrice: 380.00, salePrice: 680.00, stock: 2 }
+];
+
+const seedWorkOrders: WorkOrder[] = [
+  {
+    id: 'os-1',
+    osNumber: 'OS-0001',
+    date: '2026-05-10',
+    clientId: 'c-1',
+    vehicleId: 'v-1',
+    services: [
+      { id: 's-1', name: 'Troca de Óleo e Filtro', price: 180.00, quantity: 1 }
+    ],
+    parts: [
+      { id: 'p-1', name: 'Óleo Motor 5W30 Sintético 1L', code: 'OLE-5W30', salePrice: 55.00, quantity: 4 },
+      { id: 'p-2', name: 'Filtro de Óleo Corolla', code: 'FIL-COR2.0', salePrice: 45.00, quantity: 1 }
+    ],
+    notes: 'Troca de óleo de rotina efetuada conforme manual. Nível verificado e luz de óleo no painel reiniciada.',
+    status: 'Entregue',
+    servicesTotal: 180.00,
+    partsTotal: 265.00,
+    grandTotal: 445.00,
+    createdAt: '2026-05-10T11:00:00Z'
+  },
+  {
+    id: 'os-2',
+    osNumber: 'OS-0002',
+    date: '2026-05-18',
+    clientId: 'c-2',
+    vehicleId: 'v-3',
+    services: [
+      { id: 's-2', name: 'Revisão Geral Preventiva', price: 350.00, quantity: 1 },
+      { id: 's-3', name: 'Substituição de Pastilhas de Freio', price: 120.00, quantity: 1 }
+    ],
+    parts: [
+      { id: 'p-3', name: 'Pastilhas de Freio Cobreq', code: 'PAS-COB150', salePrice: 130.00, quantity: 1 }
+    ],
+    notes: 'Freios emitindo ruído metálico. Substituído pastilhas. Suspensão dianteira revisada, reaperto efetuado. Pneus alinhados e balanceados.',
+    status: 'Concluída',
+    servicesTotal: 470.00,
+    partsTotal: 130.00,
+    grandTotal: 600.00,
+    createdAt: '2026-05-18T13:20:00Z'
+  },
+  {
+    id: 'os-3',
+    osNumber: 'OS-0003',
+    date: '2026-05-28',
+    clientId: 'c-3',
+    vehicleId: 'v-4',
+    services: [
+      { id: 's-5', name: 'Troca de Kit de Embreagem', price: 800.00, quantity: 1 }
+    ],
+    parts: [
+      { id: 'p-5', name: 'Kit Embreagem Sachs Opala 4.1', code: 'EMB-SAC78', salePrice: 680.00, quantity: 1 }
+    ],
+    notes: 'Pedal de embreagem excessivamente rígido e marchas arranhando para engatar. Embreagem patinando em aclives. Desmontagem iniciada.',
+    status: 'Em andamento',
+    servicesTotal: 800.00,
+    partsTotal: 680.00,
+    grandTotal: 1480.00,
+    createdAt: '2026-05-28T09:40:00Z'
+  }
+];
+
+const seedBillings: Billing[] = [
+  {
+    id: 'b-1',
+    osId: 'os-1',
+    amount: 445.00,
+    paymentMethod: 'PIX',
+    status: 'Pago',
+    dueDate: '2026-05-10',
+    installments: [
+      { number: 1, amount: 445.00, dueDate: '2026-05-10', status: 'Pago', paidAt: '2026-05-10T11:45:00Z' }
+    ],
+    createdAt: '2026-05-10T11:40:00Z'
+  },
+  {
+    id: 'b-2',
+    osId: 'os-2',
+    amount: 600.00,
+    paymentMethod: 'Crédito',
+    status: 'Parcialmente pago',
+    dueDate: '2026-05-18',
+    installments: [
+      { number: 1, amount: 300.00, dueDate: '2026-05-18', status: 'Pago', paidAt: '2026-05-18T16:00:00Z' },
+      { number: 2, amount: 300.00, dueDate: '2026-06-18', status: 'Pendente' }
+    ],
+    createdAt: '2026-05-18T15:40:00Z'
+  },
+  {
+    id: 'b-3',
+    osId: 'os-3',
+    amount: 1480.00,
+    paymentMethod: 'Crédito',
+    status: 'Pendente',
+    dueDate: '2026-06-28',
+    installments: [
+      { number: 1, amount: 493.33, dueDate: '2026-06-28', status: 'Pendente' },
+      { number: 2, amount: 493.33, dueDate: '2026-07-28', status: 'Pendente' },
+      { number: 3, amount: 493.34, dueDate: '2026-08-28', status: 'Pendente' }
+    ],
+    createdAt: '2026-05-28T10:10:00Z'
+  }
+];
+
+const seedTransactions: FinancialTransaction[] = [
+  {
+    id: 't-1',
+    type: 'Entrada',
+    category: 'Pagamento OS',
+    amount: 445.00,
+    date: '2026-05-10',
+    description: 'Recebimento integral OS-0001 via PIX (Cláudio Abreu)',
+    createdAt: '2026-05-10T11:45:00Z'
+  },
+  {
+    id: 't-2',
+    type: 'Entrada',
+    category: 'Pagamento OS',
+    amount: 300.00,
+    date: '2026-05-18',
+    description: 'Recebimento Parcela 1/2 OS-0002 via Crédito (Lojas Santos)',
+    createdAt: '2026-05-18T16:00:00Z'
+  },
+  {
+    id: 't-3',
+    type: 'Saída',
+    category: 'Compra Peças',
+    amount: 640.00,
+    date: '2026-05-05',
+    description: 'Compra de 20 litros de óleo sintético 5W30 e 5 filtros Corolla',
+    createdAt: '2026-05-05T10:00:00Z'
+  },
+  {
+    id: 't-4',
+    type: 'Saída',
+    category: 'Operacional',
+    amount: 280.00,
+    date: '2026-05-08',
+    description: 'Pagamento de conta de energia e internet da oficina',
+    createdAt: '2026-05-08T16:45:00Z'
+  },
+  {
+    id: 't-5',
+    type: 'Saída',
+    category: 'Salário',
+    amount: 1500.00,
+    date: '2026-05-25',
+    description: 'Salário mensal do Ajudante Mecânico (Lucas)',
+    createdAt: '2026-05-25T18:00:00Z'
+  }
+];
 
 export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -256,6 +509,12 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       } else {
         setLoading(false);
       }
+    }).catch(err => {
+      console.warn('Supabase getSession failed, using local offline mode:', err);
+      setSession(null);
+      setUser(null);
+      setOnline(false);
+      setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -491,11 +750,60 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const signUp = async (email: string, password: string, companyName: string, cnpj: string) => {
     try {
+      const isPlaceholder = !supabase || !supabase.auth || (supabase as any).supabaseUrl?.includes('your-project-id');
+      if (isPlaceholder || !online) {
+        // Local simulation of sign up
+        const customUser: User = {
+          id: 'mock-user-id-' + Math.random().toString(36).substr(2, 9),
+          app_metadata: {},
+          user_metadata: {
+            workshop_id: 'mock-workshop-id',
+            workshop_name: companyName
+          },
+          aud: 'authenticated',
+          created_at: new Date().toISOString(),
+          email: email,
+          role: 'authenticated'
+        };
+
+        const customSession: Session = {
+          access_token: 'mock-access-token-' + Math.random().toString(36).substr(2, 9),
+          refresh_token: 'mock-refresh-token',
+          expires_in: 3600,
+          token_type: 'bearer',
+          user: customUser
+        };
+
+        const customSettings: CompanySettings = {
+          ...defaultSettings,
+          name: companyName,
+          cnpj: cnpj || '',
+          email: email
+        };
+
+        const localState: DatabaseState = {
+          clients: seedClients,
+          vehicles: seedVehicles,
+          services: seedServices,
+          parts: seedParts,
+          workOrders: seedWorkOrders,
+          billings: seedBillings,
+          transactions: seedTransactions,
+          settings: customSettings
+        };
+
+        setState(localState);
+        await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(localState));
+        setSession(customSession);
+        setUser(customUser);
+
+        Alert.alert('Modo Demonstração', `Oficina "${companyName}" criada localmente com dados de teste!`);
+        return true;
+      }
+
       // 1. Create a Workshop placeholder entry (using service_role bypass or RPC, but we can do a standard insert after user registers)
       // Actually, we sign up the user, which auto-triggers the user profile. But to bypass RLS, we can do it after sign up.
       // Better: we call Supabase signUp, and in the metadata we send the workshop properties.
-      // Wait, we need a workshop first. Let's create it.
-      // But we are not authenticated yet. So workshops RLS must allow inserts from authenticated users, or we sign up the user first, then create the workshop, then update their metadata.
       // Let's do:
       // A. SignUp user.
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -533,10 +841,63 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       if (updateError) throw updateError;
 
+      // Force refresh the session to update the JWT access token immediately with the new metadata
+      await supabase.auth.refreshSession().catch(err => {
+        console.log('Failed to refresh session JWT automatically:', err);
+      });
+
       Alert.alert('Sucesso', 'Oficina cadastrada e conta criada! Faça login para começar.');
       return true;
     } catch (e: any) {
-      console.error(e);
+      console.log('Cadastro erro:', e.message || e);
+      // Fallback in case of net/Supabase failure after standard signup try
+      if (e.message === 'Network request failed' || e.message?.includes('Fetch')) {
+        Alert.alert('Modo Demonstração', 'Sem conexão. Criando oficina em modo local...');
+        const customUser: User = {
+          id: 'mock-user-id',
+          app_metadata: {},
+          user_metadata: {
+            workshop_id: 'mock-workshop-id',
+            workshop_name: companyName
+          },
+          aud: 'authenticated',
+          created_at: new Date().toISOString(),
+          email: email,
+          role: 'authenticated'
+        };
+
+        const customSession: Session = {
+          access_token: 'mock-access-token',
+          refresh_token: 'mock-refresh-token',
+          expires_in: 3600,
+          token_type: 'bearer',
+          user: customUser
+        };
+
+        const customSettings: CompanySettings = {
+          ...defaultSettings,
+          name: companyName,
+          cnpj: cnpj || '',
+          email: email
+        };
+
+        const localState: DatabaseState = {
+          clients: seedClients,
+          vehicles: seedVehicles,
+          services: seedServices,
+          parts: seedParts,
+          workOrders: seedWorkOrders,
+          billings: seedBillings,
+          transactions: seedTransactions,
+          settings: customSettings
+        };
+
+        setState(localState);
+        await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(localState));
+        setSession(customSession);
+        setUser(customUser);
+        return true;
+      }
       Alert.alert('Erro ao Cadastrar', e.message || 'Erro desconhecido.');
       return false;
     }
@@ -544,18 +905,134 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const signIn = async (email: string, password: string) => {
     try {
+      const isPlaceholder = !supabase || !supabase.auth || (supabase as any).supabaseUrl?.includes('your-project-id');
+      if (isPlaceholder || !online) {
+        // Local sign in bypass
+        const customUser: User = {
+          id: 'mock-user-id',
+          app_metadata: {},
+          user_metadata: {
+            workshop_id: 'mock-workshop-id',
+            workshop_name: 'Minha Oficina'
+          },
+          aud: 'authenticated',
+          created_at: new Date().toISOString(),
+          email: email,
+          role: 'authenticated'
+        };
+
+        const customSession: Session = {
+          access_token: 'mock-access-token',
+          refresh_token: 'mock-refresh-token',
+          expires_in: 3600,
+          token_type: 'bearer',
+          user: customUser
+        };
+
+        const cached = await AsyncStorage.getItem(CACHE_KEY);
+        let localState: DatabaseState;
+        if (cached) {
+          localState = JSON.parse(cached);
+        } else {
+          localState = {
+            clients: seedClients,
+            vehicles: seedVehicles,
+            services: seedServices,
+            parts: seedParts,
+            workOrders: seedWorkOrders,
+            billings: seedBillings,
+            transactions: seedTransactions,
+            settings: {
+              ...defaultSettings,
+              email: email
+            }
+          };
+          await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(localState));
+        }
+
+        setState(localState);
+        setSession(customSession);
+        setUser(customUser);
+        Alert.alert('Modo Demonstração', 'Acesso efetuado no painel local offline!');
+        return true;
+      }
+
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       return true;
     } catch (e: any) {
-      console.error(e);
-      Alert.alert('Erro de Acesso', 'E-mail ou senha incorretos.');
+      console.log('Login erro:', e.message || e);
+      if (e.message === 'Network request failed' || e.message?.includes('Fetch')) {
+        Alert.alert('Modo Demonstração', 'Sem conexão. Entrando no modo local...');
+        const customUser: User = {
+          id: 'mock-user-id',
+          app_metadata: {},
+          user_metadata: {
+            workshop_id: 'mock-workshop-id',
+            workshop_name: 'Minha Oficina'
+          },
+          aud: 'authenticated',
+          created_at: new Date().toISOString(),
+          email: email,
+          role: 'authenticated'
+        };
+
+        const customSession: Session = {
+          access_token: 'mock-access-token',
+          refresh_token: 'mock-refresh-token',
+          expires_in: 3600,
+          token_type: 'bearer',
+          user: customUser
+        };
+
+        const cached = await AsyncStorage.getItem(CACHE_KEY);
+        let localState: DatabaseState;
+        if (cached) {
+          localState = JSON.parse(cached);
+        } else {
+          localState = {
+            clients: seedClients,
+            vehicles: seedVehicles,
+            services: seedServices,
+            parts: seedParts,
+            workOrders: seedWorkOrders,
+            billings: seedBillings,
+            transactions: seedTransactions,
+            settings: {
+              ...defaultSettings,
+              email: email
+            }
+          };
+          await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(localState));
+        }
+
+        setState(localState);
+        setSession(customSession);
+        setUser(customUser);
+        return true;
+      }
+
+      let userMsg = 'E-mail ou senha incorretos.';
+      if (e.message === 'Email not confirmed') {
+        userMsg = 'E-mail não verificado. Por favor, confirme o e-mail na sua caixa de entrada ou desative a confirmação de e-mail no painel do Supabase.';
+      } else if (e.message?.includes('security purposes')) {
+        userMsg = 'Por motivos de segurança, aguarde alguns segundos antes de tentar novamente.';
+      } else if (e.message && e.message !== 'Invalid login credentials') {
+        userMsg = e.message;
+      }
+      Alert.alert('Erro de Acesso', userMsg);
       return false;
     }
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.warn('Failed to sign out from Supabase server, clearing session locally:', e);
+      setSession(null);
+      setUser(null);
+    }
   };
 
   // --- CRUD OPERATIONS WITH SUPABASE ---
@@ -600,7 +1077,7 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       updateCache(newState);
       return newClient;
     } catch (e) {
-      console.error(e);
+      console.log('Database operation failed (returned null):', e);
       handleNetworkError();
       return null;
     }
@@ -631,7 +1108,7 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       updateCache(newState);
       return true;
     } catch (e) {
-      console.error(e);
+      console.log('Database operation failed (returned false):', e);
       handleNetworkError();
       return false;
     }
@@ -651,7 +1128,7 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       updateCache(newState);
       return true;
     } catch (e) {
-      console.error(e);
+      console.log('Database operation failed (returned false):', e);
       handleNetworkError();
       return false;
     }
@@ -695,7 +1172,7 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       updateCache(newState);
       return newVehicle;
     } catch (e) {
-      console.error(e);
+      console.log('Database operation failed (returned null):', e);
       handleNetworkError();
       return null;
     }
@@ -725,7 +1202,7 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       updateCache(newState);
       return true;
     } catch (e) {
-      console.error(e);
+      console.log('Database operation failed (returned false):', e);
       handleNetworkError();
       return false;
     }
@@ -744,7 +1221,7 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       updateCache(newState);
       return true;
     } catch (e) {
-      console.error(e);
+      console.log('Database operation failed (returned false):', e);
       handleNetworkError();
       return false;
     }
@@ -783,7 +1260,7 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       updateCache(newState);
       return newService;
     } catch (e) {
-      console.error(e);
+      console.log('Database operation failed (returned null):', e);
       handleNetworkError();
       return null;
     }
@@ -811,7 +1288,7 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       updateCache(newState);
       return true;
     } catch (e) {
-      console.error(e);
+      console.log('Database operation failed (returned false):', e);
       handleNetworkError();
       return false;
     }
@@ -830,7 +1307,7 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       updateCache(newState);
       return true;
     } catch (e) {
-      console.error(e);
+      console.log('Database operation failed (returned false):', e);
       handleNetworkError();
       return false;
     }
@@ -873,7 +1350,7 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       updateCache(newState);
       return newPart;
     } catch (e) {
-      console.error(e);
+      console.log('Database operation failed (returned null):', e);
       handleNetworkError();
       return null;
     }
@@ -903,7 +1380,7 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       updateCache(newState);
       return true;
     } catch (e) {
-      console.error(e);
+      console.log('Database operation failed (returned false):', e);
       handleNetworkError();
       return false;
     }
@@ -922,7 +1399,7 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       updateCache(newState);
       return true;
     } catch (e) {
-      console.error(e);
+      console.log('Database operation failed (returned false):', e);
       handleNetworkError();
       return false;
     }
@@ -1051,7 +1528,7 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       return newWO;
     } catch (e) {
-      console.error(e);
+      console.log('Database operation failed (returned null):', e);
       handleNetworkError();
       return null;
     }
@@ -1124,7 +1601,7 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       updateCache(newState);
       return true;
     } catch (e) {
-      console.error(e);
+      console.log('Database operation failed (returned false):', e);
       handleNetworkError();
       return false;
     }
@@ -1153,7 +1630,7 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       updateCache(newState);
       return true;
     } catch (e) {
-      console.error(e);
+      console.log('Database operation failed (returned false):', e);
       handleNetworkError();
       return false;
     }
@@ -1172,7 +1649,8 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           amount: billingData.amount,
           payment_method: billingData.paymentMethod,
           status: billingData.status,
-          due_date: billingData.dueDate
+          due_date: billingData.dueDate,
+          installments: billingData.installments
         })
         .select()
         .single();
@@ -1213,20 +1691,22 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             category: 'Pagamento OS',
             amount: inst.amount,
             date: inst.paidAt?.split('T')[0] ?? new Date().toISOString().split('T')[0],
-            description: `Recebimento Parcela ${inst.number}/${billingData.installments.length} da OS-${os?.osNumber || ''} (${client?.name || 'Cliente'})`
+            description: `Parcela ${inst.number}/${billingData.installments.length} da ${os?.osNumber || 'OS'}`
           });
         }
       }
 
-      const newState = {
-        ...state,
-        billings: [newBilling, ...state.billings]
-      };
-      setState(newState);
-      updateCache(newState);
+      setState(prev => {
+        const newState = {
+          ...prev,
+          billings: [newBilling, ...prev.billings]
+        };
+        updateCache(newState);
+        return newState;
+      });
       return newBilling;
     } catch (e) {
-      console.error(e);
+      console.log('Database operation failed (returned null):', e);
       handleNetworkError();
       return null;
     }
@@ -1276,7 +1756,7 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const os = state.workOrders.find(o => o.id === billing?.osId);
       const client = state.clients.find(c => c.id === os?.clientId);
 
-      const transactionDescription = `Recebimento Parcela ${installmentNumber}/${allInsts?.length} da OS-${os?.osNumber || ''} (${client?.name || 'Cliente'})`;
+      const transactionDescription = `Parcela ${installmentNumber}/${allInsts?.length} da ${os?.osNumber || 'OS'}`;
       
       const newTrans = await addTransaction({
         type: 'Entrada',
@@ -1299,15 +1779,17 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         return b;
       });
 
-      const newState = {
-        ...state,
-        billings: updatedBillings
-      };
-      setState(newState);
-      updateCache(newState);
+      setState(prev => {
+        const newState = {
+          ...prev,
+          billings: updatedBillings
+        };
+        updateCache(newState);
+        return newState;
+      });
       return true;
     } catch (e) {
-      console.error(e);
+      console.log('Database operation failed (returned false):', e);
       handleNetworkError();
       return false;
     }
@@ -1343,15 +1825,17 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         createdAt: data.created_at
       };
 
-      const newState = {
-        ...state,
-        transactions: [newTrans, ...state.transactions]
-      };
-      setState(newState);
-      updateCache(newState);
+      setState(prev => {
+        const newState = {
+          ...prev,
+          transactions: [newTrans, ...prev.transactions]
+        };
+        updateCache(newState);
+        return newState;
+      });
       return newTrans;
     } catch (e) {
-      console.error(e);
+      console.log('Database operation failed (returned null):', e);
       handleNetworkError();
       return null;
     }
@@ -1362,15 +1846,17 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const { error } = await supabase.from('financial_transactions').delete().eq('id', id);
       if (error) throw error;
 
-      const newState = {
-        ...state,
-        transactions: state.transactions.filter(t => t.id !== id)
-      };
-      setState(newState);
-      updateCache(newState);
+      setState(prev => {
+        const newState = {
+          ...prev,
+          transactions: prev.transactions.filter(t => t.id !== id)
+        };
+        updateCache(newState);
+        return newState;
+      });
       return true;
     } catch (e) {
-      console.error(e);
+      console.log('Database operation failed (returned false):', e);
       handleNetworkError();
       return false;
     }
@@ -1413,7 +1899,7 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       Alert.alert('Sucesso', 'Configurações atualizadas com sucesso!');
       return true;
     } catch (e) {
-      console.error(e);
+      console.log('Database operation failed (returned false):', e);
       handleNetworkError();
       return false;
     }
@@ -1428,6 +1914,54 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const exportDatabaseJson = () => {
     return JSON.stringify(state, null, 2);
+  };
+
+  const resetDatabase = async () => {
+    try {
+      const cleanState: DatabaseState = {
+        clients: seedClients,
+        vehicles: seedVehicles,
+        services: seedServices,
+        parts: seedParts,
+        workOrders: seedWorkOrders,
+        billings: seedBillings,
+        transactions: seedTransactions,
+        settings: defaultSettings
+      };
+      setState(cleanState);
+      await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(cleanState));
+      Alert.alert('Sucesso', 'Base de dados resetada com sucesso para os dados de demonstração!');
+    } catch (e) {
+      console.error('Failed to reset database', e);
+      Alert.alert('Erro', 'Não foi possível resetar a base de dados.');
+    }
+  };
+
+  const restoreBackup = async (jsonStr: string) => {
+    try {
+      const parsed = JSON.parse(jsonStr);
+      if (
+        parsed &&
+        Array.isArray(parsed.clients) &&
+        Array.isArray(parsed.vehicles) &&
+        Array.isArray(parsed.services) &&
+        Array.isArray(parsed.parts) &&
+        Array.isArray(parsed.workOrders) &&
+        Array.isArray(parsed.billings) &&
+        Array.isArray(parsed.transactions) &&
+        parsed.settings
+      ) {
+        setState(parsed);
+        await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(parsed));
+        Alert.alert('Sucesso', 'Backup restaurado com sucesso!');
+        return true;
+      }
+      throw new Error('Formato de backup inválido.');
+    } catch (e: any) {
+      console.error('Failed to restore backup', e);
+      Alert.alert('Erro ao Restaurar', e.message || 'Verifique se o arquivo JSON é válido.');
+      return false;
+    }
   };
 
   return (
@@ -1463,7 +1997,9 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       deleteTransaction,
       updateSettings,
       syncWithSupabase,
-      exportDatabaseJson
+      exportDatabaseJson,
+      resetDatabase,
+      restoreBackup
     }}>
       {children}
     </DatabaseContext.Provider>

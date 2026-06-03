@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler';
 console.log('[@OficinaPro] Custom index.js starting...');
 import './src/services/polyfills';
 console.log('[@OficinaPro] Polyfills imported.');

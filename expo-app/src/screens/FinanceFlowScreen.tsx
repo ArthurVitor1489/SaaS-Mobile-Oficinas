@@ -1,45 +1,26 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
-import { Plus, Search, X, ArrowUpRight, ArrowDownRight, Trash2, ArrowLeft, Check } from 'lucide-react-native';
+import { Plus, Search, X, ArrowUpRight, ArrowDownRight, Trash2 } from 'lucide-react-native';
 import { useDatabase } from '../context/DatabaseContext';
 import { theme } from '../styles/theme';
 import { formatCurrency, formatDate } from '../utils/formatters';
+import { useNavigation } from '@react-navigation/native';
+import ExpenseModal from '../components/ExpenseModal';
 import { Billing, BillingStatus } from '../types';
 
-interface FinanceScreenProps {
-  summaryPeriod: 'diario' | 'semanal' | 'mensal';
-  setSummaryPeriod: (period: 'diario' | 'semanal' | 'mensal') => void;
-  activeFinanceFilter: 'Todos' | 'Entradas' | 'Saídas';
-  setActiveFinanceFilter: (filter: 'Todos' | 'Entradas' | 'Saídas') => void;
-  billingSearch: string;
-  setBillingSearch: (search: string) => void;
-  billingStatusFilter: BillingStatus | 'Todos';
-  setBillingStatusFilter: (filter: BillingStatus | 'Todos') => void;
-  selectedBillingDetail: Billing | null;
-  setSelectedBillingDetail: (billing: Billing | null) => void;
-  onAddExpense: () => void;
-}
-
-export default function FinanceScreen({
-  summaryPeriod,
-  setSummaryPeriod,
-  activeFinanceFilter,
-  setActiveFinanceFilter,
-  billingSearch,
-  setBillingSearch,
-  billingStatusFilter,
-  setBillingStatusFilter,
-  selectedBillingDetail,
-  setSelectedBillingDetail,
-  onAddExpense,
-}: FinanceScreenProps) {
-  const { transactions, billings, workOrders, clients, deleteTransaction, payInstallment } = useDatabase();
+export default function FinanceFlowScreen() {
+  const navigation = useNavigation<any>();
+  const { transactions, billings, workOrders, clients, deleteTransaction, addTransaction } = useDatabase();
   const [activeFinanceTab, setActiveFinanceTab] = useState<'flow' | 'billings'>('flow');
+  const [summaryPeriod, setSummaryPeriod] = useState<'diario' | 'semanal' | 'mensal'>('mensal');
+  const [activeFinanceFilter, setActiveFinanceFilter] = useState<'Todos' | 'Entradas' | 'Saídas'>('Todos');
+  const [billingSearch, setBillingSearch] = useState('');
+  const [billingStatusFilter, setBillingStatusFilter] = useState<BillingStatus | 'Todos'>('Todos');
+  const [expenseModalVisible, setExpenseModalVisible] = useState(false);
 
   const clientMap = useMemo(() => new Map(clients.map(c => [c.id, c])), [clients]);
   const osMap = useMemo(() => new Map(workOrders.map(o => [o.id, o])), [workOrders]);
 
-  // All financial metric calculations optimized with useMemo
   const financeMetrics = useMemo(() => {
     const totalRecebido = transactions.filter(t => t.type === 'Entrada').reduce((sum, t) => sum + t.amount, 0);
     const totalDespesas = transactions.filter(t => t.type === 'Saída').reduce((sum, t) => sum + t.amount, 0);
@@ -50,20 +31,18 @@ export default function FinanceScreen({
       return acc + b.installments.filter(i => i.status === 'Pendente').reduce((s, i) => s + i.amount, 0);
     }, 0);
 
-    const currentMonthStr = new Date().toISOString().substring(0, 7); // "YYYY-MM"
+    const currentMonthStr = new Date().toISOString().substring(0, 7);
     const faturamentoMes = workOrders
       .filter(o => o.date.startsWith(currentMonthStr))
       .reduce((acc, o) => acc + o.grandTotal, 0);
 
     const todayStr = new Date().toISOString().split('T')[0];
 
-    // 1. Daily Stats (Hoje)
     const transactionsHoje = transactions.filter(t => t.date === todayStr);
     const entradasHoje = transactionsHoje.filter(t => t.type === 'Entrada').reduce((sum, t) => sum + t.amount, 0);
     const saidasHoje = transactionsHoje.filter(t => t.type === 'Saída').reduce((sum, t) => sum + t.amount, 0);
     const saldoHoje = entradasHoje - saidasHoje;
 
-    // 2. Weekly Stats (Esta Semana)
     const today = new Date();
     const startOfWeek = new Date(today);
     const dayIndex = today.getDay();
@@ -84,7 +63,6 @@ export default function FinanceScreen({
     const saidasSemana = transactionsSemana.filter(t => t.type === 'Saída').reduce((sum, t) => sum + t.amount, 0);
     const saldoSemana = entradasSemana - saidasSemana;
 
-    // 3. Monthly Stats (Este Mês)
     const transactionsMes = transactions.filter(t => t.date.startsWith(currentMonthStr));
     const entradasMes = transactionsMes.filter(t => t.type === 'Entrada').reduce((sum, t) => sum + t.amount, 0);
     const saidasMes = transactionsMes.filter(t => t.type === 'Saída').reduce((sum, t) => sum + t.amount, 0);
@@ -127,33 +105,10 @@ export default function FinanceScreen({
     });
   }, [billings, billingSearch, billingStatusFilter, clientMap, osMap]);
 
-  const handlePayInstallmentClick = async (billingId: string, instNum: number) => {
-    const success = await payInstallment(billingId, instNum);
-    if (success) {
-      setSelectedBillingDetail(null); // Force reload or local state update
-      // Como setSelectedBillingDetail é passado do pai, o fluxo normal seria atualizar o pai,
-      // mas como o databasecontext se encarrega de atualizar, basta atualizar a seleção.
-      const freshBilling = billings.find(b => b.id === billingId);
-      if (freshBilling) {
-        const updatedInstallments = freshBilling.installments.map(i =>
-          i.number === instNum ? { ...i, status: 'Pago' as const, paidAt: new Date().toISOString() } : i
-        );
-        const paidCount = updatedInstallments.filter(i => i.status === 'Pago').length;
-        const newStatus = paidCount === updatedInstallments.length ? 'Pago' as const : 'Parcialmente pago' as const;
-        setSelectedBillingDetail({
-          ...freshBilling,
-          status: newStatus,
-          installments: updatedInstallments
-        });
-      }
-      Alert.alert('Sucesso', 'Baixa realizada com sucesso!');
-    }
-  };
-
   const handleRemoveTransaction = (id: string) => {
     Alert.alert(
-      'Excluir Transação',
-      'Deseja excluir este lançamento financeiro? O saldo será recalculado.',
+      'Excluir Lançamento',
+      'Deseja excluir esta transação? O saldo será recalculado.',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -167,44 +122,50 @@ export default function FinanceScreen({
     );
   };
 
+  const handleExpenseSubmit = async (form: any) => {
+    const res = await addTransaction({
+      type: 'Saída',
+      category: form.category,
+      amount: parseFloat(form.amount) || 0,
+      date: form.date,
+      description: form.description
+    });
+    return !!res;
+  };
+
   return (
     <View style={styles.screenContainer}>
       <View style={styles.screenHeader}>
         <Text style={styles.tabTitle}>Financeiro</Text>
         {activeFinanceTab === 'flow' && (
-          <TouchableOpacity style={[styles.actionButton, { backgroundColor: theme.colors.error }]} onPress={onAddExpense}>
+          <TouchableOpacity style={[styles.actionButton, { backgroundColor: theme.colors.error }]} onPress={() => setExpenseModalVisible(true)}>
             <Plus size={16} color="#fff" />
             <Text style={styles.actionButtonText}>Despesa</Text>
           </TouchableOpacity>
         )}
       </View>
 
-      {/* Segment Tabs Control */}
-      {!selectedBillingDetail && (
-        <View style={styles.segmentContainer}>
-          <TouchableOpacity
-            onPress={() => setActiveFinanceTab('flow')}
-            style={[styles.segmentTab, activeFinanceTab === 'flow' ? styles.segmentTabActive : null]}
-          >
-            <Text style={[styles.segmentTabText, activeFinanceTab === 'flow' ? styles.segmentTabTextActive : null]}>
-              Fluxo de Caixa
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setActiveFinanceTab('billings')}
-            style={[styles.segmentTab, activeFinanceTab === 'billings' ? styles.segmentTabActive : null]}
-          >
-            <Text style={[styles.segmentTabText, activeFinanceTab === 'billings' ? styles.segmentTabTextActive : null]}>
-              Cobranças
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      <View style={styles.segmentContainer}>
+        <TouchableOpacity
+          onPress={() => setActiveFinanceTab('flow')}
+          style={[styles.segmentTab, activeFinanceTab === 'flow' ? styles.segmentTabActive : null]}
+        >
+          <Text style={[styles.segmentTabText, activeFinanceTab === 'flow' ? styles.segmentTabTextActive : null]}>
+            Fluxo de Caixa
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setActiveFinanceTab('billings')}
+          style={[styles.segmentTab, activeFinanceTab === 'billings' ? styles.segmentTabActive : null]}
+        >
+          <Text style={[styles.segmentTabText, activeFinanceTab === 'billings' ? styles.segmentTabTextActive : null]}>
+            Cobranças
+          </Text>
+        </TouchableOpacity>
+      </View>
 
-      {/* FLUXO DE CAIXA SUB TAB */}
-      {activeFinanceTab === 'flow' && !selectedBillingDetail && (
+      {activeFinanceTab === 'flow' ? (
         <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }}>
-          {/* Balanço Geral */}
           <View style={[styles.card, styles.balanceCard]}>
             <View style={styles.balanceHeader}>
               <View>
@@ -228,7 +189,6 @@ export default function FinanceScreen({
             </View>
           </View>
 
-          {/* Resumo por Período */}
           <View style={[styles.card, { padding: 16, marginBottom: 14 }]}>
             <View style={styles.periodHeaderRow}>
               <View>
@@ -236,7 +196,6 @@ export default function FinanceScreen({
                 <Text style={styles.periodCardSubtitle}>Entradas, saídas e resultado líquido</Text>
               </View>
               
-              {/* Seletores de Período */}
               <View style={styles.periodSelectWrapper}>
                 {(['diario', 'semanal', 'mensal'] as const).map(period => (
                   <TouchableOpacity
@@ -252,7 +211,6 @@ export default function FinanceScreen({
               </View>
             </View>
 
-            {/* Grid de Período */}
             <View style={styles.periodGrid}>
               <View style={styles.periodGridCol}>
                 <Text style={[styles.periodGridLabel, { color: theme.colors.success }]}>ENTRADAS</Text>
@@ -292,7 +250,6 @@ export default function FinanceScreen({
             </View>
           </View>
 
-          {/* Listagem de Transações com Filtro */}
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>TRANSAÇÕES</Text>
             
@@ -311,7 +268,6 @@ export default function FinanceScreen({
             </View>
           </View>
 
-          {/* Lista de Transações */}
           {filteredTransactions.length === 0 ? (
             <Text style={styles.emptyText}>Nenhum lançamento encontrado.</Text>
           ) : (
@@ -356,12 +312,8 @@ export default function FinanceScreen({
             })
           )}
         </ScrollView>
-      )}
-
-      {/* COBRANÇAS SUB TAB */}
-      {activeFinanceTab === 'billings' && !selectedBillingDetail && (
+      ) : (
         <View style={{ flex: 1 }}>
-          {/* Busca */}
           <View style={styles.searchBarWrapper}>
             <Search size={16} color="#64748b" style={{ marginRight: 8 }} />
             <TextInput
@@ -378,7 +330,6 @@ export default function FinanceScreen({
             )}
           </View>
 
-          {/* Filtro de Status horizontal */}
           <View style={{ height: 38, marginBottom: 12 }}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.statusFiltersWrapper}>
               {(['Todos', 'Pendente', 'Parcialmente pago', 'Pago', 'Cancelado'] as const).map(st => {
@@ -398,7 +349,6 @@ export default function FinanceScreen({
             </ScrollView>
           </View>
 
-          {/* Lista de Cobranças */}
           <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
             {filteredBillings.length === 0 ? (
               <View style={styles.emptyContainer}>
@@ -430,12 +380,14 @@ export default function FinanceScreen({
                 return (
                   <TouchableOpacity
                     key={b.id}
-                    onPress={() => setSelectedBillingDetail(b)}
+                    onPress={() => {
+                      navigation.navigate('BillingDetail', { billingId: b.id });
+                    }}
                     style={[styles.billingCard, { borderColor: cardBorderColor }]}
                   >
                     <View style={{ flex: 1, paddingRight: 10, gap: 4 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                        <Text style={styles.billingCardOS}>OS-{os?.osNumber || 'S/N'}</Text>
+                        <Text style={styles.billingCardOS}>{os?.osNumber || 'S/N'}</Text>
                         <View style={[styles.billingStatusBadge, { backgroundColor: badgeColor }]}>
                           <Text style={[styles.billingStatusBadgeText, { color: badgeTextColor }]}>{b.status.toUpperCase()}</Text>
                         </View>
@@ -457,120 +409,11 @@ export default function FinanceScreen({
         </View>
       )}
 
-      {/* COBRANÇA DETAILED PROFILE */}
-      {selectedBillingDetail && (
-        <View style={{ flex: 1 }}>
-          <TouchableOpacity
-            onPress={() => setSelectedBillingDetail(null)}
-            style={styles.backButton}
-          >
-            <ArrowLeft size={20} color={theme.colors.primary} />
-            <Text style={styles.backButtonText}>Voltar</Text>
-          </TouchableOpacity>
-
-          {/* Detalhes Cabeçalho */}
-          <View style={[styles.card, { padding: 18, marginBottom: 16 }]}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <View>
-                <Text style={styles.cardLabelText}>COBRANÇA DA ORDEM</Text>
-                <Text style={styles.detailedOSNum}>
-                  OS-{osMap.get(selectedBillingDetail.osId)?.osNumber || 'S/N'}
-                </Text>
-              </View>
-              <View style={[
-                styles.billingStatusBadge,
-                {
-                  backgroundColor: selectedBillingDetail.status === 'Pago' ? 'rgba(34, 197, 94, 0.1)' : selectedBillingDetail.status === 'Parcialmente pago' ? 'rgba(234, 179, 8, 0.1)' : 'rgba(59, 102, 255, 0.1)',
-                  paddingHorizontal: 8,
-                  paddingVertical: 4
-                }
-              ]}>
-                <Text style={{
-                  fontSize: 9,
-                  fontWeight: 'bold',
-                  color: selectedBillingDetail.status === 'Pago' ? theme.colors.success : selectedBillingDetail.status === 'Parcialmente pago' ? theme.colors.warning : theme.colors.primary
-                }}>{selectedBillingDetail.status.toUpperCase()}</Text>
-              </View>
-            </View>
-
-            <View style={{ borderTopWidth: 1, borderTopColor: '#272e3f', paddingTop: 10, gap: 6 }}>
-              <View>
-                <Text style={styles.cardLabelText}>Cliente</Text>
-                <Text style={styles.detailedClientName}>
-                  {(() => {
-                    const os = osMap.get(selectedBillingDetail.osId);
-                    const client = os ? clientMap.get(os.clientId) : null;
-                    return client ? client.name : 'Cliente';
-                  })()}
-                </Text>
-              </View>
-              <View>
-                <Text style={styles.cardLabelText}>Forma de Recebimento</Text>
-                <Text style={styles.detailedClientName}>{selectedBillingDetail.paymentMethod}</Text>
-              </View>
-              <View>
-                <Text style={styles.cardLabelText}>Valor Total</Text>
-                <Text style={{ fontSize: 16, color: theme.colors.success, fontWeight: '900', marginTop: 2 }}>{formatCurrency(selectedBillingDetail.amount)}</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Lista de Parcelas */}
-          <Text style={[styles.cardLabelText, { marginBottom: 10 }]}>
-            LISTA CRONOLÓGICA DE PARCELAS
-          </Text>
-          <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
-            {selectedBillingDetail.installments.map((inst, index) => {
-              const isPaid = inst.status === 'Pago';
-              return (
-                <View
-                  key={index}
-                  style={[
-                    styles.card,
-                    {
-                      padding: 16,
-                      marginBottom: 12,
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      borderColor: isPaid ? 'rgba(34, 197, 94, 0.3)' : 'rgba(234, 179, 8, 0.3)',
-                      borderWidth: 1.5,
-                    }
-                  ]}
-                >
-                  <View style={{ flex: 1, paddingRight: 8, gap: 4 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                      <Text style={styles.installmentTitle}>Parcela {inst.number} de {selectedBillingDetail.installments.length}</Text>
-                      <View style={{ backgroundColor: isPaid ? 'rgba(34, 197, 94, 0.1)' : 'rgba(234, 179, 8, 0.1)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
-                        <Text style={{ fontSize: 9, fontWeight: 'bold', color: isPaid ? theme.colors.success : theme.colors.warning }}>{inst.status.toUpperCase()}</Text>
-                      </View>
-                    </View>
-                    <Text style={styles.installmentDate}>
-                      Vencimento: {formatDate(inst.dueDate)}
-                      {isPaid && inst.paidAt && ` • Pago em: ${formatDate(inst.paidAt)}`}
-                    </Text>
-                  </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-                    <Text style={styles.installmentAmount}>{formatCurrency(inst.amount)}</Text>
-                    {!isPaid ? (
-                      <TouchableOpacity
-                        onPress={() => handlePayInstallmentClick(selectedBillingDetail.id, inst.number)}
-                        style={styles.payInstallmentButton}
-                      >
-                        <Text style={styles.payInstallmentText}>BAIXAR</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <View style={styles.paidCheckIconBg}>
-                        <Check size={14} color={theme.colors.success} />
-                      </View>
-                    )}
-                  </View>
-                </View>
-              );
-            })}
-          </ScrollView>
-        </View>
-      )}
+      <ExpenseModal 
+        visible={expenseModalVisible}
+        onClose={() => setExpenseModalVisible(false)}
+        onSubmit={handleExpenseSubmit}
+      />
     </View>
   );
 }
@@ -578,6 +421,8 @@ export default function FinanceScreen({
 const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,
+    padding: 20,
+    backgroundColor: '#090b0f',
   },
   screenHeader: {
     flexDirection: 'row',
@@ -933,67 +778,5 @@ const styles = StyleSheet.create({
   billingCardDate: {
     fontSize: 12,
     color: theme.colors.textMuted,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    paddingVertical: 6,
-  },
-  backButtonText: {
-    fontSize: 14,
-    color: theme.colors.primary,
-    fontWeight: 'bold',
-    marginLeft: 6,
-  },
-  cardLabelText: {
-    fontSize: 11,
-    color: theme.colors.textMuted,
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
-  },
-  detailedOSNum: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: theme.colors.primary,
-    marginTop: 2,
-  },
-  detailedClientName: {
-    fontSize: 14,
-    color: '#fff',
-    fontWeight: 'bold',
-    marginTop: 2,
-  },
-  installmentTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  installmentDate: {
-    fontSize: 12,
-    color: '#cbd5e1',
-  },
-  installmentAmount: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  payInstallmentButton: {
-    backgroundColor: '#10b981',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-    minHeight: 40,
-    justifyContent: 'center',
-  },
-  payInstallmentText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  paidCheckIconBg: {
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-    padding: 8,
-    borderRadius: 12,
   },
 });

@@ -545,7 +545,7 @@ export default function OSWizardModal({
                     style={[styles.pickerTag, form.status === st ? styles.pickerTagActive : null]}
                   >
                     <Text style={[styles.pickerTagText, form.status === st ? styles.pickerTagActiveText : null]}>
-                      {st}
+                      {st === 'Em andamento' ? 'Andamento' : st}
                     </Text>
                   </TouchableOpacity>
                 ))}

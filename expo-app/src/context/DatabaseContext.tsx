@@ -1525,66 +1525,52 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const addBilling = async (billingData: Omit<Billing, 'id' | 'createdAt'>) => {
     try {
-      const workshopId = user?.user_metadata.workshop_id;
-      const { data: bData, error: bError } = await supabase
-        .from('billings')
-        .insert({
-          workshop_id: workshopId,
-          os_id: billingData.osId,
-          amount: billingData.amount,
-          payment_method: billingData.paymentMethod,
-          status: billingData.status,
-          due_date: billingData.dueDate,
-          installments: billingData.installments
-        })
-        .select()
-        .single();
+      const { data, error } = await supabase.rpc('create_billing_transaction', {
+        p_os_id: billingData.osId,
+        p_amount: billingData.amount,
+        p_payment_method: billingData.paymentMethod,
+        p_status: billingData.status,
+        p_due_date: billingData.dueDate,
+        p_installments: billingData.installments
+      });
 
-      if (bError) throw bError;
+      if (error) throw error;
 
-      // Installments saving
-      const instsInsert = billingData.installments.map(i => ({
-        billing_id: bData.id,
-        number: i.number,
-        amount: i.amount,
-        due_date: i.dueDate,
-        status: i.status,
-        paid_at: i.paidAt || null
-      }));
-
-      const { error: instError } = await supabase.from('billing_installments').insert(instsInsert);
-      if (instError) throw instError;
+      const result = data as {
+        success: boolean;
+        billing_id: string;
+        created_at: string;
+        transactions: any[];
+      };
 
       const newBilling: Billing = {
-        id: bData.id,
+        id: result.billing_id,
         osId: billingData.osId,
         amount: billingData.amount,
         paymentMethod: billingData.paymentMethod,
         status: billingData.status as BillingStatus,
         dueDate: billingData.dueDate,
-        createdAt: bData.created_at,
+        createdAt: result.created_at,
         installments: billingData.installments
       };
 
-      // Trigger automatic finance entries for installments marked as paid
-      for (const inst of billingData.installments) {
-        if (inst.status === 'Pago') {
-          const os = state.workOrders.find(o => o.id === billingData.osId);
-          const client = state.clients.find(c => c.id === os?.clientId);
-          await addTransaction({
-            type: 'Entrada',
-            category: 'Pagamento OS',
-            amount: inst.amount,
-            date: inst.paidAt?.split('T')[0] ?? new Date().toISOString().split('T')[0],
-            description: `Parcela ${inst.number}/${billingData.installments.length} da ${os?.osNumber || 'OS'}`
-          });
-        }
-      }
+      const newTransactions: FinancialTransaction[] = (result.transactions || []).map(t => ({
+        id: t.id,
+        type: t.type as TransactionType,
+        category: t.category as TransactionCategory,
+        amount: typeof t.amount === 'string' ? parseFloat(t.amount) : t.amount,
+        date: t.date,
+        description: t.description,
+        createdAt: t.createdAt
+      }));
 
       setState(prev => {
+        // Filtra para remover qualquer rascunho anterior de cobrança desta OS que tenha sido deletado no banco
+        const filteredBillings = prev.billings.filter(b => b.osId !== billingData.osId);
         const newState = {
           ...prev,
-          billings: [newBilling, ...prev.billings]
+          billings: [newBilling, ...filteredBillings],
+          transactions: [...newTransactions, ...prev.transactions]
         };
         updateCache(newState);
         return newState;
@@ -1599,57 +1585,40 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const payInstallment = async (billingId: string, installmentNumber: number) => {
     try {
-      // Fetch installment reference
-      const { data: insts, error: fError } = await supabase
-        .from('billing_installments')
-        .select('*')
-        .eq('billing_id', billingId)
-        .eq('number', installmentNumber);
-
-      if (fError || insts.length === 0) throw fError || new Error('Parcela não encontrada.');
-      const instRow = insts[0];
-
       const paidAtStr = new Date().toISOString();
-      const { error: uError } = await supabase
-        .from('billing_installments')
-        .update({
-          status: 'Pago',
-          paid_at: paidAtStr
-        })
-        .eq('id', instRow.id);
-
-      if (uError) throw uError;
-
-      // Check billing overall status
-      const { data: allInsts } = await supabase
-        .from('billing_installments')
-        .select('*')
-        .eq('billing_id', billingId);
-
-      const paidCount = (allInsts || []).filter(i => i.status === 'Pago').length;
-      let newStatus: BillingStatus = 'Pendente';
-      if (paidCount === allInsts?.length) {
-        newStatus = 'Pago';
-      } else if (paidCount > 0) {
-        newStatus = 'Parcialmente pago';
-      }
-
-      await supabase.from('billings').update({ status: newStatus }).eq('id', billingId);
-
-      // Create local and remote transactions
       const billing = state.billings.find(b => b.id === billingId);
       const os = state.workOrders.find(o => o.id === billing?.osId);
-      const client = state.clients.find(c => c.id === os?.clientId);
-
-      const transactionDescription = `Parcela ${installmentNumber}/${allInsts?.length} da ${os?.osNumber || 'OS'}`;
       
-      const newTrans = await addTransaction({
+      const totalInsts = billing?.installments.length || 1;
+      const transactionDescription = `Parcela ${installmentNumber}/${totalInsts} da ${os?.osNumber || 'OS'}`;
+
+      const { data, error } = await supabase.rpc('pay_billing_installment', {
+        p_billing_id: billingId,
+        p_installment_number: installmentNumber,
+        p_paid_at: paidAtStr,
+        p_transaction_date: paidAtStr.split('T')[0],
+        p_transaction_description: transactionDescription
+      });
+
+      if (error) throw error;
+
+      const result = data as {
+        success: boolean;
+        new_status: BillingStatus;
+        amount: number;
+        transaction_id: string;
+        transaction_created_at: string;
+      };
+
+      const newTrans: FinancialTransaction = {
+        id: result.transaction_id,
         type: 'Entrada',
         category: 'Pagamento OS',
-        amount: parseFloat(instRow.amount),
+        amount: result.amount,
         date: paidAtStr.split('T')[0],
-        description: transactionDescription
-      });
+        description: transactionDescription,
+        createdAt: result.transaction_created_at
+      };
 
       const updatedBillings = state.billings.map(b => {
         if (b.id === billingId) {
@@ -1659,7 +1628,7 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             }
             return i;
           });
-          return { ...b, status: newStatus, installments: updatedInstallments };
+          return { ...b, status: result.new_status, installments: updatedInstallments };
         }
         return b;
       });
@@ -1667,7 +1636,8 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setState(prev => {
         const newState = {
           ...prev,
-          billings: updatedBillings
+          billings: updatedBillings,
+          transactions: [newTrans, ...prev.transactions]
         };
         updateCache(newState);
         return newState;

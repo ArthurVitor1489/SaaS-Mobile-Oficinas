@@ -6,15 +6,12 @@ import { theme } from '../styles/theme';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { WorkOrder } from '../types';
 
-interface DashboardScreenProps {
-  setCurrentTab: (tab: 'dashboard' | 'clients' | 'os' | 'finance' | 'more') => void;
-  setSelectedOS: (os: WorkOrder) => void;
-}
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { MainTabParamList } from '../types/navigation';
 
-export default function DashboardScreen({
-  setCurrentTab,
-  setSelectedOS,
-}: DashboardScreenProps) {
+export default function DashboardScreen() {
+  const navigation = useNavigation<any>();
   const { clients, vehicles, workOrders, billings, transactions } = useDatabase();
 
   // Metrics using useMemo to optimize re-renders
@@ -54,7 +51,8 @@ export default function DashboardScreen({
 
   return (
     <View style={styles.screenContainer}>
-      <View style={[styles.card, styles.heroCard]}>
+      <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 30 }}>
+        <View style={[styles.card, styles.heroCard]}>
         <Text style={styles.heroCardLabel}>FATURAMENTO DO MÊS</Text>
         <Text style={styles.heroCardValue}>{formatCurrency(metrics.faturamentoMes)}</Text>
         <View style={styles.heroSubRow}>
@@ -142,8 +140,10 @@ export default function DashboardScreen({
               key={os.id} 
               style={[styles.listItem, osStatusStyle, { flexDirection: 'column', alignItems: 'stretch' }]}
               onPress={() => {
-                setSelectedOS(os);
-                setCurrentTab('os');
+                navigation.navigate('OSTab', {
+                  screen: 'OSDetail',
+                  params: { osId: os.id }
+                });
               }}
             >
               <View style={styles.cardHeaderRow}>
@@ -151,7 +151,7 @@ export default function DashboardScreen({
                   <Text style={styles.osNum}>{os.osNumber}</Text>
                   <View style={[styles.statusBadge, { backgroundColor: badgeColor, borderColor: badgeBorderColor }]}>
                     <Text style={[styles.statusBadgeText, { color: badgeTextColor }]}>
-                      {os.status}
+                      {os.status === 'Em andamento' ? 'Andamento' : os.status}
                     </Text>
                   </View>
                 </View>
@@ -242,13 +242,16 @@ export default function DashboardScreen({
           );
         })
       )}
+    </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   screenContainer: {
-    paddingHorizontal: 0,
+    flex: 1,
+    padding: 20,
+    backgroundColor: '#090b0f',
   },
   card: {
     backgroundColor: theme.colors.card,

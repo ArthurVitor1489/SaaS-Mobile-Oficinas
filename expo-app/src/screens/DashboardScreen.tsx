@@ -51,7 +51,7 @@ export default function DashboardScreen() {
 
   return (
     <View style={styles.screenContainer}>
-      <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 30 }}>
+      <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
         <View style={[styles.card, styles.heroCard]}>
         <Text style={styles.heroCardLabel}>FATURAMENTO DO MÊS</Text>
         <Text style={styles.heroCardValue}>{formatCurrency(metrics.faturamentoMes)}</Text>
@@ -94,7 +94,7 @@ export default function DashboardScreen() {
             <Text style={styles.metricTitle}>A RECEBER</Text>
             <Wallet size={14} color={theme.colors.primary} />
           </View>
-          <Text style={[styles.metricValue, { color: theme.colors.primary }]} numberOfLines={1}>
+          <Text style={styles.metricValuePrimary} numberOfLines={1}>
             {formatCurrency(metrics.totalAReceber)}
           </Text>
         </View>
@@ -138,7 +138,7 @@ export default function DashboardScreen() {
           return (
             <TouchableOpacity 
               key={os.id} 
-              style={[styles.listItem, osStatusStyle, { flexDirection: 'column', alignItems: 'stretch' }]}
+              style={[styles.listItem, osStatusStyle, styles.listItemCol]}
               onPress={() => {
                 navigation.navigate('OSTab', {
                   screen: 'OSDetail',
@@ -158,7 +158,7 @@ export default function DashboardScreen() {
                 <Text style={styles.osDate}>{formatDate(os.date)}</Text>
               </View>
 
-              <View style={{ marginVertical: 4 }}>
+              <View style={styles.marginVerticalSm}>
                 <Text style={styles.cardLabelText}>Cliente</Text>
                 <Text style={styles.cardValueTextBold}>{client?.name}</Text>
                 
@@ -173,22 +173,22 @@ export default function DashboardScreen() {
               </View>
 
               <View style={styles.cardFooterRow}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <View style={styles.footerBadgeRow}>
                   {billing ? (
                     <View style={[
                       styles.billingStatusBadge,
-                      { backgroundColor: billing.status === 'Pago' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(234, 179, 8, 0.1)' }
+                      billing.status === 'Pago' ? styles.badgeSuccessBg : styles.badgeWarningBg
                     ]}>
                       <Text style={[
                         styles.billingStatusBadgeText,
-                        { color: billing.status === 'Pago' ? theme.colors.success : theme.colors.warning }
+                        billing.status === 'Pago' ? styles.textGreen : styles.textYellow
                       ]}>
                         💰 {billing.status.toUpperCase()}
                       </Text>
                     </View>
                   ) : (
-                    <View style={[styles.billingStatusBadge, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
-                      <Text style={[styles.billingStatusBadgeText, { color: theme.colors.error }]}>
+                    <View style={[styles.billingStatusBadge, styles.badgeErrorBg]}>
+                      <Text style={[styles.billingStatusBadgeText, styles.textRed]}>
                         💸 NÃO FATURADA
                       </Text>
                     </View>
@@ -218,7 +218,7 @@ export default function DashboardScreen() {
               <View style={styles.transMainInfo}>
                 <View style={[
                   styles.transIconBg,
-                  { backgroundColor: isInflow ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)' }
+                  isInflow ? styles.badgeSuccessBg : styles.badgeErrorBg
                 ]}>
                   {isInflow ? (
                     <ArrowUpRight size={16} color={theme.colors.success} />
@@ -226,7 +226,7 @@ export default function DashboardScreen() {
                     <ArrowDownRight size={16} color={theme.colors.error} />
                   )}
                 </View>
-                <View style={{ flex: 1, paddingRight: 6 }}>
+                <View style={styles.transTextWrapper}>
                   <Text style={styles.tDesc} numberOfLines={1}>
                     {t.description}
                   </Text>
@@ -235,7 +235,7 @@ export default function DashboardScreen() {
                   </Text>
                 </View>
               </View>
-              <Text style={[styles.tAmount, { color: isInflow ? theme.colors.success : theme.colors.error }]}>
+              <Text style={[styles.tAmount, isInflow ? styles.textGreen : styles.textRed]}>
                 {isInflow ? '+' : '-'}{formatCurrency(t.amount)}
               </Text>
             </View>
@@ -566,5 +566,50 @@ const styles = StyleSheet.create({
   tAmount: {
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollViewContent: {
+    paddingBottom: 30,
+  },
+  metricValuePrimary: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: theme.colors.primary,
+  },
+  listItemCol: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+  },
+  marginVerticalSm: {
+    marginVertical: 4,
+  },
+  footerBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  badgeSuccessBg: {
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+  },
+  badgeWarningBg: {
+    backgroundColor: 'rgba(234, 179, 8, 0.1)',
+  },
+  badgeErrorBg: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+  },
+  textGreen: {
+    color: theme.colors.success,
+  },
+  textRed: {
+    color: theme.colors.error,
+  },
+  textYellow: {
+    color: theme.colors.warning,
+  },
+  transTextWrapper: {
+    flex: 1,
+    paddingRight: 6,
   },
 });

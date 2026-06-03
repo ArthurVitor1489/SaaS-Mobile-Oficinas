@@ -3346,12 +3346,12 @@ function MainWorkshopApp() {
 
             {/* STEP 1: SELECT CLIENT & VEHICLE */}
             {wizardStep === 1 && (
-              <ScrollView showsVerticalScrollIndicator={false}>
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16 }}>
                 <Text style={styles.inputLabel}>1. Selecionar Cliente *</Text>
                 
                 {/* Client Search input */}
                 <View style={styles.catalogSearchWrapper}>
-                  <Search size={14} color="#64748b" style={styles.catalogSearchIcon} />
+                  <Search size={18} color="#64748b" style={styles.catalogSearchIcon} />
                   <TextInput
                     placeholder="Buscar por nome ou CPF..."
                     placeholderTextColor="#475569"
@@ -3361,13 +3361,13 @@ function MainWorkshopApp() {
                   />
                   {clientSearch !== '' && (
                     <TouchableOpacity onPress={() => setClientSearch('')}>
-                      <X size={14} color="#64748b" />
+                      <X size={18} color="#64748b" />
                     </TouchableOpacity>
                   )}
                 </View>
 
                 {/* Client selection picker */}
-                <View style={[styles.pickerFake, { maxHeight: 180 }]}>
+                <View style={[styles.pickerFake, { maxHeight: 220 }]}>
                   <ScrollView nestedScrollEnabled showsVerticalScrollIndicator>
                     {(() => {
                       const filtered = clients.filter(c => 
@@ -3396,18 +3396,18 @@ function MainWorkshopApp() {
                                 vehicleId: clientCars.length === 1 ? clientCars[0].id : ''
                               }));
                             }}
-                            style={[styles.pickerItem, isSelected ? styles.pickerItemActive : null]}
+                            style={[styles.pickerItem, { padding: 16 }, isSelected ? styles.pickerItemActive : null]}
                           >
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                               <View>
-                                <Text style={[styles.pickerItemText, isSelected ? styles.pickerItemActiveText : null, { fontWeight: 'bold' }]}>
+                                <Text style={{ fontSize: 16, color: isSelected ? '#3b66ff' : '#cbd5e1', fontWeight: 'bold' }}>
                                   {c.name}
                                 </Text>
                                 {c.cpfCnpj ? (
-                                  <Text style={{ fontSize: 7, color: '#64748b', marginTop: 1 }}>CPF/CNPJ: {c.cpfCnpj}</Text>
+                                  <Text style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>CPF/CNPJ: {c.cpfCnpj}</Text>
                                 ) : null}
                               </View>
-                              {isSelected && <Check size={12} color="#3b66ff" />}
+                              {isSelected && <Check size={16} color="#3b66ff" />}
                             </View>
                           </TouchableOpacity>
                         );
@@ -3435,7 +3435,7 @@ function MainWorkshopApp() {
                       }
 
                       return (
-                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginVertical: 6 }}>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginVertical: 6 }}>
                           {selectionVehicles.map(v => {
                             const isSelected = osForm.vehicleId === v.id;
                             return (
@@ -3444,22 +3444,22 @@ function MainWorkshopApp() {
                                 onPress={() => setOsForm(prev => ({ ...prev, vehicleId: v.id }))}
                                 style={{
                                   backgroundColor: isSelected ? 'rgba(59, 102, 255, 0.1)' : '#0a0c10',
-                                  borderColor: isSelected ? '#3b66ff' : '#1e293b',
-                                  borderWidth: 1,
-                                  borderRadius: 10,
-                                  padding: 10,
-                                  minWidth: '47%',
+                                  borderColor: isSelected ? '#3b66ff' : '#334155',
+                                  borderWidth: 1.5,
+                                  borderRadius: 12,
+                                  padding: 16,
+                                  minWidth: '46%',
                                   flexGrow: 1,
                                 }}
                               >
-                                <Text style={{ fontSize: 10, color: isSelected ? '#3b66ff' : '#cbd5e1', fontWeight: 'bold' }}>
+                                <Text style={{ fontSize: 14, color: isSelected ? '#3b66ff' : '#cbd5e1', fontWeight: 'bold' }}>
                                   {v.brand} {v.model}
                                 </Text>
-                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
-                                  <View style={{ backgroundColor: isSelected ? '#3b66ff' : '#334155', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 3 }}>
-                                    <Text style={{ fontSize: 7, color: '#fff', fontWeight: 'bold' }}>{v.plate}</Text>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+                                  <View style={{ backgroundColor: isSelected ? '#3b66ff' : '#334155', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                                    <Text style={{ fontSize: 11, color: '#fff', fontWeight: 'bold' }}>{v.plate}</Text>
                                   </View>
-                                  {isSelected && <Check size={10} color="#3b66ff" />}
+                                  {isSelected && <Check size={14} color="#3b66ff" />}
                                 </View>
                               </TouchableOpacity>
                             );
@@ -3475,7 +3475,8 @@ function MainWorkshopApp() {
                   disabled={!osForm.clientId || !osForm.vehicleId}
                   style={[
                     styles.submitButton, 
-                    (!osForm.clientId || !osForm.vehicleId) ? { backgroundColor: '#1e293b', opacity: 0.5 } : null
+                    (!osForm.clientId || !osForm.vehicleId) ? { backgroundColor: '#1e293b', opacity: 0.5 } : null,
+                    { marginTop: 0 }
                   ]} 
                   onPress={() => setWizardStep(2)}
                 >
@@ -3486,12 +3487,12 @@ function MainWorkshopApp() {
 
             {/* STEP 2: ADD SERVICES */}
             {wizardStep === 2 && (
-              <ScrollView showsVerticalScrollIndicator={false}>
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16 }}>
                 <Text style={styles.inputLabel}>Adicionar Serviços ao Orçamento</Text>
 
                 {/* Service Search Input */}
                 <View style={styles.catalogSearchWrapper}>
-                  <Search size={14} color="#64748b" style={styles.catalogSearchIcon} />
+                  <Search size={18} color="#64748b" style={styles.catalogSearchIcon} />
                   <TextInput
                     placeholder="Filtrar serviços do catálogo..."
                     placeholderTextColor="#475569"
@@ -3501,13 +3502,13 @@ function MainWorkshopApp() {
                   />
                   {serviceSearch !== '' && (
                     <TouchableOpacity onPress={() => setServiceSearch('')}>
-                      <X size={14} color="#64748b" />
+                      <X size={18} color="#64748b" />
                     </TouchableOpacity>
                   )}
                 </View>
 
                 {/* Services Catalog List */}
-                <View style={[styles.pickerFake, { maxHeight: 220, padding: 0 }]}>
+                <View style={[styles.pickerFake, { maxHeight: 320, padding: 0 }]}>
                   <ScrollView nestedScrollEnabled showsVerticalScrollIndicator>
                     {(() => {
                       const filteredServices = services.filter(s => 
@@ -3517,7 +3518,7 @@ function MainWorkshopApp() {
                       if (filteredServices.length === 0) {
                         return (
                           <View style={{ padding: 16, alignItems: 'center' }}>
-                            <Text style={{ fontSize: 10, color: '#64748b' }}>Nenhum serviço disponível</Text>
+                            <Text style={{ fontSize: 13, color: '#64748b' }}>Nenhum serviço disponível</Text>
                           </View>
                         );
                       }
@@ -3534,43 +3535,47 @@ function MainWorkshopApp() {
                               flexDirection: 'row', 
                               justifyContent: 'space-between', 
                               alignItems: 'center', 
-                              padding: 12, 
+                              minHeight: 72,
+                              paddingVertical: 16,
+                              paddingHorizontal: 16,
                               backgroundColor: isSelected ? 'rgba(59, 102, 255, 0.05)' : 'transparent',
-                              borderBottomWidth: 0.5,
-                              borderBottomColor: '#1e293b22'
+                              borderBottomWidth: 1,
+                              borderBottomColor: '#1e293b'
                             }}
                           >
                             <View style={{ flex: 1, paddingRight: 8 }}>
-                              <Text style={{ fontSize: 14, color: isSelected ? '#3b66ff' : '#f8fafc', fontWeight: 'bold' }}>
+                              <Text style={{ fontSize: 16, color: isSelected ? '#3b66ff' : '#f8fafc', fontWeight: 'bold' }}>
                                 {s.name}
                               </Text>
                               {s.code ? (
-                                <Text style={{ fontSize: 11, color: '#64748b', marginTop: 4, fontFamily: 'monospace' }}>CÓD: {s.code}</Text>
+                                <Text style={{ fontSize: 13, color: '#64748b', marginTop: 4, fontFamily: 'monospace' }}>CÓD: {s.code}</Text>
                               ) : null}
                             </View>
 
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                               <View style={{ alignItems: 'flex-end' }}>
-                                <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#fff' }}>{formatCurrency(s.price)}</Text>
+                                <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#fff' }}>{formatCurrency(s.price)}</Text>
                                 {qty > 1 && (
-                                  <Text style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{qty}x {formatCurrency(s.price)}</Text>
+                                  <Text style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>{qty}x {formatCurrency(s.price)}</Text>
                                 )}
                               </View>
 
                               {/* Qty controller buttons */}
-                              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#0a0c10', borderWidth: 1.5, borderColor: '#334155', borderRadius: 10, padding: 3 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                                 <TouchableOpacity 
                                   onPress={() => handleUpdateServiceQty(s, qty - 1)}
-                                  style={{ width: 34, height: 34, alignItems: 'center', justifyContent: 'center', backgroundColor: '#181c24', borderRadius: 8, borderWidth: 1, borderColor: '#334155' }}
+                                  style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center', backgroundColor: '#181c24', borderRadius: 12, borderWidth: 1.5, borderColor: '#334155' }}
+                                  activeOpacity={0.7}
                                 >
-                                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>-</Text>
+                                  <Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>-</Text>
                                 </TouchableOpacity>
-                                <Text style={{ width: 32, textAlign: 'center', color: '#fff', fontSize: 14, fontWeight: 'bold', fontFamily: 'monospace' }}>{qty}</Text>
+                                <Text style={{ minWidth: 24, textAlign: 'center', color: '#fff', fontSize: 16, fontWeight: 'bold', fontFamily: 'monospace' }}>{qty}</Text>
                                 <TouchableOpacity 
                                   onPress={() => handleUpdateServiceQty(s, qty + 1)}
-                                  style={{ width: 34, height: 34, alignItems: 'center', justifyContent: 'center', backgroundColor: '#181c24', borderRadius: 8, borderWidth: 1, borderColor: '#334155' }}
+                                  style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center', backgroundColor: '#181c24', borderRadius: 12, borderWidth: 1.5, borderColor: '#334155' }}
+                                  activeOpacity={0.7}
                                 >
-                                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>+</Text>
+                                  <Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>+</Text>
                                 </TouchableOpacity>
                               </View>
                             </View>
@@ -3582,15 +3587,15 @@ function MainWorkshopApp() {
                 </View>
 
                 {/* Subtotal Display */}
-                <View style={{ backgroundColor: '#0a0c10', borderWidth: 1, borderColor: '#1e293b', borderRadius: 10, padding: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 6 }}>
-                  <Text style={{ fontSize: 9, color: '#64748b', fontWeight: 'bold' }}>Total em Serviços:</Text>
-                  <Text style={{ fontSize: 11, color: '#fff', fontWeight: 'bold' }}>
+                <View style={{ backgroundColor: '#0a0c10', borderWidth: 1.5, borderColor: '#1e293b', borderRadius: 12, padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ fontSize: 13, color: '#64748b', fontWeight: 'bold' }}>Total em Serviços:</Text>
+                  <Text style={{ fontSize: 16, color: '#fff', fontWeight: 'bold' }}>
                     {formatCurrency(osForm.selectedServices.reduce((acc, s) => acc + (s.price * s.quantity), 0))}
                   </Text>
                 </View>
 
                 {/* Navigation Row */}
-                <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+                <View style={{ flexDirection: 'row', gap: 12 }}>
                   <TouchableOpacity 
                     style={[styles.submitButton, { flex: 1, backgroundColor: '#1e293b', marginTop: 0 }]} 
                     onPress={() => setWizardStep(1)}
@@ -3609,12 +3614,12 @@ function MainWorkshopApp() {
 
             {/* STEP 3: ADD PARTS */}
             {wizardStep === 3 && (
-              <ScrollView showsVerticalScrollIndicator={false}>
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16 }}>
                 <Text style={styles.inputLabel}>Adicionar Peças ao Orçamento</Text>
 
                 {/* Parts Search Input */}
                 <View style={styles.catalogSearchWrapper}>
-                  <Search size={14} color="#64748b" style={styles.catalogSearchIcon} />
+                  <Search size={18} color="#64748b" style={styles.catalogSearchIcon} />
                   <TextInput
                     placeholder="Filtrar peças do catálogo..."
                     placeholderTextColor="#475569"
@@ -3624,13 +3629,13 @@ function MainWorkshopApp() {
                   />
                   {partSearch !== '' && (
                     <TouchableOpacity onPress={() => setPartSearch('')}>
-                      <X size={14} color="#64748b" />
+                      <X size={18} color="#64748b" />
                     </TouchableOpacity>
                   )}
                 </View>
 
                 {/* Parts Catalog List */}
-                <View style={[styles.pickerFake, { maxHeight: 220, padding: 0 }]}>
+                <View style={[styles.pickerFake, { maxHeight: 320, padding: 0 }]}>
                   <ScrollView nestedScrollEnabled showsVerticalScrollIndicator>
                     {(() => {
                       const filteredParts = parts.filter(p => 
@@ -3640,7 +3645,7 @@ function MainWorkshopApp() {
                       if (filteredParts.length === 0) {
                         return (
                           <View style={{ padding: 16, alignItems: 'center' }}>
-                            <Text style={{ fontSize: 10, color: '#64748b' }}>Nenhuma peça disponível</Text>
+                            <Text style={{ fontSize: 13, color: '#64748b' }}>Nenhuma peça disponível</Text>
                           </View>
                         );
                       }
@@ -3657,43 +3662,47 @@ function MainWorkshopApp() {
                               flexDirection: 'row', 
                               justifyContent: 'space-between', 
                               alignItems: 'center', 
-                              padding: 12, 
+                              minHeight: 72,
+                              paddingVertical: 16,
+                              paddingHorizontal: 16,
                               backgroundColor: isSelected ? 'rgba(59, 102, 255, 0.05)' : 'transparent',
-                              borderBottomWidth: 0.5,
-                              borderBottomColor: '#1e293b22'
+                              borderBottomWidth: 1,
+                              borderBottomColor: '#1e293b'
                             }}
                           >
                             <View style={{ flex: 1, paddingRight: 8 }}>
-                              <Text style={{ fontSize: 14, color: isSelected ? '#3b66ff' : '#f8fafc', fontWeight: 'bold' }}>
+                              <Text style={{ fontSize: 16, color: isSelected ? '#3b66ff' : '#f8fafc', fontWeight: 'bold' }}>
                                 {p.name}
                               </Text>
                               {p.code ? (
-                                <Text style={{ fontSize: 11, color: '#64748b', marginTop: 4, fontFamily: 'monospace' }}>SKU: {p.code} {p.stock !== undefined ? `• Est: ${p.stock}` : ''}</Text>
+                                <Text style={{ fontSize: 13, color: '#64748b', marginTop: 4, fontFamily: 'monospace' }}>SKU: {p.code} {p.stock !== undefined ? `• Est: ${p.stock}` : ''}</Text>
                               ) : null}
                             </View>
 
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                               <View style={{ alignItems: 'flex-end' }}>
-                                <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#fff' }}>{formatCurrency(p.salePrice)}</Text>
+                                <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#fff' }}>{formatCurrency(p.salePrice)}</Text>
                                 {qty > 1 && (
-                                  <Text style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{qty}x {formatCurrency(p.salePrice)}</Text>
+                                  <Text style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>{qty}x {formatCurrency(p.salePrice)}</Text>
                                 )}
                               </View>
 
                               {/* Qty controller buttons */}
-                              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#0a0c10', borderWidth: 1.5, borderColor: '#334155', borderRadius: 10, padding: 3 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                                 <TouchableOpacity 
                                   onPress={() => handleUpdatePartQty(p, qty - 1)}
-                                  style={{ width: 34, height: 34, alignItems: 'center', justifyContent: 'center', backgroundColor: '#181c24', borderRadius: 8, borderWidth: 1, borderColor: '#334155' }}
+                                  style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center', backgroundColor: '#181c24', borderRadius: 12, borderWidth: 1.5, borderColor: '#334155' }}
+                                  activeOpacity={0.7}
                                 >
-                                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>-</Text>
+                                  <Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>-</Text>
                                 </TouchableOpacity>
-                                <Text style={{ width: 32, textAlign: 'center', color: '#fff', fontSize: 14, fontWeight: 'bold', fontFamily: 'monospace' }}>{qty}</Text>
+                                <Text style={{ minWidth: 24, textAlign: 'center', color: '#fff', fontSize: 16, fontWeight: 'bold', fontFamily: 'monospace' }}>{qty}</Text>
                                 <TouchableOpacity 
                                   onPress={() => handleUpdatePartQty(p, qty + 1)}
-                                  style={{ width: 34, height: 34, alignItems: 'center', justifyContent: 'center', backgroundColor: '#181c24', borderRadius: 8, borderWidth: 1, borderColor: '#334155' }}
+                                  style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center', backgroundColor: '#181c24', borderRadius: 12, borderWidth: 1.5, borderColor: '#334155' }}
+                                  activeOpacity={0.7}
                                 >
-                                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>+</Text>
+                                  <Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>+</Text>
                                 </TouchableOpacity>
                               </View>
                             </View>
@@ -3705,15 +3714,15 @@ function MainWorkshopApp() {
                 </View>
 
                 {/* Subtotal Display */}
-                <View style={{ backgroundColor: '#0a0c10', borderWidth: 1, borderColor: '#1e293b', borderRadius: 10, padding: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 6 }}>
-                  <Text style={{ fontSize: 9, color: '#64748b', fontWeight: 'bold' }}>Total em Peças:</Text>
-                  <Text style={{ fontSize: 11, color: '#fff', fontWeight: 'bold' }}>
+                <View style={{ backgroundColor: '#0a0c10', borderWidth: 1.5, borderColor: '#1e293b', borderRadius: 12, padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ fontSize: 13, color: '#64748b', fontWeight: 'bold' }}>Total em Peças:</Text>
+                  <Text style={{ fontSize: 16, color: '#fff', fontWeight: 'bold' }}>
                     {formatCurrency(osForm.selectedParts.reduce((acc, p) => acc + (p.salePrice * p.quantity), 0))}
                   </Text>
                 </View>
 
                 {/* Navigation Row */}
-                <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+                <View style={{ flexDirection: 'row', gap: 12 }}>
                   <TouchableOpacity 
                     style={[styles.submitButton, { flex: 1, backgroundColor: '#1e293b', marginTop: 0 }]} 
                     onPress={() => setWizardStep(2)}
@@ -3732,16 +3741,16 @@ function MainWorkshopApp() {
 
             {/* STEP 4: REVISION & OBSERVATIONS */}
             {wizardStep === 4 && (
-              <ScrollView showsVerticalScrollIndicator={false}>
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16 }}>
                 <Text style={styles.inputLabel}>Observações / Diagnóstico Técnico</Text>
                 <TextInput 
                   placeholder="Escreva problemas observados ou detalhes adicionais..." 
                   placeholderTextColor="#475569"
                   multiline
-                  numberOfLines={3}
+                  numberOfLines={4}
                   value={osForm.notes} 
                   onChangeText={t => setOsForm(prev => ({ ...prev, notes: t }))}
-                  style={[styles.modalInput, { height: 60, textAlignVertical: 'top', marginBottom: 12 }]} 
+                  style={[styles.modalInput, { height: 100, textAlignVertical: 'top', padding: 16 }]} 
                 />
 
                 <Text style={styles.inputLabel}>Status da Ordem de Serviço</Text>
@@ -3759,23 +3768,23 @@ function MainWorkshopApp() {
 
                 {/* Totals & Costs Review Card */}
                 <Text style={styles.inputLabel}>Revisão de Custos e Totais</Text>
-                <View style={[styles.card, { padding: 12, backgroundColor: '#0a0c10', gap: 4, marginBottom: 10 }]}>
+                <View style={[styles.card, { padding: 16, backgroundColor: '#0a0c10', gap: 8 }]}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginVertical: 1 }}>
-                    <Text style={{ fontSize: 9, color: '#64748b' }}>Soma de Serviços:</Text>
-                    <Text style={{ fontSize: 9, color: '#f1f5f9', fontWeight: 'bold' }}>
+                    <Text style={{ fontSize: 13, color: '#64748b' }}>Soma de Serviços:</Text>
+                    <Text style={{ fontSize: 13, color: '#f1f5f9', fontWeight: 'bold' }}>
                       {formatCurrency(osForm.selectedServices.reduce((acc, s) => acc + (s.price * s.quantity), 0))}
                     </Text>
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginVertical: 1 }}>
-                    <Text style={{ fontSize: 9, color: '#64748b' }}>Soma de Peças:</Text>
-                    <Text style={{ fontSize: 9, color: '#f1f5f9', fontWeight: 'bold' }}>
+                    <Text style={{ fontSize: 13, color: '#64748b' }}>Soma de Peças:</Text>
+                    <Text style={{ fontSize: 13, color: '#f1f5f9', fontWeight: 'bold' }}>
                       {formatCurrency(osForm.selectedParts.reduce((acc, p) => acc + (p.salePrice * p.quantity), 0))}
                     </Text>
                   </View>
                   <View style={styles.divider} />
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
-                    <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#3b66ff' }}>TOTAL GERAL:</Text>
-                    <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#22c55e' }}>
+                    <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#3b66ff' }}>TOTAL GERAL:</Text>
+                    <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#22c55e' }}>
                       {formatCurrency(
                         osForm.selectedServices.reduce((acc, s) => acc + (s.price * s.quantity), 0) +
                         osForm.selectedParts.reduce((acc, p) => acc + (p.salePrice * p.quantity), 0)
@@ -3785,7 +3794,7 @@ function MainWorkshopApp() {
                 </View>
 
                 {/* Navigation Row */}
-                <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+                <View style={{ flexDirection: 'row', gap: 12 }}>
                   <TouchableOpacity 
                     style={[styles.submitButton, { flex: 1, backgroundColor: '#1e293b', marginTop: 0 }]} 
                     onPress={() => setWizardStep(3)}
@@ -4545,6 +4554,7 @@ const styles = StyleSheet.create({
     maxHeight: '85%',
     borderWidth: 1.5,
     borderColor: '#1e293b',
+    gap: 16,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -4553,7 +4563,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#1e293b',
     paddingBottom: 12,
-    marginBottom: 18,
+    marginBottom: 2,
   },
   modalTitle: {
     fontSize: 18,
@@ -4561,7 +4571,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   inputLabel: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#94a3b8',
     marginBottom: 6,
@@ -4580,7 +4590,7 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     backgroundColor: '#3b66ff',
-    paddingVertical: 16,
+    height: 56,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
@@ -4589,8 +4599,8 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '600',
   },
   pickerFake: {
     borderWidth: 1,
@@ -4625,11 +4635,11 @@ const styles = StyleSheet.create({
   },
   pickerTag: {
     backgroundColor: '#090b0f',
-    borderWidth: 1,
-    borderColor: '#1e293b',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#334155',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
     marginRight: 8,
     marginBottom: 8,
   },
@@ -4638,7 +4648,7 @@ const styles = StyleSheet.create({
     borderColor: '#3b66ff',
   },
   pickerTagText: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#94a3b8',
     fontWeight: 'bold',
   },
@@ -4724,19 +4734,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#090b0f',
-    borderWidth: 1,
-    borderColor: '#1e293b',
+    borderWidth: 1.5,
+    borderColor: '#334155',
     borderRadius: 14,
     paddingHorizontal: 16,
-    marginBottom: 12,
+    height: 56,
   },
   catalogSearchIcon: {
     marginRight: 10,
   },
   catalogSearchInput: {
     flex: 1,
-    height: 44,
-    fontSize: 14,
+    height: '100%',
+    fontSize: 16,
     color: '#f1f5f9',
   },
   catalogListItem: {

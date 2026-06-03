@@ -1977,27 +1977,27 @@ function MainWorkshopApp() {
               // 2. OS DETAILED VIEW
               <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
                 {/* Header Actions */}
-                <View style={[styles.screenHeader, { marginBottom: 12 }]}>
+                <View style={[styles.screenHeader, { marginBottom: 16 }]}>
                   <TouchableOpacity 
                     onPress={() => setSelectedOS(null)} 
                     style={{ flexDirection: 'row', alignItems: 'center' }}
                   >
-                    <ArrowLeft size={16} color="#3b66ff" style={{ marginRight: 2 }} />
-                    <Text style={{ fontSize: 11, color: '#3b66ff', fontWeight: 'bold' }}>Voltar</Text>
+                    <ArrowLeft size={20} color="#3b66ff" style={{ marginRight: 4 }} />
+                    <Text style={{ fontSize: 14, color: '#3b66ff', fontWeight: 'bold' }}>Voltar</Text>
                   </TouchableOpacity>
                   
                   <TouchableOpacity 
                     onPress={() => handleStartEditOS(selectedOS)} 
-                    style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(59, 102, 255, 0.1)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 }}
+                    style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(59, 102, 255, 0.1)', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 }}
                   >
-                    <Edit2 size={12} color="#3b66ff" style={{ marginRight: 4 }} />
-                    <Text style={{ fontSize: 10, color: '#3b66ff', fontWeight: 'bold' }}>Editar</Text>
+                    <Edit2 size={14} color="#3b66ff" style={{ marginRight: 6 }} />
+                    <Text style={{ fontSize: 13, color: '#3b66ff', fontWeight: 'bold' }}>Editar</Text>
                   </TouchableOpacity>
                 </View>
 
                 {/* Status selector badges */}
-                <Text style={{ fontSize: 8, fontWeight: '900', color: '#64748b', letterSpacing: 0.5, marginBottom: 6 }}>STATUS DA ORDEM</Text>
-                <View style={{ flexDirection: 'row', gap: 4, marginBottom: 12 }}>
+                <Text style={styles.cardLabelText}>Status da Ordem</Text>
+                <View style={{ flexDirection: 'row', gap: 6, marginBottom: 16, marginTop: 4 }}>
                   {['Aberta', 'Em andamento', 'Concluída', 'Entregue'].map(st => {
                     const isActive = selectedOS.status === st;
                     let activeColor = '#3b66ff';
@@ -2016,56 +2016,58 @@ function MainWorkshopApp() {
                         }}
                         style={{
                           flex: 1,
-                          paddingVertical: 5,
-                          borderRadius: 6,
-                          backgroundColor: isActive ? activeColor : '#0f1115',
-                          borderWidth: 1,
+                          paddingVertical: 10,
+                          borderRadius: 10,
+                          backgroundColor: isActive ? activeColor : '#181c24',
+                          borderWidth: 1.5,
                           borderColor: isActive ? activeColor : '#1e293b',
                           alignItems: 'center'
                         }}
                       >
-                        <Text style={{ fontSize: 7, fontWeight: 'bold', color: isActive ? '#fff' : '#64748b', textTransform: 'uppercase' }}>{st}</Text>
+                        <Text style={{ fontSize: 10, fontWeight: 'bold', color: isActive ? '#fff' : '#64748b', textTransform: 'uppercase' }}>{st}</Text>
                       </TouchableOpacity>
                     );
                   })}
                 </View>
 
                 {/* Info Card */}
-                <View style={[styles.card, { padding: 12, marginBottom: 12 }]}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <Text style={{ fontSize: 12, fontWeight: '900', color: '#3b66ff' }}>{selectedOS.osNumber}</Text>
-                    <Text style={{ fontSize: 9, color: '#64748b' }}>Data: {selectedOS.date.split('-').reverse().join('/')}</Text>
+                <View style={[styles.card, { padding: 18, marginBottom: 16 }]}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <Text style={{ fontSize: 18, fontWeight: '900', color: '#3b66ff' }}>{selectedOS.osNumber}</Text>
+                    <Text style={{ fontSize: 13, color: '#94a3b8' }}>Data: {selectedOS.date.split('-').reverse().join('/')}</Text>
                   </View>
-                  <View style={{ borderTopWidth: 1, borderTopColor: '#1e293b', paddingTop: 8, gap: 4 }}>
-                    <Text style={{ fontSize: 9, color: '#94a3b8' }}>
-                      Cliente: <Text style={{ color: '#fff', fontWeight: 'bold' }}>{clients.find(c => c.id === selectedOS.clientId)?.name}</Text>
-                    </Text>
-                    <Text style={{ fontSize: 9, color: '#94a3b8' }}>
-                      Veículo: <Text style={{ color: '#fff', fontWeight: 'bold' }}>
+                  <View style={{ borderTopWidth: 1, borderTopColor: '#272e3f', paddingTop: 10, gap: 6 }}>
+                    <View>
+                      <Text style={styles.cardLabelText}>Cliente</Text>
+                      <Text style={{ fontSize: 14, color: '#fff', fontWeight: 'bold', marginTop: 2 }}>{clients.find(c => c.id === selectedOS.clientId)?.name}</Text>
+                    </View>
+                    <View>
+                      <Text style={styles.cardLabelText}>Veículo</Text>
+                      <Text style={{ fontSize: 14, color: '#fff', fontWeight: 'bold', marginTop: 2 }}>
                         {(() => {
                           const v = vehicles.find(veh => veh.id === selectedOS.vehicleId);
-                          return v ? `${v.brand} ${v.model} (${v.plate})` : 'N/A';
+                          return v ? `${v.brand} ${v.model} (${v.plate.toUpperCase()})` : 'N/A';
                         })()}
                       </Text>
-                    </Text>
+                    </View>
                   </View>
                 </View>
 
                 {/* Services details */}
                 {selectedOS.services.length > 0 && (
-                  <View style={{ marginBottom: 12 }}>
-                    <Text style={{ fontSize: 8, fontWeight: '900', color: '#64748b', letterSpacing: 0.5, marginBottom: 6 }}>SERVIÇOS EXECUTADOS</Text>
-                    <View style={{ backgroundColor: '#0f1115', borderRadius: 12, borderWidth: 1, borderColor: '#1e293b', overflow: 'hidden' }}>
+                  <View style={{ marginBottom: 16 }}>
+                    <Text style={styles.cardLabelText}>Serviços Executados</Text>
+                    <View style={{ backgroundColor: '#181c24', borderRadius: 16, borderWidth: 1.5, borderColor: '#1e293b', overflow: 'hidden', marginTop: 6 }}>
                       {selectedOS.services.map((s, idx) => (
-                        <View key={idx} style={{ padding: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: idx === selectedOS.services.length - 1 ? 0 : 1, borderBottomColor: '#1e293b' }}>
+                        <View key={idx} style={{ padding: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: idx === selectedOS.services.length - 1 ? 0 : 1, borderBottomColor: '#1e293b' }}>
                           <View style={{ flex: 1, paddingRight: 8 }}>
-                            <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#fff' }}>{s.name}</Text>
-                            {s.code ? <Text style={{ fontSize: 7, color: '#64748b', marginTop: 2, fontFamily: 'monospace' }}>CÓD: {s.code}</Text> : null}
+                            <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#fff' }}>{s.name}</Text>
+                            {s.code ? <Text style={{ fontSize: 11, color: '#64748b', marginTop: 2, fontFamily: 'monospace' }}>CÓD: {s.code.toUpperCase()}</Text> : null}
                           </View>
                           <View style={{ alignItems: 'flex-end' }}>
-                            <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#fff' }}>{formatCurrency(s.price * (s.quantity || 1))}</Text>
+                            <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#fff' }}>{formatCurrency(s.price * (s.quantity || 1))}</Text>
                             {(s.quantity || 1) > 1 ? (
-                              <Text style={{ fontSize: 7, color: '#64748b', marginTop: 1 }}>{(s.quantity || 1)}x {formatCurrency(s.price)}</Text>
+                              <Text style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{(s.quantity || 1)}x {formatCurrency(s.price)}</Text>
                             ) : null}
                           </View>
                         </View>
@@ -2076,19 +2078,19 @@ function MainWorkshopApp() {
 
                 {/* Parts details */}
                 {selectedOS.parts.length > 0 && (
-                  <View style={{ marginBottom: 12 }}>
-                    <Text style={{ fontSize: 8, fontWeight: '900', color: '#64748b', letterSpacing: 0.5, marginBottom: 6 }}>PEÇAS SUBSTITUÍDAS</Text>
-                    <View style={{ backgroundColor: '#0f1115', borderRadius: 12, borderWidth: 1, borderColor: '#1e293b', overflow: 'hidden' }}>
+                  <View style={{ marginBottom: 16 }}>
+                    <Text style={styles.cardLabelText}>Peças Substituídas</Text>
+                    <View style={{ backgroundColor: '#181c24', borderRadius: 16, borderWidth: 1.5, borderColor: '#1e293b', overflow: 'hidden', marginTop: 6 }}>
                       {selectedOS.parts.map((p, idx) => (
-                        <View key={idx} style={{ padding: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: idx === selectedOS.parts.length - 1 ? 0 : 1, borderBottomColor: '#1e293b' }}>
+                        <View key={idx} style={{ padding: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: idx === selectedOS.parts.length - 1 ? 0 : 1, borderBottomColor: '#1e293b' }}>
                           <View style={{ flex: 1, paddingRight: 8 }}>
-                            <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#fff' }}>{p.name}</Text>
-                            {p.code ? <Text style={{ fontSize: 7, color: '#64748b', marginTop: 2, fontFamily: 'monospace' }}>SKU: {p.code}</Text> : null}
+                            <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#fff' }}>{p.name}</Text>
+                            {p.code ? <Text style={{ fontSize: 11, color: '#64748b', marginTop: 2, fontFamily: 'monospace' }}>SKU: {p.code.toUpperCase()}</Text> : null}
                           </View>
                           <View style={{ alignItems: 'flex-end' }}>
-                            <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#fff' }}>{formatCurrency(p.salePrice * p.quantity)}</Text>
+                            <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#fff' }}>{formatCurrency(p.salePrice * p.quantity)}</Text>
                             {p.quantity > 1 ? (
-                              <Text style={{ fontSize: 7, color: '#64748b', marginTop: 1 }}>{p.quantity}x {formatCurrency(p.salePrice)}</Text>
+                              <Text style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{p.quantity}x {formatCurrency(p.salePrice)}</Text>
                             ) : null}
                           </View>
                         </View>
@@ -2098,76 +2100,78 @@ function MainWorkshopApp() {
                 )}
 
                 {/* Summary totals */}
-                <View style={[styles.card, { padding: 12, gap: 4, marginBottom: 12 }]}>
+                <View style={[styles.card, { padding: 16, gap: 6, marginBottom: 16 }]}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                    <Text style={{ fontSize: 9, color: '#64748b' }}>Mão de Obra:</Text>
-                    <Text style={{ fontSize: 9, color: '#f1f5f9', fontWeight: 'bold' }}>{formatCurrency(selectedOS.servicesTotal)}</Text>
+                    <Text style={{ fontSize: 13, color: '#94a3b8' }}>Mão de Obra:</Text>
+                    <Text style={{ fontSize: 13, color: '#f1f5f9', fontWeight: 'bold' }}>{formatCurrency(selectedOS.servicesTotal)}</Text>
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                    <Text style={{ fontSize: 9, color: '#64748b' }}>Peças:</Text>
-                    <Text style={{ fontSize: 9, color: '#f1f5f9', fontWeight: 'bold' }}>{formatCurrency(selectedOS.partsTotal)}</Text>
+                    <Text style={{ fontSize: 13, color: '#94a3b8' }}>Peças:</Text>
+                    <Text style={{ fontSize: 13, color: '#f1f5f9', fontWeight: 'bold' }}>{formatCurrency(selectedOS.partsTotal)}</Text>
                   </View>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: '#1e293b', paddingTop: 6, marginTop: 4 }}>
-                    <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#3b66ff' }}>TOTAL GERAL:</Text>
-                    <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#fff' }}>{formatCurrency(selectedOS.grandTotal)}</Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: '#272e3f', paddingTop: 8, marginTop: 6 }}>
+                    <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#3b66ff' }}>TOTAL GERAL:</Text>
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: '#fff' }}>{formatCurrency(selectedOS.grandTotal)}</Text>
                   </View>
                 </View>
 
                 {/* Observations */}
                 {selectedOS.notes ? (
-                  <View style={{ marginBottom: 12 }}>
-                    <Text style={{ fontSize: 8, fontWeight: '900', color: '#64748b', letterSpacing: 0.5, marginBottom: 4 }}>OBSERVAÇÕES</Text>
-                    <View style={{ backgroundColor: '#0f1115', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#1e293b' }}>
-                      <Text style={{ fontSize: 9, color: '#cbd5e1', lineHeight: 12 }}>{selectedOS.notes}</Text>
+                  <View style={{ marginBottom: 16 }}>
+                    <Text style={styles.cardLabelText}>Observações</Text>
+                    <View style={{ backgroundColor: '#181c24', padding: 16, borderRadius: 14, borderWidth: 1.5, borderColor: '#1e293b', marginTop: 6 }}>
+                      <Text style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 18 }}>{selectedOS.notes}</Text>
                     </View>
                   </View>
                 ) : null}
 
                 {/* Client Signature display */}
-                <View style={{ marginBottom: 14 }}>
-                  <Text style={{ fontSize: 8, fontWeight: '900', color: '#64748b', letterSpacing: 0.5, marginBottom: 6 }}>ASSINATURA DIGITAL DO CLIENTE</Text>
-                  {selectedOS.signature ? (
-                    <View style={{ backgroundColor: '#0f1115', padding: 10, borderRadius: 12, borderWidth: 1, borderColor: '#1e293b', alignItems: 'center', justifyContent: 'center' }}>
-                      <SvgXml xml={selectedOS.signature} width="200" height="80" />
-                      <Text style={{ fontSize: 7, color: '#64748b', marginTop: 4 }}>ASSINADO DIGITALMENTE</Text>
-                    </View>
-                  ) : (
-                    <TouchableOpacity 
-                      onPress={() => setSigningOSId(selectedOS.id)}
-                      style={{ backgroundColor: '#0f1115', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#1e293b', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 }}
-                    >
-                      <PenTool size={12} color="#64748b" />
-                      <Text style={{ fontSize: 9, color: '#64748b', fontWeight: 'bold' }}>Coletar Assinatura do Cliente</Text>
-                    </TouchableOpacity>
-                  )}
+                <View style={{ marginBottom: 16 }}>
+                  <Text style={styles.cardLabelText}>Assinatura Digital do Cliente</Text>
+                  <View style={{ marginTop: 6 }}>
+                    {selectedOS.signature ? (
+                      <View style={{ backgroundColor: '#181c24', padding: 16, borderRadius: 16, borderWidth: 1.5, borderColor: '#1e293b', alignItems: 'center', justifyContent: 'center' }}>
+                        <SvgXml xml={selectedOS.signature} width="220" height="90" />
+                        <Text style={{ fontSize: 11, color: '#64748b', fontWeight: 'bold', marginTop: 6, letterSpacing: 0.5 }}>ASSINADO DIGITALMENTE</Text>
+                      </View>
+                    ) : (
+                      <TouchableOpacity 
+                        onPress={() => setSigningOSId(selectedOS.id)}
+                        style={{ backgroundColor: '#181c24', padding: 16, borderRadius: 16, borderWidth: 1.5, borderColor: '#1e293b', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 }}
+                      >
+                        <PenTool size={16} color="#64748b" />
+                        <Text style={{ fontSize: 13, color: '#94a3b8', fontWeight: 'bold' }}>Coletar Assinatura do Cliente</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 </View>
 
                 {/* Actions Panel */}
-                <View style={{ flexDirection: 'row', gap: 6, marginBottom: 16 }}>
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 24 }}>
                   <TouchableOpacity 
                     onPress={() => handleShareOS(selectedOS)}
-                    style={{ flex: 1, backgroundColor: '#3b66ff', paddingVertical: 12, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 }}
+                    style={{ flex: 1, backgroundColor: '#3b66ff', paddingVertical: 14, borderRadius: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 }}
                   >
-                    <FileText size={14} color="#fff" />
-                    <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#fff' }}>Imprimir / PDF</Text>
+                    <FileText size={16} color="#fff" />
+                    <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#fff' }}>Imprimir / PDF</Text>
                   </TouchableOpacity>
 
                   {(() => {
                     const billing = billings.find(b => b.osId === selectedOS.id);
                     if (billing) {
                       return (
-                        <View style={{ flex: 1, backgroundColor: 'rgba(34, 197, 94, 0.1)', paddingVertical: 12, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(34, 197, 94, 0.3)' }}>
-                          <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#22c55e', textTransform: 'uppercase' }}>💰 FATURADA ({billing.status})</Text>
+                        <View style={{ flex: 1, backgroundColor: 'rgba(34, 197, 94, 0.1)', paddingVertical: 14, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(34, 197, 94, 0.3)' }}>
+                          <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#22c55e', textTransform: 'uppercase' }}>💰 FATURADA ({billing.status.toUpperCase()})</Text>
                         </View>
                       );
                     } else {
                       return (
                         <TouchableOpacity 
                           onPress={() => setShowBillingPanel(true)}
-                          style={{ flex: 1, backgroundColor: '#10b981', paddingVertical: 12, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 }}
+                          style={{ flex: 1, backgroundColor: '#10b981', paddingVertical: 14, borderRadius: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 }}
                         >
-                          <DollarSign size={14} color="#fff" />
-                          <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#fff' }}>Faturar OS</Text>
+                          <DollarSign size={16} color="#fff" />
+                          <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#fff' }}>Faturar OS</Text>
                         </TouchableOpacity>
                       );
                     }
@@ -2833,33 +2837,33 @@ function MainWorkshopApp() {
           <View style={styles.screenContainer}>
             {!selectedBillingDetail ? (
               <View style={{ flex: 1 }}>
-                <View style={[styles.screenHeader, { marginBottom: 12 }]}>
+                <View style={[styles.screenHeader, { marginBottom: 16 }]}>
                   <TouchableOpacity style={styles.backButton} onPress={() => setMoreSubScreen('menu')}>
-                    <ArrowLeft size={14} color="#fff" style={{ marginRight: 2 }} />
+                    <ArrowLeft size={16} color="#fff" style={{ marginRight: 4 }} />
                     <Text style={styles.backButtonText}>Menu</Text>
                   </TouchableOpacity>
-                  <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#fff' }}>Cobranças</Text>
+                  <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#fff' }}>Cobranças</Text>
                 </View>
 
                 {/* Busca */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e293b', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 2, marginBottom: 10 }}>
-                  <Search size={14} color="#64748b" style={{ marginRight: 6 }} />
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e293b', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 4, marginBottom: 12 }}>
+                  <Search size={16} color="#64748b" style={{ marginRight: 8 }} />
                   <TextInput
                     placeholder="Buscar por OS ou cliente..."
                     placeholderTextColor="#475569"
                     value={billingSearch}
                     onChangeText={setBillingSearch}
-                    style={{ flex: 1, color: '#f1f5f9', fontSize: 11, paddingVertical: 6 }}
+                    style={{ flex: 1, color: '#f1f5f9', fontSize: 14, paddingVertical: 8 }}
                   />
                   {billingSearch !== '' && (
                     <TouchableOpacity onPress={() => setBillingSearch('')}>
-                      <X size={14} color="#64748b" />
+                      <X size={16} color="#64748b" />
                     </TouchableOpacity>
                   )}
                 </View>
 
                 {/* Filtro de Status horizontal */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, marginBottom: 10 }}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginBottom: 14, height: 32 }}>
                   {['Todos', 'Pendente', 'Parcialmente pago', 'Pago', 'Cancelado'].map(st => {
                     const isActive = billingStatusFilter === st;
                     return (
@@ -2867,16 +2871,16 @@ function MainWorkshopApp() {
                         key={st}
                         onPress={() => setBillingStatusFilter(st as any)}
                         style={{
-                          paddingHorizontal: 12,
-                          paddingVertical: 5,
-                          borderRadius: 15,
-                          borderWidth: 1,
+                          paddingHorizontal: 14,
+                          paddingVertical: 6,
+                          borderRadius: 14,
+                          borderWidth: 1.5,
                           borderColor: isActive ? '#3b66ff' : '#1e293b',
-                          backgroundColor: isActive ? '#3b66ff' : '#0f172a',
+                          backgroundColor: isActive ? '#3b66ff' : '#181c24',
                           marginRight: 6
                         }}
                       >
-                        <Text style={{ fontSize: 8, fontWeight: 'bold', textTransform: 'uppercase', color: isActive ? '#fff' : '#64748b' }}>
+                        <Text style={{ fontSize: 11, fontWeight: 'bold', textTransform: 'uppercase', color: isActive ? '#fff' : '#64748b' }}>
                           {st}
                         </Text>
                       </TouchableOpacity>
@@ -2895,7 +2899,7 @@ function MainWorkshopApp() {
                     const matchesStatus = billingStatusFilter === 'Todos' || b.status === billingStatusFilter;
                     return matchesSearch && matchesStatus;
                   }).length === 0 ? (
-                    <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                    <View style={{ paddingVertical: 30, alignItems: 'center' }}>
                       <Text style={styles.emptyText}>Nenhuma cobrança encontrada.</Text>
                     </View>
                   ) : (
@@ -2914,38 +2918,42 @@ function MainWorkshopApp() {
                       
                       let badgeColor = 'rgba(59, 102, 255, 0.1)';
                       let badgeTextColor = '#3b66ff';
+                      let cardBorderColor = 'rgba(59, 102, 255, 0.2)';
                       if (b.status === 'Pago') {
                         badgeColor = 'rgba(34, 197, 94, 0.1)';
                         badgeTextColor = '#22c55e';
+                        cardBorderColor = 'rgba(34, 197, 94, 0.3)';
                       } else if (b.status === 'Parcialmente pago') {
                         badgeColor = 'rgba(234, 179, 8, 0.1)';
                         badgeTextColor = '#eab308';
+                        cardBorderColor = 'rgba(234, 179, 8, 0.3)';
                       } else if (b.status === 'Cancelado') {
                         badgeColor = 'rgba(100, 116, 139, 0.1)';
                         badgeTextColor = '#64748b';
+                        cardBorderColor = '#272e3f';
                       }
 
                       return (
                         <TouchableOpacity
                           key={b.id}
                           onPress={() => setSelectedBillingDetail(b)}
-                          style={[styles.card, { padding: 12, marginBottom: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
+                          style={[styles.card, { padding: 18, marginBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderColor: cardBorderColor, borderWidth: 1.5 }]}
                         >
-                          <View style={{ flex: 1, paddingRight: 8 }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                              <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#fff' }}>OS-{os?.osNumber || 'S/N'}</Text>
-                              <View style={{ backgroundColor: badgeColor, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 }}>
-                                <Text style={{ fontSize: 7, fontWeight: 'bold', color: badgeTextColor }}>{b.status.toUpperCase()}</Text>
+                          <View style={{ flex: 1, paddingRight: 10, gap: 4 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                              <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#fff' }}>OS-{os?.osNumber || 'S/N'}</Text>
+                              <View style={{ backgroundColor: badgeColor, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }}>
+                                <Text style={{ fontSize: 9, fontWeight: 'bold', color: badgeTextColor }}>{b.status.toUpperCase()}</Text>
                               </View>
                             </View>
-                            <Text style={{ fontSize: 9, color: '#94a3b8', marginBottom: 2 }} numberOfLines={1}>{client?.name}</Text>
-                            <Text style={{ fontSize: 8, color: '#64748b' }}>
+                            <Text style={{ fontSize: 13, color: '#f8fafc', fontWeight: 'bold' }} numberOfLines={1}>{client?.name}</Text>
+                            <Text style={{ fontSize: 12, color: '#cbd5e1' }}>
                               Método: {b.paymentMethod} • Parcelas: <Text style={{ color: '#3b66ff', fontWeight: 'bold' }}>{paidCount}/{b.installments.length}</Text>
                             </Text>
                           </View>
-                          <View style={{ alignItems: 'flex-end', gap: 4 }}>
-                            <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#fff' }}>{formatCurrency(b.amount)}</Text>
-                            <Text style={{ fontSize: 8, color: '#64748b' }}>Venc: {b.dueDate.split('-').reverse().join('/')}</Text>
+                          <View style={{ alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+                            <Text style={{ fontSize: 15, fontWeight: 'black', color: '#fff' }}>{formatCurrency(b.amount)}</Text>
+                            <Text style={{ fontSize: 12, color: '#94a3b8' }}>Venc: {b.dueDate.split('-').reverse().join('/')}</Text>
                           </View>
                         </TouchableOpacity>
                       );
@@ -2957,18 +2965,18 @@ function MainWorkshopApp() {
               <View style={{ flex: 1 }}>
                 <TouchableOpacity
                   onPress={() => setSelectedBillingDetail(null)}
-                  style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}
+                  style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}
                 >
-                  <ArrowLeft size={16} color="#3b66ff" />
-                  <Text style={{ fontSize: 11, color: '#3b66ff', fontWeight: 'bold', marginLeft: 4 }}>Voltar</Text>
+                  <ArrowLeft size={20} color="#3b66ff" />
+                  <Text style={{ fontSize: 14, color: '#3b66ff', fontWeight: 'bold', marginLeft: 6 }}>Voltar</Text>
                 </TouchableOpacity>
 
                 {/* Detalhes Cabeçalho */}
-                <View style={[styles.card, { padding: 14, marginBottom: 14 }]}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <View style={[styles.card, { padding: 18, marginBottom: 16 }]}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                     <View>
-                      <Text style={{ fontSize: 8, color: '#64748b', fontWeight: 'bold' }}>COBRANÇA DA ORDEM</Text>
-                      <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#3b66ff' }}>
+                      <Text style={styles.cardLabelText}>COBRANÇA DA ORDEM</Text>
+                      <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#3b66ff', marginTop: 2 }}>
                         OS-{workOrders.find(o => o.id === selectedBillingDetail.osId)?.osNumber || 'S/N'}
                       </Text>
                     </View>
@@ -2979,34 +2987,37 @@ function MainWorkshopApp() {
                       borderRadius: 12
                     }}>
                       <Text style={{
-                        fontSize: 8,
+                        fontSize: 9,
                         fontWeight: 'bold',
                         color: selectedBillingDetail.status === 'Pago' ? '#22c55e' : selectedBillingDetail.status === 'Parcialmente pago' ? '#eab308' : '#3b66ff'
                       }}>{selectedBillingDetail.status.toUpperCase()}</Text>
                     </View>
                   </View>
 
-                  <View style={{ borderTopWidth: 1, borderTopColor: '#1e293b', paddingTop: 8, gap: 4 }}>
-                    <Text style={{ fontSize: 9, color: '#94a3b8' }}>
-                      Cliente: <Text style={{ color: '#fff', fontWeight: 'bold' }}>
+                  <View style={{ borderTopWidth: 1, borderTopColor: '#272e3f', paddingTop: 10, gap: 6 }}>
+                    <View>
+                      <Text style={styles.cardLabelText}>Cliente</Text>
+                      <Text style={{ fontSize: 14, color: '#fff', fontWeight: 'bold', marginTop: 2 }}>
                         {(() => {
                           const os = workOrders.find(o => o.id === selectedBillingDetail.osId);
                           const client = os ? clients.find(c => c.id === os.clientId) : null;
                           return client ? client.name : 'Cliente';
                         })()}
                       </Text>
-                    </Text>
-                    <Text style={{ fontSize: 9, color: '#94a3b8' }}>
-                      Forma de Recebimento: <Text style={{ color: '#fff', fontWeight: 'bold' }}>{selectedBillingDetail.paymentMethod}</Text>
-                    </Text>
-                    <Text style={{ fontSize: 9, color: '#94a3b8' }}>
-                      Valor Total: <Text style={{ color: '#22c55e', fontWeight: 'bold' }}>{formatCurrency(selectedBillingDetail.amount)}</Text>
-                    </Text>
+                    </View>
+                    <View>
+                      <Text style={styles.cardLabelText}>Forma de Recebimento</Text>
+                      <Text style={{ fontSize: 14, color: '#fff', fontWeight: 'bold', marginTop: 2 }}>{selectedBillingDetail.paymentMethod}</Text>
+                    </View>
+                    <View>
+                      <Text style={styles.cardLabelText}>Valor Total</Text>
+                      <Text style={{ fontSize: 16, color: '#22c55e', fontWeight: '900', marginTop: 2 }}>{formatCurrency(selectedBillingDetail.amount)}</Text>
+                    </View>
                   </View>
                 </View>
 
                 {/* Lista de Parcelas */}
-                <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#64748b', marginBottom: 8 }}>
+                <Text style={[styles.cardLabelText, { marginBottom: 10 }]}>
                   LISTA CRONOLÓGICA DE PARCELAS
                 </Text>
                 <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
@@ -3018,30 +3029,35 @@ function MainWorkshopApp() {
                         style={[
                           styles.card,
                           {
-                            padding: 12,
-                            marginBottom: 8,
+                            padding: 16,
+                            marginBottom: 12,
                             flexDirection: 'row',
                             justifyContent: 'space-between',
                             alignItems: 'center',
-                            borderColor: isPaid ? 'rgba(34, 197, 94, 0.2)' : '#1e293b',
-                            borderWidth: 1
+                            borderColor: isPaid ? 'rgba(34, 197, 94, 0.3)' : 'rgba(234, 179, 8, 0.3)',
+                            borderWidth: 1.5,
+                            shadowColor: isPaid ? '#22c55e' : '#eab308',
+                            shadowOpacity: 0.08,
+                            shadowRadius: 6,
+                            shadowOffset: { width: 0, height: 2 },
+                            elevation: 2,
                           }
                         ]}
                       >
-                        <View style={{ flex: 1, paddingRight: 8 }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                            <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#fff' }}>Parcela {inst.number} de {selectedBillingDetail.installments.length}</Text>
-                            <View style={{ backgroundColor: isPaid ? 'rgba(34, 197, 94, 0.1)' : 'rgba(234, 179, 8, 0.1)', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4 }}>
-                              <Text style={{ fontSize: 7, fontWeight: 'bold', color: isPaid ? '#22c55e' : '#eab308' }}>{inst.status.toUpperCase()}</Text>
+                        <View style={{ flex: 1, paddingRight: 8, gap: 4 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                            <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#fff' }}>Parcela {inst.number} de {selectedBillingDetail.installments.length}</Text>
+                            <View style={{ backgroundColor: isPaid ? 'rgba(34, 197, 94, 0.1)' : 'rgba(234, 179, 8, 0.1)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                              <Text style={{ fontSize: 9, fontWeight: 'bold', color: isPaid ? '#22c55e' : '#eab308' }}>{inst.status.toUpperCase()}</Text>
                             </View>
                           </View>
-                          <Text style={{ fontSize: 8, color: '#64748b' }}>
+                          <Text style={{ fontSize: 12, color: '#cbd5e1' }}>
                             Vencimento: {inst.dueDate.split('-').reverse().join('/')}
                             {isPaid && inst.paidAt && ` • Pago em: ${inst.paidAt.split('T')[0].split('-').reverse().join('/')}`}
                           </Text>
                         </View>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                          <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#fff' }}>{formatCurrency(inst.amount)}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+                          <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#fff' }}>{formatCurrency(inst.amount)}</Text>
                           {!isPaid ? (
                             <TouchableOpacity
                               onPress={async () => {
@@ -3061,16 +3077,16 @@ function MainWorkshopApp() {
                               }}
                               style={{
                                 backgroundColor: '#10b981',
-                                paddingHorizontal: 8,
-                                paddingVertical: 5,
-                                borderRadius: 6
+                                paddingHorizontal: 16,
+                                paddingVertical: 10,
+                                borderRadius: 10
                               }}
                             >
-                              <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#fff' }}>BAIXAR</Text>
+                              <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#fff' }}>BAIXAR</Text>
                             </TouchableOpacity>
                           ) : (
-                            <View style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)', padding: 4, borderRadius: 12 }}>
-                              <Check size={10} color="#22c55e" />
+                            <View style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)', padding: 6, borderRadius: 12 }}>
+                              <Check size={14} color="#22c55e" />
                             </View>
                           )}
                         </View>

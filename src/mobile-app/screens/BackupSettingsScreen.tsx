@@ -102,156 +102,156 @@ export const BackupSettingsScreen: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col space-y-5 pb-16 animate-slide-up no-scrollbar overflow-y-auto max-h-full select-none">
+    <div className="flex flex-col space-y-6 pb-20 animate-slide-up no-scrollbar overflow-y-auto max-h-full select-none">
       
       {/* Title */}
       <div>
-        <h2 className="text-xl font-bold text-slate-100 tracking-tight">Ajustes & Backup</h2>
-        <p className="text-xs text-slate-400">Configure sua oficina mecânica e seus backups</p>
+        <h2 className="text-2xl font-black text-slate-100 tracking-tight">Ajustes & Backup</h2>
+        <p className="text-sm text-slate-400">Configure sua oficina mecânica e seus backups</p>
       </div>
 
       {/* Profile Form */}
-      <form onSubmit={handleSaveSettings} className="bg-dark-900 border border-dark-800 rounded-2xl p-4 space-y-4">
-        <div className="flex items-center gap-2 border-b border-dark-800 pb-2 flex-shrink-0">
-          <Building size={16} className="text-brand-400" />
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">Cadastro da Oficina</h3>
+      <form onSubmit={handleSaveSettings} className="bg-dark-900 border border-dark-800 rounded-2xl p-4.5 space-y-4.5">
+        <div className="flex items-center gap-2 border-b border-dark-800 pb-3 flex-shrink-0">
+          <Building size={18} className="text-brand-400" />
+          <h3 className="text-sm font-black uppercase tracking-wider text-slate-200">Cadastro da Oficina</h3>
         </div>
 
-        <div className="space-y-1">
-          <label className="text-[9px] uppercase font-bold text-dark-400">Nome Fantasia da Empresa *</label>
+        <div className="space-y-1.5">
+          <label className="text-xs uppercase font-bold text-slate-400 tracking-wider">Nome Fantasia da Empresa *</label>
           <input
             type="text"
             required
             value={form.name}
             onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
-            className="w-full bg-dark-950 border border-dark-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-brand-500"
+            className="w-full bg-dark-950 border border-dark-800 rounded-xl px-4 py-3 h-12 text-sm text-slate-200 focus:outline-none focus:border-brand-500"
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <label className="text-[9px] uppercase font-bold text-dark-400">CNPJ da Oficina</label>
+        <div className="grid grid-cols-2 gap-3.5">
+          <div className="space-y-1.5">
+            <label className="text-xs uppercase font-bold text-slate-400 tracking-wider">CNPJ da Oficina</label>
             <input
               type="text"
               value={form.cnpj}
               onChange={e => setForm(prev => ({ ...prev, cnpj: e.target.value }))}
-              className="w-full bg-dark-950 border border-dark-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-brand-500"
+              className="w-full bg-dark-950 border border-dark-800 rounded-xl px-4 py-3 h-12 text-sm text-slate-200 focus:outline-none focus:border-brand-500"
             />
           </div>
 
-          <div className="space-y-1">
-            <label className="text-[9px] uppercase font-bold text-dark-400">E-mail de Contato</label>
+          <div className="space-y-1.5">
+            <label className="text-xs uppercase font-bold text-slate-400 tracking-wider">E-mail de Contato</label>
             <input
               type="email"
               value={form.email}
               onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))}
-              className="w-full bg-dark-950 border border-dark-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-brand-500"
+              className="w-full bg-dark-950 border border-dark-800 rounded-xl px-4 py-3 h-12 text-sm text-slate-200 focus:outline-none focus:border-brand-500"
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <label className="text-[9px] uppercase font-bold text-dark-400">Telefone Comercial</label>
+        <div className="grid grid-cols-2 gap-3.5">
+          <div className="space-y-1.5">
+            <label className="text-xs uppercase font-bold text-slate-400 tracking-wider">Telefone Comercial</label>
             <input
               type="text"
               value={form.phone}
               onChange={e => setForm(prev => ({ ...prev, phone: e.target.value }))}
-              className="w-full bg-dark-950 border border-dark-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-brand-500"
+              className="w-full bg-dark-950 border border-dark-800 rounded-xl px-4 py-3 h-12 text-sm text-slate-200 focus:outline-none focus:border-brand-500"
             />
           </div>
 
-          <div className="space-y-1">
-            <label className="text-[9px] uppercase font-bold text-dark-400">WhatsApp Comercial</label>
+          <div className="space-y-1.5">
+            <label className="text-xs uppercase font-bold text-slate-400 tracking-wider">WhatsApp Comercial</label>
             <input
               type="text"
               value={form.whatsapp}
               onChange={e => setForm(prev => ({ ...prev, whatsapp: e.target.value }))}
-              className="w-full bg-dark-950 border border-dark-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-brand-500"
+              className="w-full bg-dark-950 border border-dark-800 rounded-xl px-4 py-3 h-12 text-sm text-slate-200 focus:outline-none focus:border-brand-500"
             />
           </div>
         </div>
 
-        <div className="space-y-1">
-          <label className="text-[9px] uppercase font-bold text-dark-400">Endereço Físico</label>
+        <div className="space-y-1.5">
+          <label className="text-xs uppercase font-bold text-slate-400 tracking-wider">Endereço Físico</label>
           <input
             type="text"
             value={form.address}
             onChange={e => setForm(prev => ({ ...prev, address: e.target.value }))}
-            className="w-full bg-dark-950 border border-dark-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-brand-500"
+            className="w-full bg-dark-950 border border-dark-800 rounded-xl px-4 py-3 h-12 text-sm text-slate-200 focus:outline-none focus:border-brand-500"
           />
         </div>
 
-        <div className="space-y-1">
-          <label className="text-[9px] uppercase font-bold text-dark-400">URL do Logotipo (.png/.jpg)</label>
+        <div className="space-y-1.5">
+          <label className="text-xs uppercase font-bold text-slate-400 tracking-wider">URL do Logotipo (.png/.jpg)</label>
           <input
             type="text"
             value={form.logoUrl}
             onChange={e => setForm(prev => ({ ...prev, logoUrl: e.target.value }))}
-            className="w-full bg-dark-950 border border-dark-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none"
+            className="w-full bg-dark-950 border border-dark-800 rounded-xl px-4 py-3 h-12 text-sm text-slate-200 focus:outline-none"
           />
         </div>
 
-        <div className="flex items-center justify-between border-t border-dark-800/80 pt-3">
-          <div className="space-y-0.5">
-            <span className="text-xs font-semibold text-slate-300">Numeração de OS automática</span>
-            <div className="text-[8px] text-dark-500 font-bold uppercase">Gera OS-0001, OS-0002 em sequência</div>
+        <div className="flex items-center justify-between border-t border-dark-800 pt-3.5">
+          <div className="space-y-1">
+            <span className="text-sm font-bold text-slate-200">Numeração de OS automática</span>
+            <div className="text-xs text-slate-400 font-medium">Gera OS-0001, OS-0002 em sequência</div>
           </div>
           <button
             type="button"
             onClick={() => setForm(prev => ({ ...prev, autoSequence: !prev.autoSequence }))}
-            className={`w-10 h-6 rounded-full p-0.5 transition-colors duration-200 ${form.autoSequence ? 'bg-brand-500 flex justify-end' : 'bg-dark-800 flex justify-start'}`}
+            className={`w-12 h-7 rounded-full p-0.5 transition-colors duration-200 ${form.autoSequence ? 'bg-brand-500 flex justify-end' : 'bg-dark-800 flex justify-start'}`}
           >
-            <span className="w-5 h-5 rounded-full bg-white shadow-sm" />
+            <span className="w-6 h-6 rounded-full bg-white shadow-sm" />
           </button>
         </div>
 
-        <div className="space-y-1">
-          <label className="text-[9px] uppercase font-bold text-dark-400">Termos de Garantia / Notas do PDF</label>
+        <div className="space-y-1.5">
+          <label className="text-xs uppercase font-bold text-slate-400 tracking-wider">Termos de Garantia / Notas do PDF</label>
           <textarea
             value={form.pdfNotes}
             onChange={e => setForm(prev => ({ ...prev, pdfNotes: e.target.value }))}
             rows={3}
-            className="w-full bg-dark-950 border border-dark-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none resize-none"
+            className="w-full bg-dark-950 border border-dark-800 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none resize-none"
           />
         </div>
 
         <button
           type="submit"
-          className="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-premium active:scale-98"
+          className="w-full py-3.5 bg-brand-500 hover:bg-brand-600 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 transition-all shadow-premium active:scale-98 h-12"
         >
-          {saveSuccess ? <Check size={14} /> : <Save size={14} />}
+          {saveSuccess ? <Check size={16} /> : <Save size={16} />}
           {saveSuccess ? 'Configurações Salvas!' : 'Salvar Configurações'}
         </button>
       </form>
 
       {/* Backup and Safety */}
-      <div className="bg-dark-900 border border-dark-800 rounded-2xl p-4 space-y-4">
-        <div className="flex items-center gap-2 border-b border-dark-800 pb-2">
-          <ShieldAlert size={16} className="text-brand-400" />
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">Backup & Segurança</h3>
+      <div className="bg-dark-900 border border-dark-800 rounded-2xl p-4.5 space-y-4.5">
+        <div className="flex items-center gap-2 border-b border-dark-800 pb-3">
+          <ShieldAlert size={18} className="text-brand-400" />
+          <h3 className="text-sm font-black uppercase tracking-wider text-slate-200">Backup & Segurança</h3>
         </div>
 
-        <p className="text-[10px] text-dark-400 leading-snug">
+        <p className="text-xs text-slate-400 leading-relaxed">
           Exporte seus cadastros de clientes, carros e finanças para segurança física offline, permitindo restaurar a qualquer momento.
         </p>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-3">
           {/* Export JSON */}
           <button
             onClick={handleExportJson}
-            className="py-2.5 bg-dark-950 hover:bg-dark-850 border border-dark-800 rounded-xl text-xs font-semibold text-slate-300 flex items-center justify-center gap-1.5 transition-colors"
+            className="py-3.5 bg-dark-950 hover:bg-dark-850 border border-dark-800 rounded-xl text-sm font-bold text-slate-300 flex items-center justify-center gap-2 transition-colors h-12"
           >
-            <Download size={14} className="text-brand-400" />
+            <Download size={16} className="text-brand-400" />
             Exportar JSON
           </button>
 
           {/* Import JSON */}
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="py-2.5 bg-dark-950 hover:bg-dark-850 border border-dark-800 rounded-xl text-xs font-semibold text-slate-300 flex items-center justify-center gap-1.5 transition-colors"
+            className="py-3.5 bg-dark-950 hover:bg-dark-850 border border-dark-800 rounded-xl text-sm font-bold text-slate-300 flex items-center justify-center gap-2 transition-colors h-12"
           >
-            <Upload size={14} className="text-brand-400" />
+            <Upload size={16} className="text-brand-400" />
             Importar JSON
           </button>
           
@@ -266,21 +266,21 @@ export const BackupSettingsScreen: React.FC = () => {
           {/* Export Excel (CSV) */}
           <button
             onClick={handleExportCsv}
-            className="col-span-2 py-2 bg-dark-950 hover:bg-dark-850 border border-dark-800 rounded-xl text-xs font-semibold text-slate-300 flex items-center justify-center gap-1.5 transition-colors"
+            className="col-span-2 py-3 bg-dark-950 hover:bg-dark-850 border border-dark-800 rounded-xl text-sm font-bold text-slate-300 flex items-center justify-center gap-2 transition-colors h-12"
           >
-            <FileSpreadsheet size={14} className="text-emerald-500" />
+            <FileSpreadsheet size={16} className="text-emerald-500" />
             Exportar Ordens (Excel .CSV)
           </button>
         </div>
 
         {/* Danger reset zone */}
-        <div className="border-t border-dark-800/80 pt-3">
+        <div className="border-t border-dark-800 pt-3.5">
           <button
             type="button"
             onClick={handleReset}
-            className="w-full py-2 bg-danger-600/10 hover:bg-danger-600 border border-danger-500/20 hover:border-danger-600 text-danger-500 hover:text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all"
+            className="w-full py-3 bg-danger-600/10 hover:bg-danger-600 border border-danger-500/20 hover:border-danger-600 text-danger-500 hover:text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all h-12"
           >
-            <RefreshCw size={13} />
+            <RefreshCw size={15} />
             Resetar Base de Dados (Limpar Tudo)
           </button>
         </div>

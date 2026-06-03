@@ -244,50 +244,50 @@ export const WorkOrdersScreen: React.FC = () => {
       
       {/* 1. LIST SCREEN */}
       {!selectedOS && !isCreatingOS && (
-        <div className="flex flex-col space-y-4 h-full animate-slide-up">
+        <div className="flex flex-col space-y-5 h-full animate-slide-up">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold text-slate-100 tracking-tight">Ordens de Serviço</h2>
-              <p className="text-xs text-slate-400">Controle de manutenções e reparos</p>
+              <h2 className="text-2xl font-black text-slate-100 tracking-tight">Ordens de Serviço</h2>
+              <p className="text-sm text-slate-400">Controle de manutenções e reparos</p>
             </div>
             <button
               onClick={() => setIsCreatingOS(true)}
-              className="p-2 bg-brand-500 hover:bg-brand-600 text-white rounded-xl shadow-premium flex items-center justify-center gap-1 text-xs font-semibold transition-all active:scale-95"
+              className="px-4 py-2.5 bg-brand-500 hover:bg-brand-600 text-white rounded-xl shadow-premium flex items-center justify-center gap-1.5 text-sm font-bold transition-all active:scale-95"
             >
-              <Plus size={15} />
+              <Plus size={16} />
               Nova OS
             </button>
           </div>
 
           {/* Search bar */}
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-dark-400">
-              <Search size={14} />
+            <span className="absolute inset-y-0 left-0 pl-4.5 flex items-center text-slate-400">
+              <Search size={18} />
             </span>
             <input
               type="text"
               placeholder="Buscar por OS, cliente, placa..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full bg-dark-900 border border-dark-800 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-200 placeholder-dark-500 focus:outline-none focus:border-brand-500 transition-colors"
+              className="w-full bg-dark-900 border border-dark-800 rounded-xl pl-12 pr-4.5 py-3 h-12 text-sm text-slate-200 placeholder-dark-500 focus:outline-none focus:border-brand-500 transition-colors"
             />
             {search && (
-              <button onClick={() => setSearch('')} className="absolute inset-y-0 right-0 pr-3 flex items-center text-dark-500 hover:text-white">
-                <X size={14} />
+              <button onClick={() => setSearch('')} className="absolute inset-y-0 right-0 pr-4.5 flex items-center text-dark-500 hover:text-white">
+                <X size={18} />
               </button>
             )}
           </div>
 
           {/* Horizontal OS Status Slider filter */}
-          <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-0.5 select-none flex-shrink-0">
+          <div className="flex gap-2 overflow-x-auto no-scrollbar py-1.5 select-none flex-shrink-0">
             {['Todos', 'Aberta', 'Em andamento', 'Concluída', 'Entregue'].map(st => {
               const isActive = statusFilter === st;
               return (
                 <button
                   key={st}
                   onClick={() => setStatusFilter(st as any)}
-                  className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase transition-all flex-shrink-0 border ${isActive ? 'bg-brand-500 text-white border-brand-500 shadow-premium' : 'bg-dark-900 text-dark-400 border-dark-800 hover:text-slate-200'}`}
+                  className={`px-4 py-2 rounded-full text-[11px] font-bold uppercase transition-all flex-shrink-0 border ${isActive ? 'bg-brand-500 text-white border-brand-500 shadow-premium' : 'bg-dark-900 text-dark-400 border-dark-800 hover:text-slate-200'}`}
                 >
                   {st}
                 </button>
@@ -296,12 +296,12 @@ export const WorkOrdersScreen: React.FC = () => {
           </div>
 
           {/* OS Cards List */}
-          <div className="flex-1 overflow-y-auto no-scrollbar space-y-2.5 pb-16">
+          <div className="flex-1 overflow-y-auto no-scrollbar space-y-3.5 pb-20">
             {filteredOS.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center text-dark-500">
-                <span className="text-3xl">📋</span>
-                <h4 className="text-xs font-bold text-slate-400 mt-2">Nenhuma Ordem de Serviço</h4>
-                <p className="text-[10px] text-dark-500 mt-1 max-w-[200px]">Crie uma nova clicando em "Nova OS".</p>
+              <div className="flex flex-col items-center justify-center py-16 text-center text-dark-500">
+                <span className="text-4xl">📋</span>
+                <h4 className="text-sm font-bold text-slate-400 mt-2.5">Nenhuma Ordem de Serviço</h4>
+                <p className="text-xs text-dark-500 mt-1.5 max-w-[240px]">Crie uma nova clicando em "Nova OS".</p>
               </div>
             ) : (
               filteredOS.map(os => {
@@ -309,82 +309,90 @@ export const WorkOrdersScreen: React.FC = () => {
                 const vehicle = vehicles.find(v => v.id === os.vehicleId);
                 const billing = billings.find(b => b.osId === os.id);
                 
-                let statusColor = 'bg-brand-500/10 text-brand-400 border-brand-500/20';
-                if (os.status === 'Em andamento') statusColor = 'bg-warning-500/10 text-warning-500 border-warning-500/20';
-                else if (os.status === 'Concluída') statusColor = 'bg-success-500/10 text-success-500 border-success-500/20';
-                else if (os.status === 'Entregue') statusColor = 'bg-dark-800 text-dark-400 border-dark-700';
+                let statusColor = 'bg-brand-500/10 text-brand-400 border-brand-500/30';
+                let statusGlow = 'border-brand-500/20 shadow-[0_0_12px_rgba(59,102,255,0.04)]';
+                if (os.status === 'Em andamento') {
+                  statusColor = 'bg-warning-500/10 text-warning-500 border-warning-500/30';
+                  statusGlow = 'border-warning-500/20 shadow-[0_0_12px_rgba(245,158,11,0.04)]';
+                } else if (os.status === 'Concluída') {
+                  statusColor = 'bg-success-500/10 text-success-500 border-success-500/30';
+                  statusGlow = 'border-success-500/20 shadow-[0_0_12px_rgba(16,185,129,0.04)]';
+                } else if (os.status === 'Entregue') {
+                  statusColor = 'bg-dark-800 text-slate-400 border-dark-700';
+                  statusGlow = 'border-dark-800 shadow-none';
+                }
 
                 return (
                   <div
                     key={os.id}
                     onClick={() => setSelectedOS(os)}
-                    className="bg-dark-900 border border-dark-800 rounded-xl p-3 flex flex-col space-y-2 hover:border-dark-700 cursor-pointer transition-colors active:bg-dark-800/50"
+                    className={`bg-dark-900 border-2 ${statusGlow} rounded-2xl p-4.5 flex flex-col space-y-3.5 hover:border-brand-500/40 cursor-pointer transition-all active:bg-dark-800/50`}
                   >
                     <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <span className="font-extrabold text-xs text-slate-200">{os.osNumber}</span>
-                        <span className={`text-[8px] font-black px-1.5 py-0.25 border rounded-full uppercase ${statusColor}`}>
+                      <div className="flex items-center gap-2.5">
+                        <span className="font-black text-sm text-brand-400">{os.osNumber}</span>
+                        <span className={`text-[10px] font-extrabold px-2 py-0.5 border rounded-full uppercase ${statusColor}`}>
                           {os.status}
                         </span>
                       </div>
-                      <span className="text-[9px] text-dark-400 font-medium">{formatDate(os.date)}</span>
+                      <span className="text-xs text-slate-400 font-medium">{formatDate(os.date)}</span>
                     </div>
 
-                    <div className="text-[10px] text-slate-300 font-semibold leading-tight">
-                      {client?.name} • <span className="text-dark-400">{vehicle?.brand} {vehicle?.model}</span>
+                    <div className="text-xs text-slate-350 leading-relaxed font-semibold">
+                      <div className="text-slate-100 font-bold">{client?.name}</div>
+                      <div className="text-slate-400 font-normal mt-0.5">{vehicle?.brand} {vehicle?.model} • Placa: <span className="font-bold text-slate-300 uppercase">{vehicle?.plate}</span></div>
                     </div>
 
-                    <div className="flex justify-between items-center border-t border-dark-850 pt-2 text-[10px]">
-                      <div className="text-[8px] text-dark-500 font-bold uppercase flex items-center gap-1.5">
+                    <div className="flex justify-between items-center border-t border-dark-800 pt-3 text-xs">
+                      <div className="text-[10px] font-bold uppercase flex items-center gap-1.5">
                         {billing ? (
-                          <span className={`px-1.5 py-0.25 rounded ${billing.status === 'Pago' ? 'bg-success-500/10 text-success-500' : 'bg-warning-500/10 text-warning-500'}`}>
+                          <span className={`px-2 py-0.5 rounded-md ${billing.status === 'Pago' ? 'bg-success-500/10 text-success-500' : 'bg-warning-500/10 text-warning-500'}`}>
                             💰 {billing.status.toUpperCase()}
                           </span>
                         ) : (
-                          <span className="px-1.5 py-0.25 bg-danger-500/10 text-danger-500 rounded">
+                          <span className="px-2 py-0.5 bg-danger-500/10 text-danger-500 rounded-md">
                             💸 NÃO FATURADA
                           </span>
                         )}
                       </div>
-                      <span className="font-extrabold text-slate-200">{formatCurrency(os.grandTotal)}</span>
+                      <span className="font-black text-sm text-slate-100">{formatCurrency(os.grandTotal)}</span>
                     </div>
                   </div>
                 );
               })
             )}
           </div>
-        </div>
       )}
 
       {/* 2. OS DETAILED OVERVIEW */}
       {selectedOS && !isCreatingOS && (
         <div className="flex flex-col h-full bg-dark-950 animate-slide-in-right overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-dark-800 pb-3 mb-3">
-            <div className="flex items-center gap-1">
-              <button onClick={() => setSelectedOS(null)} className="p-1 hover:bg-dark-800 text-slate-300 rounded-lg flex items-center gap-1 text-xs transition-colors">
-                <ArrowLeft size={16} />
+          <div className="flex items-center justify-between border-b border-dark-800 pb-3 mb-4">
+            <div className="flex items-center gap-1.5">
+              <button onClick={() => setSelectedOS(null)} className="p-1.5 hover:bg-dark-800 text-slate-300 rounded-lg flex items-center gap-1.5 text-sm font-bold transition-colors">
+                <ArrowLeft size={18} />
                 Voltar
               </button>
               <button 
                 onClick={handleStartEditOS}
-                className="p-1 hover:bg-dark-800 text-brand-400 rounded-lg flex items-center gap-0.5 text-xs font-semibold transition-colors"
+                className="p-1.5 hover:bg-dark-800 text-brand-400 rounded-lg flex items-center gap-1 text-sm font-bold transition-colors"
               >
-                <Edit2 size={13} />
+                <Edit2 size={15} />
                 Editar
               </button>
             </div>
             
             {/* Status dropdown selector */}
-            <div className="flex items-center gap-1.5">
-              <label className="text-[8px] uppercase font-bold text-dark-400">Status:</label>
+            <div className="flex items-center gap-2">
+              <label className="text-[10px] uppercase font-bold text-slate-400">Status:</label>
               <select
                 value={selectedOS.status}
                 onChange={e => {
                   updateWorkOrderStatus(selectedOS.id, e.target.value as OSStatus);
                   setSelectedOS(prev => prev ? { ...prev, status: e.target.value as OSStatus } : null);
                 }}
-                className="bg-dark-900 border border-dark-800 text-[10px] text-slate-200 font-bold rounded-lg px-2 py-1 focus:outline-none focus:border-brand-500"
+                className="bg-dark-900 border border-dark-800 text-xs text-slate-200 font-bold rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-brand-500 h-9"
               >
                 <option value="Aberta">Aberta</option>
                 <option value="Em andamento">Em andamento</option>
@@ -395,24 +403,24 @@ export const WorkOrdersScreen: React.FC = () => {
           </div>
 
           {/* Details Body */}
-          <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pb-20 select-text">
+          <div className="flex-1 overflow-y-auto no-scrollbar space-y-5 pb-20 select-text">
             {/* Card info */}
-            <div className="bg-dark-900 border border-dark-800 rounded-xl p-3.5 space-y-2">
+            <div className="bg-dark-900 border border-dark-800 rounded-2xl p-4.5 space-y-3">
               <div className="flex justify-between items-center">
-                <span className="font-extrabold text-sm text-brand-400">{selectedOS.osNumber}</span>
-                <span className="text-[10px] text-dark-400 font-semibold">{formatDate(selectedOS.date)}</span>
+                <span className="font-black text-base text-brand-400">{selectedOS.osNumber}</span>
+                <span className="text-xs text-slate-400 font-bold">{formatDate(selectedOS.date)}</span>
               </div>
               
-              <div className="border-t border-dark-800 pt-2 text-[10px] space-y-1">
+              <div className="border-t border-dark-800 pt-3 text-xs space-y-2 leading-relaxed">
                 <div>
-                  <span className="text-dark-500 font-bold">CLIENTE:</span>{' '}
-                  <span className="text-slate-300 font-semibold">
+                  <span className="text-slate-400 font-bold uppercase tracking-wider">Cliente:</span>{' '}
+                  <span className="text-slate-100 font-extrabold">
                     {clients.find(c => c.id === selectedOS.clientId)?.name}
                   </span>
                 </div>
                 <div>
-                  <span className="text-dark-500 font-bold">VEÍCULO:</span>{' '}
-                  <span className="text-slate-300 font-semibold">
+                  <span className="text-slate-400 font-bold uppercase tracking-wider">Veículo:</span>{' '}
+                  <span className="text-slate-100 font-extrabold text-xs">
                     {(() => {
                       const v = vehicles.find(veh => veh.id === selectedOS.vehicleId);
                       return v ? `${v.brand} ${v.model} (${v.plate})` : '';
@@ -424,27 +432,27 @@ export const WorkOrdersScreen: React.FC = () => {
 
             {/* List Services */}
             {selectedOS.services.length > 0 && (
-              <div className="space-y-2">
-                <span className="text-[10px] font-bold text-dark-400 uppercase tracking-wider block">Serviços Executados</span>
-                <div className="bg-dark-900 border border-dark-800 rounded-xl overflow-hidden divide-y divide-dark-800">
+              <div className="space-y-2.5">
+                <span className="text-xs font-extrabold text-slate-400 uppercase tracking-wider block">Serviços Executados</span>
+                <div className="bg-dark-900 border border-dark-800 rounded-2xl overflow-hidden divide-y divide-dark-800">
                   {selectedOS.services.map(s => {
                     const qty = s.quantity || 1;
                     return (
-                      <div key={s.id} className="p-3 flex justify-between items-center text-xs">
+                      <div key={s.id} className="p-4 flex justify-between items-center text-sm">
                         <div>
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-slate-300 font-medium">{s.name}</span>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-slate-200 font-bold">{s.name}</span>
                             {s.code && (
-                              <span className="text-[8px] font-mono bg-dark-950 border border-dark-800 text-dark-400 px-1 py-0.25 rounded uppercase">
+                              <span className="text-[10px] font-mono bg-dark-950 border border-dark-800 text-slate-400 px-1.5 py-0.5 rounded uppercase">
                                 {s.code}
                               </span>
                             )}
                           </div>
                         </div>
                         <div className="text-right">
-                          <span className="font-bold text-slate-200">{formatCurrency(s.price * qty)}</span>
+                          <span className="font-extrabold text-white">{formatCurrency(s.price * qty)}</span>
                           {qty > 1 && (
-                            <div className="text-[8px] text-dark-400 font-bold uppercase">{qty}x {formatCurrency(s.price)}</div>
+                            <div className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">{qty}x {formatCurrency(s.price)}</div>
                           )}
                         </div>
                       </div>
@@ -456,18 +464,18 @@ export const WorkOrdersScreen: React.FC = () => {
 
             {/* List Parts */}
             {selectedOS.parts.length > 0 && (
-              <div className="space-y-2">
-                <span className="text-[10px] font-bold text-dark-400 uppercase tracking-wider block">Peças Substituídas</span>
-                <div className="bg-dark-900 border border-dark-800 rounded-xl overflow-hidden divide-y divide-dark-800">
+              <div className="space-y-2.5">
+                <span className="text-xs font-extrabold text-slate-400 uppercase tracking-wider block">Peças Substituídas</span>
+                <div className="bg-dark-900 border border-dark-800 rounded-2xl overflow-hidden divide-y divide-dark-800">
                   {selectedOS.parts.map(p => (
-                    <div key={p.id} className="p-3 flex justify-between items-center text-xs">
+                    <div key={p.id} className="p-4 flex justify-between items-center text-sm">
                       <div>
-                        <div className="text-slate-300 font-medium">{p.name}</div>
-                        <span className="text-[8px] text-dark-400 font-bold uppercase">Código: {p.code}</span>
+                        <div className="text-slate-200 font-bold">{p.name}</div>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase mt-1 block">Código: {p.code}</span>
                       </div>
                       <div className="text-right">
-                        <span className="font-bold text-slate-200">{formatCurrency(p.salePrice * p.quantity)}</span>
-                        <div className="text-[8px] text-dark-400 font-bold uppercase">{p.quantity}x {formatCurrency(p.salePrice)}</div>
+                        <span className="font-extrabold text-white">{formatCurrency(p.salePrice * p.quantity)}</span>
+                        <div className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">{p.quantity}x {formatCurrency(p.salePrice)}</div>
                       </div>
                     </div>
                   ))}
@@ -476,26 +484,26 @@ export const WorkOrdersScreen: React.FC = () => {
             )}
 
             {/* Summary totals */}
-            <div className="bg-dark-900 border border-dark-800 rounded-xl p-3.5 space-y-2 text-xs">
-              <div className="flex justify-between text-dark-400 text-[10px]">
+            <div className="bg-dark-900 border border-dark-800 rounded-2xl p-4.5 space-y-3 text-sm">
+              <div className="flex justify-between text-slate-400 text-xs">
                 <span>Total de Serviços:</span>
-                <span className="font-semibold text-slate-350">{formatCurrency(selectedOS.servicesTotal)}</span>
+                <span className="font-bold text-slate-200">{formatCurrency(selectedOS.servicesTotal)}</span>
               </div>
-              <div className="flex justify-between text-dark-400 text-[10px]">
+              <div className="flex justify-between text-slate-400 text-xs">
                 <span>Total de Peças:</span>
-                <span className="font-semibold text-slate-350">{formatCurrency(selectedOS.partsTotal)}</span>
+                <span className="font-bold text-slate-200">{formatCurrency(selectedOS.partsTotal)}</span>
               </div>
-              <div className="flex justify-between border-t border-dark-800 pt-2 font-extrabold text-xs text-brand-400 uppercase tracking-wider">
-                <span>Valor Total:</span>
-                <span className="text-sm text-slate-100">{formatCurrency(selectedOS.grandTotal)}</span>
+              <div className="flex justify-between border-t border-dark-800 pt-3 font-black text-xs text-brand-500 uppercase tracking-wider">
+                <span className="text-slate-100 text-sm font-extrabold">Valor Total:</span>
+                <span className="text-base text-white font-black">{formatCurrency(selectedOS.grandTotal)}</span>
               </div>
             </div>
 
             {/* Observations */}
             {selectedOS.notes && (
-              <div className="space-y-2">
-                <span className="text-[10px] font-bold text-dark-400 uppercase tracking-wider block">Observações do Mecânico</span>
-                <div className="bg-dark-900 border border-dark-800 rounded-xl p-3 text-[10px] text-slate-300 leading-snug">
+              <div className="space-y-2.5">
+                <span className="text-xs font-extrabold text-slate-400 uppercase tracking-wider block">Observações do Mecânico</span>
+                <div className="bg-dark-900 border border-dark-800 rounded-2xl p-4 text-xs text-slate-300 leading-relaxed">
                   {selectedOS.notes}
                 </div>
               </div>
@@ -503,20 +511,20 @@ export const WorkOrdersScreen: React.FC = () => {
 
             {/* Signature Box */}
             {selectedOS.signature ? (
-              <div className="space-y-2">
-                <span className="text-[10px] font-bold text-dark-400 uppercase tracking-wider block">Assinatura Digital</span>
-                <div className="bg-dark-900 border border-dark-800 rounded-xl p-4 flex flex-col items-center justify-center">
-                  <img src={selectedOS.signature} alt="Assinatura" className="h-12 object-contain bg-white/5 rounded p-1" />
-                  <span className="text-[8px] text-dark-500 uppercase font-semibold mt-1">Assinado em conformidade</span>
+              <div className="space-y-2.5">
+                <span className="text-xs font-extrabold text-slate-400 uppercase tracking-wider block">Assinatura Digital</span>
+                <div className="bg-dark-900 border border-dark-800 rounded-2xl p-5 flex flex-col items-center justify-center">
+                  <img src={selectedOS.signature} alt="Assinatura" className="h-16 object-contain bg-white/5 rounded p-1.5" />
+                  <span className="text-[10px] text-slate-500 uppercase font-bold mt-2">Assinado em conformidade</span>
                 </div>
               </div>
             ) : (
               !isSigning && (
                 <button
                   onClick={() => setIsSigning(true)}
-                  className="w-full py-2 bg-dark-900 hover:bg-dark-800 border border-dark-800 rounded-xl text-xs font-semibold text-slate-300 flex items-center justify-center gap-1.5 transition-colors"
+                  className="w-full py-3 bg-dark-900 hover:bg-dark-800 border border-dark-800 rounded-xl text-sm font-bold text-slate-350 flex items-center justify-center gap-2 transition-colors h-12"
                 >
-                  <PenTool size={14} className="text-brand-400" />
+                  <PenTool size={16} className="text-brand-400" />
                   Coletar Assinatura do Cliente
                 </button>
               )
@@ -535,21 +543,21 @@ export const WorkOrdersScreen: React.FC = () => {
             )}
 
             {/* Bottom Actions Drawer */}
-            <div className="pt-2 grid grid-cols-2 gap-2">
+            <div className="pt-3 flex flex-col gap-3">
               <button
                 onClick={() => setShowPDF(true)}
-                className="col-span-2 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-premium active:scale-98"
+                className="w-full py-3.5 bg-brand-500 hover:bg-brand-600 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 transition-all shadow-premium active:scale-98 h-12"
               >
-                <FileText size={15} />
+                <FileText size={16} />
                 Gerar Recibo / PDF
               </button>
 
               {!activeOSBilling && (
                 <button
                   onClick={() => setShowBillingPanel(true)}
-                  className="col-span-2 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-colors"
+                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 transition-colors h-12"
                 >
-                  <DollarSign size={15} />
+                  <DollarSign size={16} />
                   Faturar Ordem de Serviço
                 </button>
               )}

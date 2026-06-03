@@ -70,131 +70,131 @@ export const DashboardScreen: React.FC = () => {
   const padding = 15;
 
   return (
-    <div className="flex flex-col space-y-5 pb-6 animate-slide-up no-scrollbar overflow-y-auto max-h-full">
+    <div className="flex flex-col space-y-6 pb-10 animate-slide-up no-scrollbar overflow-y-auto max-h-full">
       {/* Title */}
       <div>
-        <h2 className="text-xl font-bold text-slate-100 font-sans tracking-tight">Painel Principal</h2>
-        <p className="text-xs text-slate-400">Visão geral das atividades da oficina</p>
+        <h2 className="text-2xl font-black text-slate-100 font-sans tracking-tight">Painel Principal</h2>
+        <p className="text-sm text-slate-400">Visão geral das atividades da oficina</p>
       </div>
 
       {/* Grid: Indicators */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-4">
         {/* Metric: Faturamento */}
-        <div className="col-span-2 bg-gradient-to-r from-brand-600 to-brand-800 border border-brand-500 rounded-2xl p-4 shadow-premium relative overflow-hidden">
+        <div className="col-span-2 bg-gradient-to-r from-brand-600 to-brand-800 border border-brand-500 rounded-2xl p-5 shadow-premium relative overflow-hidden">
           <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-2 translate-y-2">
-            <Wallet size={120} />
+            <Wallet size={140} />
           </div>
-          <span className="text-[10px] uppercase font-bold text-brand-200 tracking-wider flex items-center gap-1">
-            <Calendar size={11} />
+          <span className="text-xs uppercase font-bold text-brand-200 tracking-wider flex items-center gap-1.5">
+            <Calendar size={13} />
             Faturamento do Mês
           </span>
-          <h3 className="text-2xl font-extrabold text-white mt-1 font-sans">{formatCurrency(faturamentoMes)}</h3>
-          <div className="flex items-center gap-1.5 mt-2 text-[10px] text-brand-100 bg-brand-900/40 w-fit px-2 py-0.5 rounded-full backdrop-blur-xs">
-            <span className="font-semibold">{formatCurrency(totalRecebidoMes)}</span> recebido à vista/parcelas
+          <h3 className="text-3xl font-black text-white mt-1.5 font-sans">{formatCurrency(faturamentoMes)}</h3>
+          <div className="flex items-center gap-1.5 mt-2.5 text-xs text-brand-100 bg-brand-900/40 w-fit px-3 py-1 rounded-full backdrop-blur-xs">
+            <span className="font-bold">{formatCurrency(totalRecebidoMes)}</span> recebido à vista/parcelas
           </div>
         </div>
 
         {/* Metric: OS Abertas */}
-        <div className="bg-dark-900 border border-dark-800 rounded-xl p-3.5 flex flex-col justify-between">
+        <div className="bg-dark-900 border-2 border-brand-500/30 shadow-[0_0_12px_rgba(59,102,255,0.08)] rounded-2xl p-4.5 flex flex-col justify-between">
           <div className="flex justify-between items-start">
-            <span className="text-[10px] uppercase font-bold text-dark-400 tracking-wider">Abertas</span>
-            <span className="p-1.5 bg-brand-500/10 text-brand-400 rounded-lg">
-              <ClipboardList size={14} />
+            <span className="text-xs uppercase font-extrabold text-slate-300 tracking-wider">Abertas</span>
+            <span className="p-2 bg-brand-500/10 text-brand-400 rounded-xl">
+              <ClipboardList size={16} />
             </span>
           </div>
-          <div className="mt-3">
-            <div className="text-lg font-bold text-slate-100">{osAbertas}</div>
-            <span className="text-[9px] text-dark-400">Ordens abertas</span>
+          <div className="mt-4">
+            <div className="text-2xl font-black text-white">{osAbertas}</div>
+            <span className="text-xs text-slate-400">Ordens abertas</span>
           </div>
         </div>
 
         {/* Metric: OS Em Andamento */}
-        <div className="bg-dark-900 border border-dark-800 rounded-xl p-3.5 flex flex-col justify-between">
+        <div className="bg-dark-900 border-2 border-warning-500/30 shadow-[0_0_12px_rgba(245,158,11,0.08)] rounded-2xl p-4.5 flex flex-col justify-between">
           <div className="flex justify-between items-start">
-            <span className="text-[10px] uppercase font-bold text-dark-400 tracking-wider">Em Curso</span>
-            <span className="p-1.5 bg-warning-500/10 text-warning-500 rounded-lg">
-              <Play size={14} />
+            <span className="text-xs uppercase font-extrabold text-slate-300 tracking-wider">Em Curso</span>
+            <span className="p-2 bg-warning-500/10 text-warning-500 rounded-xl">
+              <Play size={16} />
             </span>
           </div>
-          <div className="mt-3">
-            <div className="text-lg font-bold text-slate-100">{osAndamento}</div>
-            <span className="text-[9px] text-dark-400">Na oficina</span>
+          <div className="mt-4">
+            <div className="text-2xl font-black text-white">{osAndamento}</div>
+            <span className="text-xs text-slate-400">Na oficina</span>
           </div>
         </div>
 
         {/* Metric: OS Concluídas */}
-        <div className="bg-dark-900 border border-dark-800 rounded-xl p-3.5 flex flex-col justify-between">
+        <div className="bg-dark-900 border-2 border-success-500/30 shadow-[0_0_12px_rgba(16,185,129,0.08)] rounded-2xl p-4.5 flex flex-col justify-between">
           <div className="flex justify-between items-start">
-            <span className="text-[10px] uppercase font-bold text-dark-400 tracking-wider">Concluídas</span>
-            <span className="p-1.5 bg-success-500/10 text-success-500 rounded-lg">
-              <CheckCircle size={14} />
+            <span className="text-xs uppercase font-extrabold text-slate-300 tracking-wider">Concluídas</span>
+            <span className="p-2 bg-success-500/10 text-success-500 rounded-xl">
+              <CheckCircle size={16} />
             </span>
           </div>
-          <div className="mt-3">
-            <div className="text-lg font-bold text-slate-100">{osConcluidas}</div>
-            <span className="text-[9px] text-dark-400">Prontas p/ entrega</span>
+          <div className="mt-4">
+            <div className="text-2xl font-black text-white">{osConcluidas}</div>
+            <span className="text-xs text-slate-400">Prontas p/ entrega</span>
           </div>
         </div>
 
         {/* Metric: Valor a Receber */}
-        <div className="bg-dark-900 border border-dark-800 rounded-xl p-3.5 flex flex-col justify-between">
+        <div className="bg-dark-900 border border-brand-500/20 rounded-2xl p-4.5 flex flex-col justify-between">
           <div className="flex justify-between items-start">
-            <span className="text-[10px] uppercase font-bold text-dark-400 tracking-wider">A Receber</span>
-            <span className="p-1.5 bg-brand-500/10 text-brand-400 rounded-lg">
-              <Wallet size={14} />
+            <span className="text-xs uppercase font-extrabold text-slate-300 tracking-wider">A Receber</span>
+            <span className="p-2 bg-brand-500/10 text-brand-400 rounded-xl">
+              <Wallet size={16} />
             </span>
           </div>
-          <div className="mt-3">
-            <div className="text-sm font-bold text-slate-100 truncate">{formatCurrency(valorAReceber)}</div>
-            <span className="text-[9px] text-dark-400">Parcelas pendentes</span>
+          <div className="mt-4">
+            <div className="text-lg font-black text-white truncate">{formatCurrency(valorAReceber)}</div>
+            <span className="text-xs text-slate-400">Parcelas pendentes</span>
           </div>
         </div>
       </div>
 
       {/* Grid: Client & Vehicle Counts */}
-      <div className="flex gap-2">
-        <div className="flex-1 bg-dark-900 border border-dark-800 rounded-xl p-2.5 flex items-center gap-3">
-          <div className="p-2 bg-brand-500/10 text-brand-400 rounded-lg">
-            <Users size={16} />
+      <div className="flex gap-3">
+        <div className="flex-1 bg-dark-900 border border-dark-800 rounded-2xl p-3.5 flex items-center gap-3.5">
+          <div className="p-2.5 bg-brand-500/10 text-brand-400 rounded-xl">
+            <Users size={18} />
           </div>
           <div>
-            <div className="text-xs font-semibold text-slate-300">{clients.length}</div>
-            <div className="text-[8px] text-dark-400 uppercase font-bold">Clientes</div>
+            <div className="text-sm font-black text-white">{clients.length}</div>
+            <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Clientes</div>
           </div>
         </div>
         
-        <div className="flex-1 bg-dark-900 border border-dark-800 rounded-xl p-2.5 flex items-center gap-3">
-          <div className="p-2 bg-brand-500/10 text-brand-400 rounded-lg">
-            <Car size={16} />
+        <div className="flex-1 bg-dark-900 border border-dark-800 rounded-2xl p-3.5 flex items-center gap-3.5">
+          <div className="p-2.5 bg-brand-500/10 text-brand-400 rounded-xl">
+            <Car size={18} />
           </div>
           <div>
-            <div className="text-xs font-semibold text-slate-300">{vehicles.length}</div>
-            <div className="text-[8px] text-dark-400 uppercase font-bold">Veículos</div>
+            <div className="text-sm font-black text-white">{vehicles.length}</div>
+            <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Veículos</div>
           </div>
         </div>
       </div>
 
       {/* Financial Flow Dynamic Chart */}
-      <div className="bg-dark-900 border border-dark-800 rounded-2xl p-4">
-        <div className="flex items-center justify-between mb-3">
+      <div className="bg-dark-900 border border-dark-800 rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-4">
           <div>
-            <span className="text-[10px] uppercase font-bold text-dark-400 tracking-wider">Fluxo de Caixa</span>
-            <h4 className="text-xs font-semibold text-slate-200">Últimos 5 Dias</h4>
+            <span className="text-xs uppercase font-bold text-slate-400 tracking-wider">Fluxo de Caixa</span>
+            <h4 className="text-sm font-bold text-white">Últimos 5 Dias</h4>
           </div>
-          <div className="flex items-center gap-2 text-[9px]">
-            <span className="flex items-center gap-1 text-slate-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-brand-500" />
+          <div className="flex items-center gap-3 text-xs">
+            <span className="flex items-center gap-1.5 text-slate-300">
+              <span className="w-2 h-2 rounded-full bg-brand-500" />
               Entradas
             </span>
-            <span className="flex items-center gap-1 text-slate-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444]" />
+            <span className="flex items-center gap-1.5 text-slate-300">
+              <span className="w-2 h-2 rounded-full bg-[#ef4444]" />
               Saídas
             </span>
           </div>
         </div>
 
         {/* Pure SVG Bar Chart */}
-        <div className="relative w-full h-32 flex items-end">
+        <div className="relative w-full h-36 flex items-end">
           <svg className="w-full h-full" viewBox={`0 0 200 ${chartHeight}`} preserveAspectRatio="none">
             {/* Grid Lines */}
             <line x1="0" y1="20" x2="200" y2="20" stroke="#2c313c" strokeWidth="0.5" strokeDasharray="2" />
@@ -235,7 +235,7 @@ export const DashboardScreen: React.FC = () => {
           </svg>
           
           {/* Chart X Labels */}
-          <div className="absolute left-0 right-0 bottom-0 flex justify-between px-2.5 text-[8px] text-dark-400 uppercase font-semibold">
+          <div className="absolute left-0 right-0 bottom-0 flex justify-between px-2 text-[10px] text-slate-400 uppercase font-bold">
             {days.map((d, i) => (
               <span key={i} className="w-8 text-center">{d.dayName}</span>
             ))}
@@ -244,38 +244,38 @@ export const DashboardScreen: React.FC = () => {
       </div>
 
       {/* OS Status / Recentes */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <span className="text-[10px] uppercase font-bold text-dark-400 tracking-wider">Ordens Recentes</span>
-          <span className="text-[9px] text-brand-400 font-semibold cursor-pointer">Ver todas</span>
+          <span className="text-xs uppercase font-extrabold text-slate-400 tracking-wider">Ordens Recentes</span>
+          <span className="text-xs text-brand-400 font-bold cursor-pointer">Ver todas</span>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-3">
           {recentOS.map(os => {
             const client = clients.find(c => c.id === os.clientId);
             const vehicle = vehicles.find(v => v.id === os.vehicleId);
             
-            let statusColor = 'bg-brand-500/10 text-brand-400 border-brand-500/20';
-            if (os.status === 'Em andamento') statusColor = 'bg-warning-500/10 text-warning-500 border-warning-500/20';
-            else if (os.status === 'Concluída') statusColor = 'bg-success-500/10 text-success-500 border-success-500/20';
-            else if (os.status === 'Entregue') statusColor = 'bg-dark-800 text-dark-400 border-dark-700';
+            let statusColor = 'bg-brand-500/10 text-brand-400 border-brand-500/30';
+            if (os.status === 'Em andamento') statusColor = 'bg-warning-500/10 text-warning-500 border-warning-500/30';
+            else if (os.status === 'Concluída') statusColor = 'bg-success-500/10 text-success-500 border-success-500/30';
+            else if (os.status === 'Entregue') statusColor = 'bg-dark-800 text-slate-400 border-dark-700';
 
             return (
-              <div key={os.id} className="bg-dark-900 border border-dark-800 rounded-xl p-3 flex items-center justify-between hover:border-dark-700 transition-colors">
+              <div key={os.id} className="bg-dark-900 border border-dark-800 rounded-2xl p-4 flex items-center justify-between hover:border-brand-500/30 transition-colors">
                 <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-xs text-slate-200">{os.osNumber}</span>
-                    <span className={`text-[8px] font-bold px-1.5 py-0.25 border rounded-full ${statusColor}`}>
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-sm text-brand-400">{os.osNumber}</span>
+                    <span className={`text-[10px] font-extrabold px-2 py-0.5 border rounded-full ${statusColor}`}>
                       {os.status}
                     </span>
                   </div>
-                  <div className="text-[10px] text-dark-300 mt-1 font-semibold">
-                    {client?.name} • <span className="text-dark-400">{vehicle?.brand} {vehicle?.model}</span>
+                  <div className="text-xs text-slate-300 mt-1.5 font-medium">
+                    {client?.name} <span className="text-slate-400 font-normal">• {vehicle?.brand} {vehicle?.model}</span>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="font-bold text-xs text-slate-100">{formatCurrency(os.grandTotal)}</div>
-                  <div className="text-[8px] text-dark-400">{os.date.split('-').reverse().join('/')}</div>
+                  <div className="font-extrabold text-sm text-slate-100">{formatCurrency(os.grandTotal)}</div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">{os.date.split('-').reverse().join('/')}</div>
                 </div>
               </div>
             );
@@ -284,27 +284,28 @@ export const DashboardScreen: React.FC = () => {
       </div>
 
       {/* Recent Finance Transactions Feed */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <span className="text-[10px] uppercase font-bold text-dark-400 tracking-wider">Últimos Lançamentos</span>
-          <span className="text-[9px] text-brand-400 font-semibold cursor-pointer">Ver extrato</span>
+          <span className="text-xs uppercase font-extrabold text-slate-400 tracking-wider">Últimos Lançamentos</span>
+          <span className="text-xs text-brand-400 font-bold cursor-pointer">Ver extrato</span>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-3">
           {recentTransactions.map(t => {
             const isInflow = t.type === 'Entrada';
+            const itemBorder = isInflow ? 'border-success-500/20' : 'border-danger-500/20';
             return (
-              <div key={t.id} className="bg-dark-900 border border-dark-800 rounded-xl p-3 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`p-1.5 rounded-lg ${isInflow ? 'bg-success-500/10 text-success-500' : 'bg-danger-500/10 text-danger-500'}`}>
-                    {isInflow ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+              <div key={t.id} className={`bg-dark-900 border ${itemBorder} rounded-2xl p-4 flex items-center justify-between`}>
+                <div className="flex items-center gap-3.5">
+                  <div className={`p-2 rounded-xl ${isInflow ? 'bg-success-500/10 text-success-500' : 'bg-danger-500/10 text-danger-500'}`}>
+                    {isInflow ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
                   </div>
                   <div>
-                    <div className="text-xs font-semibold text-slate-200 line-clamp-1">{t.description}</div>
-                    <div className="text-[8px] text-dark-400 uppercase font-bold mt-0.5">{t.category} • {t.date.split('-').reverse().join('/')}</div>
+                    <div className="text-sm font-bold text-slate-200 line-clamp-1">{t.description}</div>
+                    <div className="text-[10px] text-slate-400 uppercase font-bold mt-1">{t.category} • {t.date.split('-').reverse().join('/')}</div>
                   </div>
                 </div>
-                <div className={`font-bold text-xs ${isInflow ? 'text-success-500' : 'text-danger-500'}`}>
+                <div className={`font-black text-sm ${isInflow ? 'text-success-500' : 'text-danger-500'}`}>
                   {isInflow ? '+' : '-'}{formatCurrency(t.amount)}
                 </div>
               </div>

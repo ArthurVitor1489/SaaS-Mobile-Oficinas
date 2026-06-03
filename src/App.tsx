@@ -213,35 +213,35 @@ export default function DashboardScreen() {
         </div>
 
         {/* Real Smartphone Shell */}
-        <div className="w-[320px] h-[640px] bg-dark-950 rounded-[40px] border-[10px] border-dark-800 shadow-glass-dark relative overflow-hidden flex flex-col flex-shrink-0 pulse-glow">
+        <div className="w-[375px] h-[780px] bg-dark-950 rounded-[44px] border-[12px] border-dark-800 shadow-glass-dark relative overflow-hidden flex flex-col flex-shrink-0 pulse-glow">
           
           {/* Hardware Notch / Ear Speaker & Camera */}
-          <div className="absolute top-0 left-1/2 transform -translate-x-1/2 h-5 w-28 bg-dark-800 rounded-b-2xl z-50 flex items-center justify-center gap-1.5">
+          <div className="absolute top-0 left-1/2 transform -translate-x-1/2 h-5 w-32 bg-dark-800 rounded-b-2xl z-50 flex items-center justify-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-dark-950" />
-            <span className="w-8 h-1 rounded-full bg-dark-950" />
+            <span className="w-10 h-1 rounded-full bg-dark-950" />
           </div>
 
           {/* iOS/Android Simulated Status Bar */}
-          <div className="h-9 bg-dark-950 px-5 flex items-center justify-between text-[9px] text-slate-400 font-bold select-none z-40 flex-shrink-0">
+          <div className="h-9 bg-dark-950 px-6 flex items-center justify-between text-[10px] text-slate-400 font-bold select-none z-40 flex-shrink-0">
             <span>09:41 AM</span>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <span>5G</span>
-              <span className="w-3.5 h-2 border border-dark-500 rounded-sm relative flex items-center p-0.25">
-                <span className="w-2 h-full bg-slate-300 rounded-2xs" />
-                <span className="w-0.5 h-0.75 bg-dark-500 absolute -right-0.5 rounded-2xs" />
+              <span className="w-4 h-2.5 border border-dark-500 rounded-xs relative flex items-center p-0.25">
+                <span className="w-2.5 h-full bg-slate-300 rounded-2xs" />
+                <span className="w-0.5 h-1 bg-dark-500 absolute -right-0.5 rounded-2xs" />
               </span>
             </div>
           </div>
 
           {/* App Header (Workshop name & settings indicators) */}
-          <div className="px-4 py-2.5 bg-dark-950 border-b border-dark-850 flex items-center justify-between flex-shrink-0 z-30 select-none">
-            <div className="flex items-center gap-2">
+          <div className="px-5 py-3 bg-dark-950 border-b border-dark-850 flex items-center justify-between flex-shrink-0 z-30 select-none">
+            <div className="flex items-center gap-2.5">
               <img 
                 src={db.settings.logoUrl} 
                 alt="Logo" 
-                className="w-5 h-5 rounded-md object-cover border border-dark-800"
+                className="w-6 h-6 rounded-md object-cover border border-dark-800"
               />
-              <span className="text-[10px] font-black text-slate-100 uppercase tracking-wide leading-none max-w-[140px] truncate">
+              <span className="text-xs font-black text-slate-100 uppercase tracking-wide leading-none max-w-[180px] truncate">
                 {db.settings.name}
               </span>
             </div>
@@ -250,7 +250,7 @@ export default function DashboardScreen() {
             {mobileTab === 'more' && activeSubScreen && (
               <button 
                 onClick={() => setActiveSubScreen(null)}
-                className="px-2 py-0.5 bg-brand-500/10 text-brand-400 font-bold text-[8px] uppercase rounded-full"
+                className="px-2.5 py-1 bg-brand-500/10 text-brand-400 font-bold text-[9px] uppercase rounded-full"
               >
                 Voltar Menu
               </button>
@@ -258,22 +258,22 @@ export default function DashboardScreen() {
           </div>
 
           {/* Phone active screen rendering container */}
-          <div className="flex-1 bg-dark-950 p-4 overflow-y-auto no-scrollbar relative z-10">
+          <div className="flex-1 bg-dark-950 p-5 overflow-y-auto no-scrollbar relative z-10">
             {renderMobileScreen()}
           </div>
 
           {/* Bottom 5-Tab Navigation Bar */}
-          <div className="h-14 bg-dark-950 border-t border-dark-850 grid grid-cols-5 flex-shrink-0 z-40 select-none">
+          <div className="h-16 bg-dark-950 border-t border-dark-850 grid grid-cols-5 flex-shrink-0 z-40 select-none pb-2">
             {/* Tab: Dashboard */}
             <button
               onClick={() => {
                 setMobileTab('dashboard');
                 setActiveSubScreen(null);
               }}
-              className={`flex flex-col items-center justify-center gap-0.5 ${mobileTab === 'dashboard' ? 'text-brand-500' : 'text-dark-500 hover:text-slate-400'}`}
+              className={`flex flex-col items-center justify-center gap-1 ${mobileTab === 'dashboard' ? 'text-brand-500' : 'text-dark-500 hover:text-slate-400'}`}
             >
-              <Smartphone size={16} />
-              <span className="text-[7px] font-bold uppercase tracking-wide">Painel</span>
+              <Smartphone size={18} />
+              <span className="text-[9px] font-bold uppercase tracking-wide">Painel</span>
             </button>
 
             {/* Tab: Clientes */}
@@ -282,10 +282,10 @@ export default function DashboardScreen() {
                 setMobileTab('clients');
                 setActiveSubScreen(null);
               }}
-              className={`flex flex-col items-center justify-center gap-0.5 ${mobileTab === 'clients' ? 'text-brand-500' : 'text-dark-500 hover:text-slate-400'}`}
+              className={`flex flex-col items-center justify-center gap-1 ${mobileTab === 'clients' ? 'text-brand-500' : 'text-dark-500 hover:text-slate-400'}`}
             >
-              <Users size={16} />
-              <span className="text-[7px] font-bold uppercase tracking-wide">Clientes</span>
+              <Users size={18} />
+              <span className="text-[9px] font-bold uppercase tracking-wide">Clientes</span>
             </button>
 
             {/* Tab: OS */}
@@ -294,10 +294,10 @@ export default function DashboardScreen() {
                 setMobileTab('os');
                 setActiveSubScreen(null);
               }}
-              className={`flex flex-col items-center justify-center gap-0.5 ${mobileTab === 'os' ? 'text-brand-500' : 'text-dark-500 hover:text-slate-400'}`}
+              className={`flex flex-col items-center justify-center gap-1 ${mobileTab === 'os' ? 'text-brand-500' : 'text-dark-500 hover:text-slate-400'}`}
             >
-              <ClipboardList size={16} />
-              <span className="text-[7px] font-bold uppercase tracking-wide">Serviços</span>
+              <ClipboardList size={18} />
+              <span className="text-[9px] font-bold uppercase tracking-wide">Serviços</span>
             </button>
 
             {/* Tab: Financeiro */}
@@ -306,10 +306,10 @@ export default function DashboardScreen() {
                 setMobileTab('finance');
                 setActiveSubScreen(null);
               }}
-              className={`flex flex-col items-center justify-center gap-0.5 ${mobileTab === 'finance' ? 'text-brand-500' : 'text-dark-500 hover:text-slate-400'}`}
+              className={`flex flex-col items-center justify-center gap-1 ${mobileTab === 'finance' ? 'text-brand-500' : 'text-dark-500 hover:text-slate-400'}`}
             >
-              <Wallet size={16} />
-              <span className="text-[7px] font-bold uppercase tracking-wide">Caixa</span>
+              <Wallet size={18} />
+              <span className="text-[9px] font-bold uppercase tracking-wide">Caixa</span>
             </button>
 
             {/* Tab: Mais */}
@@ -318,10 +318,10 @@ export default function DashboardScreen() {
                 setMobileTab('more');
                 setActiveSubScreen(null);
               }}
-              className={`flex flex-col items-center justify-center gap-0.5 ${mobileTab === 'more' ? 'text-brand-500' : 'text-dark-500 hover:text-slate-400'}`}
+              className={`flex flex-col items-center justify-center gap-1 ${mobileTab === 'more' ? 'text-brand-500' : 'text-dark-500 hover:text-slate-400'}`}
             >
-              <Menu size={16} />
-              <span className="text-[7px] font-bold uppercase tracking-wide">Mais</span>
+              <Menu size={18} />
+              <span className="text-[9px] font-bold uppercase tracking-wide">Mais</span>
             </button>
           </div>
         </div>

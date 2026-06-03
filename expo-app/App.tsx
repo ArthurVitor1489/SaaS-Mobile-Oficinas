@@ -3535,47 +3535,47 @@ function MainWorkshopApp() {
                               flexDirection: 'row', 
                               justifyContent: 'space-between', 
                               alignItems: 'center', 
-                              minHeight: 72,
-                              paddingVertical: 16,
+                              minHeight: 64,
+                              paddingVertical: 12,
                               paddingHorizontal: 16,
                               backgroundColor: isSelected ? 'rgba(59, 102, 255, 0.05)' : 'transparent',
                               borderBottomWidth: 1,
                               borderBottomColor: '#1e293b'
                             }}
                           >
-                            <View style={{ flex: 1, paddingRight: 8 }}>
-                              <Text style={{ fontSize: 16, color: isSelected ? '#3b66ff' : '#f8fafc', fontWeight: 'bold' }}>
+                            <View style={{ flex: 1, paddingRight: 12 }}>
+                              <Text style={{ fontSize: 14, color: isSelected ? '#3b66ff' : '#f8fafc', fontWeight: 'bold' }} numberOfLines={2}>
                                 {s.name}
                               </Text>
-                              {s.code ? (
-                                <Text style={{ fontSize: 13, color: '#64748b', marginTop: 4, fontFamily: 'monospace' }}>CÓD: {s.code}</Text>
-                              ) : null}
+                              <Text style={{ fontSize: 12, color: '#64748b', marginTop: 4, fontFamily: 'monospace' }}>
+                                {s.code ? `CÓD: ${s.code}  •  ` : ''}
+                                <Text style={{ color: '#22c55e', fontWeight: 'bold' }}>{formatCurrency(s.price)}</Text>
+                              </Text>
                             </View>
 
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                              <View style={{ alignItems: 'flex-end' }}>
-                                <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#fff' }}>{formatCurrency(s.price)}</Text>
-                                {qty > 1 && (
-                                  <Text style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>{qty}x {formatCurrency(s.price)}</Text>
-                                )}
-                              </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                              {qty > 1 && (
+                                <Text style={{ fontSize: 12, color: '#64748b', fontWeight: 'bold', marginRight: 4 }}>
+                                  {qty}x
+                                </Text>
+                              )}
 
                               {/* Qty controller buttons */}
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                                 <TouchableOpacity 
                                   onPress={() => handleUpdateServiceQty(s, qty - 1)}
-                                  style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center', backgroundColor: '#181c24', borderRadius: 12, borderWidth: 1.5, borderColor: '#334155' }}
+                                  style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center', backgroundColor: '#181c24', borderRadius: 10, borderWidth: 1.5, borderColor: '#334155' }}
                                   activeOpacity={0.7}
                                 >
-                                  <Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>-</Text>
+                                  <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>-</Text>
                                 </TouchableOpacity>
-                                <Text style={{ minWidth: 24, textAlign: 'center', color: '#fff', fontSize: 16, fontWeight: 'bold', fontFamily: 'monospace' }}>{qty}</Text>
+                                <Text style={{ minWidth: 20, textAlign: 'center', color: '#fff', fontSize: 14, fontWeight: 'bold', fontFamily: 'monospace' }}>{qty}</Text>
                                 <TouchableOpacity 
                                   onPress={() => handleUpdateServiceQty(s, qty + 1)}
-                                  style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center', backgroundColor: '#181c24', borderRadius: 12, borderWidth: 1.5, borderColor: '#334155' }}
+                                  style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center', backgroundColor: '#181c24', borderRadius: 10, borderWidth: 1.5, borderColor: '#334155' }}
                                   activeOpacity={0.7}
                                 >
-                                  <Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>+</Text>
+                                  <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>+</Text>
                                 </TouchableOpacity>
                               </View>
                             </View>
@@ -3662,47 +3662,49 @@ function MainWorkshopApp() {
                               flexDirection: 'row', 
                               justifyContent: 'space-between', 
                               alignItems: 'center', 
-                              minHeight: 72,
-                              paddingVertical: 16,
+                              minHeight: 64,
+                              paddingVertical: 12,
                               paddingHorizontal: 16,
                               backgroundColor: isSelected ? 'rgba(59, 102, 255, 0.05)' : 'transparent',
                               borderBottomWidth: 1,
                               borderBottomColor: '#1e293b'
                             }}
                           >
-                            <View style={{ flex: 1, paddingRight: 8 }}>
-                              <Text style={{ fontSize: 16, color: isSelected ? '#3b66ff' : '#f8fafc', fontWeight: 'bold' }}>
+                            <View style={{ flex: 1, paddingRight: 12 }}>
+                              <Text style={{ fontSize: 14, color: isSelected ? '#3b66ff' : '#f8fafc', fontWeight: 'bold' }} numberOfLines={2}>
                                 {p.name}
                               </Text>
-                              {p.code ? (
-                                <Text style={{ fontSize: 13, color: '#64748b', marginTop: 4, fontFamily: 'monospace' }}>SKU: {p.code} {p.stock !== undefined ? `• Est: ${p.stock}` : ''}</Text>
-                              ) : null}
+                              <Text style={{ fontSize: 12, color: '#64748b', marginTop: 4, fontFamily: 'monospace' }}>
+                                {p.code ? `SKU: ${p.code} ` : ''}
+                                {p.stock !== undefined ? `• Est: ${p.stock} ` : ''}
+                                {p.code || p.stock !== undefined ? ' •  ' : ''}
+                                <Text style={{ color: '#22c55e', fontWeight: 'bold' }}>{formatCurrency(p.salePrice)}</Text>
+                              </Text>
                             </View>
 
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                              <View style={{ alignItems: 'flex-end' }}>
-                                <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#fff' }}>{formatCurrency(p.salePrice)}</Text>
-                                {qty > 1 && (
-                                  <Text style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>{qty}x {formatCurrency(p.salePrice)}</Text>
-                                )}
-                              </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                              {qty > 1 && (
+                                <Text style={{ fontSize: 12, color: '#64748b', fontWeight: 'bold', marginRight: 4 }}>
+                                  {qty}x
+                                </Text>
+                              )}
 
                               {/* Qty controller buttons */}
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                                 <TouchableOpacity 
                                   onPress={() => handleUpdatePartQty(p, qty - 1)}
-                                  style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center', backgroundColor: '#181c24', borderRadius: 12, borderWidth: 1.5, borderColor: '#334155' }}
+                                  style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center', backgroundColor: '#181c24', borderRadius: 10, borderWidth: 1.5, borderColor: '#334155' }}
                                   activeOpacity={0.7}
                                 >
-                                  <Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>-</Text>
+                                  <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>-</Text>
                                 </TouchableOpacity>
-                                <Text style={{ minWidth: 24, textAlign: 'center', color: '#fff', fontSize: 16, fontWeight: 'bold', fontFamily: 'monospace' }}>{qty}</Text>
+                                <Text style={{ minWidth: 20, textAlign: 'center', color: '#fff', fontSize: 14, fontWeight: 'bold', fontFamily: 'monospace' }}>{qty}</Text>
                                 <TouchableOpacity 
                                   onPress={() => handleUpdatePartQty(p, qty + 1)}
-                                  style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center', backgroundColor: '#181c24', borderRadius: 12, borderWidth: 1.5, borderColor: '#334155' }}
+                                  style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center', backgroundColor: '#181c24', borderRadius: 10, borderWidth: 1.5, borderColor: '#334155' }}
                                   activeOpacity={0.7}
                                 >
-                                  <Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>+</Text>
+                                  <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>+</Text>
                                 </TouchableOpacity>
                               </View>
                             </View>

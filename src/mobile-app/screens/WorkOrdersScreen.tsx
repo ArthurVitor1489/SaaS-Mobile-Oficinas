@@ -362,6 +362,7 @@ export const WorkOrdersScreen: React.FC = () => {
               })
             )}
           </div>
+        </div>
       )}
 
       {/* 2. OS DETAILED OVERVIEW */}

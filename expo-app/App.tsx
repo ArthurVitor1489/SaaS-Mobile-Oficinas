@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { 
-  Menu, Users, ClipboardList, Wallet, MoreHorizontal, LogOut, Wifi, WifiOff 
+  Menu, Users, ClipboardList, Wallet, MoreHorizontal, Wifi, WifiOff 
 } from 'lucide-react-native';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -290,24 +290,7 @@ function MoreStackNavigator() {
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 function MainTabNavigator() {
-  const { signOut, settings, online } = useDatabase();
-
-  const handleSignOutClick = () => {
-    Alert.alert(
-      'Sair da Conta',
-      'Deseja realmente desconectar-se e sair do painel?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Sair',
-          style: 'destructive',
-          onPress: async () => {
-            await signOut();
-          }
-        }
-      ]
-    );
-  };
+  const { settings, online } = useDatabase();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -330,10 +313,6 @@ function MainTabNavigator() {
             </View>
           </View>
         </View>
-
-        <TouchableOpacity onPress={handleSignOutClick} style={styles.logoutButton}>
-          <LogOut size={16} color="#ef4444" />
-        </TouchableOpacity>
       </View>
 
       <Tab.Navigator
@@ -470,11 +449,7 @@ const styles = StyleSheet.create({
     color: '#64748b',
     letterSpacing: 0.5,
   },
-  logoutButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#ef444410',
-  },
+
   tabBar: {
     flexDirection: 'row',
     height: 60,

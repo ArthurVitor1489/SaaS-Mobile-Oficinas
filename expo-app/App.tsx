@@ -1364,25 +1364,103 @@ function MainWorkshopApp() {
               workOrders.slice(0, 3).map(os => {
                 const client = clients.find(c => c.id === os.clientId);
                 const vehicle = vehicles.find(v => v.id === os.vehicleId);
+                const billing = billings.find(b => b.osId === os.id);
+                
+                let osStatusStyle = styles.cardOpen;
+                let badgeColor = 'rgba(59, 102, 255, 0.1)';
+                let badgeTextColor = '#3b66ff';
+                let badgeBorderColor = 'rgba(59, 102, 255, 0.3)';
+                if (os.status === 'Em andamento') {
+                  osStatusStyle = styles.cardProgress;
+                  badgeColor = 'rgba(234, 179, 8, 0.1)';
+                  badgeTextColor = '#eab308';
+                  badgeBorderColor = 'rgba(234, 179, 8, 0.3)';
+                } else if (os.status === 'Concluída') {
+                  osStatusStyle = styles.cardDone;
+                  badgeColor = 'rgba(34, 197, 94, 0.1)';
+                  badgeTextColor = '#22c55e';
+                  badgeBorderColor = 'rgba(34, 197, 94, 0.3)';
+                } else if (os.status === 'Entregue') {
+                  osStatusStyle = styles.cardDelivered;
+                  badgeColor = '#272e3f';
+                  badgeTextColor = '#cbd5e1';
+                  badgeBorderColor = '#272e3f';
+                }
+
                 return (
                   <TouchableOpacity 
                     key={os.id} 
-                    style={styles.listItem}
-                    onPress={() => handleShareOS(os)}
+                    style={[styles.listItem, osStatusStyle, { flexDirection: 'column', alignItems: 'stretch' }]}
+                    onPress={() => {
+                      setSelectedOS(os);
+                      setCurrentTab('os');
+                    }}
                   >
-                    <View style={styles.listItemLeft}>
-                      <Text style={styles.osNum}>{os.osNumber}</Text>
-                      <Text style={styles.osDetails}>
-                        {client?.name}{vehicle ? ` • ${vehicle.brand} ${vehicle.model}` : ''}
-                      </Text>
+                    {/* Header Row */}
+                    <View style={styles.cardHeaderRow}>
+                      <View style={styles.cardHeaderLeft}>
+                        <Text style={[styles.osNum, { color: '#3b66ff', fontWeight: '900' }]}>{os.osNumber}</Text>
+                        <View style={[
+                          styles.statusBadge, 
+                          { backgroundColor: badgeColor, borderColor: badgeBorderColor, borderWidth: 1 }
+                        ]}>
+                          <Text style={{ 
+                            fontSize: 9, 
+                            fontWeight: '900', 
+                            color: badgeTextColor, 
+                            textTransform: 'uppercase' 
+                          }}>
+                            {os.status}
+                          </Text>
+                        </View>
+                      </View>
                       <Text style={styles.osDate}>{os.date.split('-').reverse().join('/')}</Text>
                     </View>
-                    <View style={styles.listItemRight}>
-                      <Text style={styles.osTotal}>{formatCurrency(os.grandTotal)}</Text>
-                      <View style={{ flexDirection: 'row', gap: 6, marginTop: 4, alignItems: 'center' }}>
-                        <Text style={styles.osStatus}>{os.status.toUpperCase()}</Text>
-                        <Share2 size={12} color="#64748b" />
+
+                    {/* Content */}
+                    <View style={{ marginVertical: 4 }}>
+                      <Text style={styles.cardLabelText}>Cliente</Text>
+                      <Text style={[styles.cardValueText, { color: '#fff', fontWeight: 'bold' }]}>{client?.name}</Text>
+                      
+                      {vehicle && (
+                        <>
+                          <Text style={styles.cardLabelText}>Veículo</Text>
+                          <Text style={styles.cardValueText}>
+                            {vehicle.brand} {vehicle.model} • Placa: <Text style={{ fontWeight: 'bold', color: '#cbd5e1' }}>{vehicle.plate.toUpperCase()}</Text>
+                          </Text>
+                        </>
+                      )}
+                    </View>
+
+                    {/* Footer Row */}
+                    <View style={styles.cardFooterRow}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        {billing ? (
+                          <View style={{ 
+                            backgroundColor: billing.status === 'Pago' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(234, 179, 8, 0.1)',
+                            paddingHorizontal: 8,
+                            paddingVertical: 3,
+                            borderRadius: 6
+                          }}>
+                            <Text style={{ 
+                              fontSize: 9, 
+                              fontWeight: '900', 
+                              color: billing.status === 'Pago' ? '#22c55e' : '#eab308' 
+                            }}>
+                              💰 {billing.status.toUpperCase()}
+                            </Text>
+                          </View>
+                        ) : (
+                          <View style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                            <Text style={{ fontSize: 9, fontWeight: '900', color: '#ef4444' }}>
+                              💸 NÃO FATURADA
+                            </Text>
+                          </View>
+                        )}
                       </View>
+                      <Text style={[styles.osTotal, { fontSize: 16, color: '#fff', fontWeight: '900' }]}>
+                        {formatCurrency(os.grandTotal)}
+                      </Text>
                     </View>
                   </TouchableOpacity>
                 );
@@ -1398,35 +1476,33 @@ function MainWorkshopApp() {
             ) : (
               transactions.slice(0, 4).map(t => {
                 const isInflow = t.type === 'Entrada';
+                const transStyle = isInflow ? styles.cardInflow : styles.cardOutflow;
                 return (
-                  <View key={t.id} style={styles.listItem}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                  <View key={t.id} style={[styles.listItem, transStyle, { borderWidth: 1.5 }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 }}>
                       <View style={{ 
                         backgroundColor: isInflow ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)', 
-                        paddingHorizontal: 6,
-                        paddingVertical: 4, 
-                        borderRadius: 8 
+                        padding: 10, 
+                        borderRadius: 12 
                       }}>
                         {isInflow ? (
-                          <ArrowUpRight size={12} color="#22c55e" />
+                          <ArrowUpRight size={16} color="#22c55e" />
                         ) : (
-                          <ArrowDownRight size={12} color="#ef4444" />
+                          <ArrowDownRight size={16} color="#ef4444" />
                         )}
                       </View>
                       <View style={{ flex: 1, paddingRight: 6 }}>
-                        <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#fff' }} numberOfLines={1}>
+                        <Text style={styles.tDesc} numberOfLines={1}>
                           {t.description}
                         </Text>
-                        <Text style={{ fontSize: 7, color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase', marginTop: 2 }}>
+                        <Text style={[styles.tDate, { textTransform: 'uppercase', fontWeight: 'bold' }]}>
                           {t.category} • {t.date.split('-').reverse().join('/')}
                         </Text>
                       </View>
                     </View>
-                    <Text style={{ 
-                      fontSize: 10, 
-                      fontWeight: 'bold', 
+                    <Text style={[styles.tAmount, { 
                       color: isInflow ? '#22c55e' : '#ef4444' 
-                    }}>
+                    }]}>
                       {isInflow ? '+' : '-'}{formatCurrency(t.amount)}
                     </Text>
                   </View>
@@ -1488,28 +1564,43 @@ function MainWorkshopApp() {
 
                     return filtered.map(client => {
                       const clientCars = vehicles.filter(v => v.clientId === client.id);
+                      const totalCars = clientCars.length;
                       return (
                         <TouchableOpacity 
                           key={client.id} 
-                          style={[styles.card, styles.clientCard]}
+                          style={[styles.card, { padding: 18, marginBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
                           onPress={() => {
                             setSelectedClient(client);
                             setActiveClientTab('vehicles');
                           }}
                         >
-                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <View style={{ flex: 1, gap: 6 }}>
                             <Text style={styles.clientName}>{client.name}</Text>
-                            <ChevronRight size={16} color="#64748b" />
-                          </View>
-                          <Text style={styles.clientDetails}>Telefone: {client.phone}</Text>
-                          <Text style={styles.clientDetails}>WhatsApp: {client.whatsapp}</Text>
-                          {clientCars.length > 0 && (
-                            <View style={{ flexDirection: 'row', gap: 5, marginTop: 6 }}>
-                              {clientCars.map(c => (
-                                <Text key={c.id} style={styles.catalogItemCodeBadge}>{c.plate}</Text>
-                              ))}
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                              <Text style={[styles.clientDetails, { marginTop: 0 }]}>{client.phone}</Text>
+                              <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#475569' }} />
+                              <View style={{ 
+                                backgroundColor: 'rgba(59, 102, 255, 0.1)', 
+                                paddingHorizontal: 8, 
+                                paddingVertical: 2, 
+                                borderRadius: 8,
+                                borderWidth: 0.5,
+                                borderColor: 'rgba(59, 102, 255, 0.3)'
+                              }}>
+                                <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#3b66ff' }}>
+                                  {totalCars} {totalCars === 1 ? 'VEÍCULO' : 'VEÍCULOS'}
+                                </Text>
+                              </View>
                             </View>
-                          )}
+                            {clientCars.length > 0 && (
+                              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                                {clientCars.map(c => (
+                                  <Text key={c.id} style={[styles.catalogItemCodeBadge, { marginTop: 0 }]}>{c.plate.toUpperCase()}</Text>
+                                ))}
+                              </View>
+                            )}
+                          </View>
+                          <ChevronRight size={18} color="#64748b" />
                         </TouchableOpacity>
                       );
                     });
@@ -1793,57 +1884,88 @@ function MainWorkshopApp() {
                       const client = clients.find(c => c.id === os.clientId);
                       const vehicle = vehicles.find(v => v.id === os.vehicleId);
                       const billing = billings.find(b => b.osId === os.id);
-
+                      let osStatusStyle = styles.cardOpen;
                       let badgeColor = 'rgba(59, 102, 255, 0.1)';
                       let badgeTextColor = '#3b66ff';
-                      if (os.status === 'Concluída') {
-                        badgeColor = 'rgba(34, 197, 94, 0.1)';
-                        badgeTextColor = '#22c55e';
-                      } else if (os.status === 'Em andamento') {
+                      let badgeBorderColor = 'rgba(59, 102, 255, 0.3)';
+                      if (os.status === 'Em andamento') {
+                        osStatusStyle = styles.cardProgress;
                         badgeColor = 'rgba(234, 179, 8, 0.1)';
                         badgeTextColor = '#eab308';
+                        badgeBorderColor = 'rgba(234, 179, 8, 0.3)';
+                      } else if (os.status === 'Concluída') {
+                        osStatusStyle = styles.cardDone;
+                        badgeColor = 'rgba(34, 197, 94, 0.1)';
+                        badgeTextColor = '#22c55e';
+                        badgeBorderColor = 'rgba(34, 197, 94, 0.3)';
                       } else if (os.status === 'Entregue') {
-                        badgeColor = 'rgba(100, 116, 139, 0.1)';
-                        badgeTextColor = '#64748b';
+                        osStatusStyle = styles.cardDelivered;
+                        badgeColor = '#272e3f';
+                        badgeTextColor = '#cbd5e1';
+                        badgeBorderColor = '#272e3f';
                       }
 
                       return (
                         <TouchableOpacity
                           key={os.id}
                           onPress={() => setSelectedOS(os)}
-                          style={[styles.card, styles.osCard, { padding: 12, marginBottom: 8 }]}
+                          style={[styles.card, osStatusStyle, { padding: 18, marginBottom: 12 }]}
                         >
-                          <View style={styles.osHeaderRow}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                              <Text style={styles.osNumberLabel}>{os.osNumber}</Text>
-                              <View style={{ backgroundColor: badgeColor, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 }}>
-                                <Text style={{ fontSize: 7, fontWeight: 'bold', color: badgeTextColor }}>{os.status.toUpperCase()}</Text>
+                          <View style={styles.cardHeaderRow}>
+                            <View style={styles.cardHeaderLeft}>
+                              <Text style={[styles.osNum, { color: '#3b66ff', fontWeight: '900' }]}>{os.osNumber}</Text>
+                              <View style={[
+                                styles.statusBadge, 
+                                { backgroundColor: badgeColor, borderColor: badgeBorderColor, borderWidth: 1 }
+                              ]}>
+                                <Text style={{ fontSize: 9, fontWeight: '900', color: badgeTextColor, textTransform: 'uppercase' }}>
+                                  {os.status}
+                                </Text>
                               </View>
                             </View>
                             <Text style={styles.osDate}>{os.date.split('-').reverse().join('/')}</Text>
                           </View>
                           
-                          <Text style={[styles.osLabel, { marginTop: 4 }]}>
-                            Cliente: <Text style={styles.osValue}>{client?.name}</Text>
-                          </Text>
-                          <Text style={[styles.osLabel, { marginTop: 2 }]}>
-                            Veículo: <Text style={styles.osValue}>{vehicle ? `${vehicle.brand} ${vehicle.model} (${vehicle.plate})` : 'N/A'}</Text>
-                          </Text>
+                          <View style={{ marginVertical: 4 }}>
+                            <Text style={styles.cardLabelText}>Cliente</Text>
+                            <Text style={[styles.cardValueText, { color: '#fff', fontWeight: 'bold' }]}>{client?.name}</Text>
+                            
+                            {vehicle && (
+                              <>
+                                <Text style={styles.cardLabelText}>Veículo</Text>
+                                <Text style={styles.cardValueText}>
+                                  {vehicle.brand} {vehicle.model} • Placa: <Text style={{ fontWeight: 'bold', color: '#cbd5e1' }}>{vehicle.plate.toUpperCase()}</Text>
+                                </Text>
+                              </>
+                            )}
+                          </View>
 
-                          <View style={styles.divider} />
-                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <View style={styles.cardFooterRow}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                               {billing ? (
-                                <View style={{ backgroundColor: billing.status === 'Pago' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(234, 179, 8, 0.1)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                                  <Text style={{ fontSize: 7, fontWeight: 'bold', color: billing.status === 'Pago' ? '#22c55e' : '#eab308' }}>💰 FATURADA ({billing.status.toUpperCase()})</Text>
+                                <View style={{ 
+                                  backgroundColor: billing.status === 'Pago' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(234, 179, 8, 0.1)',
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 3,
+                                  borderRadius: 6
+                                }}>
+                                  <Text style={{ 
+                                    fontSize: 9, 
+                                    fontWeight: '900', 
+                                    color: billing.status === 'Pago' ? '#22c55e' : '#eab308' 
+                                  }}>
+                                    💰 {billing.status.toUpperCase()}
+                                  </Text>
                                 </View>
                               ) : (
-                                <View style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                                  <Text style={{ fontSize: 7, fontWeight: 'bold', color: '#ef4444' }}>💸 NÃO FATURADA</Text>
+                                <View style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                                  <Text style={{ fontSize: 9, fontWeight: '900', color: '#ef4444' }}>
+                                    💸 NÃO FATURADA
+                                  </Text>
                                 </View>
                               )}
                             </View>
-                            <Text style={styles.osTotalVal}>{formatCurrency(os.grandTotal)}</Text>
+                            <Text style={[styles.osTotalVal, { fontSize: 16, fontWeight: '900' }]}>{formatCurrency(os.grandTotal)}</Text>
                           </View>
                         </TouchableOpacity>
                       );
@@ -2282,18 +2404,38 @@ function MainWorkshopApp() {
                   return activeFinanceFilter === 'Entradas' ? t.type === 'Entrada' : t.type === 'Saída';
                 }).map(t => {
                   const isInflow = t.type === 'Entrada';
+                  const transStyle = isInflow ? styles.cardInflow : styles.cardOutflow;
                   return (
-                    <View key={t.id} style={[styles.listItem, { justifyContent: 'space-between', alignItems: 'center' }]}>
-                      <View style={{ flex: 1, paddingRight: 8 }}>
-                        <Text style={styles.tDesc}>{t.description}</Text>
-                        <Text style={styles.tDate}>{t.date.split('-').reverse().join('/')} | {t.category}</Text>
+                    <View key={t.id} style={[styles.listItem, transStyle, { borderWidth: 1.5, padding: 18, marginBottom: 12 }]}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 }}>
+                        <View style={{ 
+                          backgroundColor: isInflow ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)', 
+                          padding: 10, 
+                          borderRadius: 12 
+                        }}>
+                          {isInflow ? (
+                            <ArrowUpRight size={16} color="#22c55e" />
+                          ) : (
+                            <ArrowDownRight size={16} color="#ef4444" />
+                          )}
+                        </View>
+                        <View style={{ flex: 1, paddingRight: 6 }}>
+                          <Text style={styles.tDesc} numberOfLines={1}>
+                            {t.description}
+                          </Text>
+                          <Text style={[styles.tDate, { textTransform: 'uppercase', fontWeight: 'bold' }]}>
+                            {t.category} • {t.date.split('-').reverse().join('/')}
+                          </Text>
+                        </View>
                       </View>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                        <Text style={[styles.tAmount, isInflow ? styles.textGreen : styles.textRed, { fontWeight: 'bold' }]}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                        <Text style={[styles.tAmount, { 
+                          color: isInflow ? '#22c55e' : '#ef4444' 
+                        }]}>
                           {isInflow ? '+' : '-'}{formatCurrency(t.amount)}
                         </Text>
                         <TouchableOpacity
-                          style={{ padding: 6, backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: 6 }}
+                          style={{ padding: 8, backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: 8 }}
                           onPress={() => {
                             Alert.alert(
                               'Excluir Transação',
@@ -2311,7 +2453,7 @@ function MainWorkshopApp() {
                             );
                           }}
                         >
-                          <Trash2 size={10} color="#ef4444" />
+                          <Trash2 size={12} color="#ef4444" />
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -3895,12 +4037,12 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a0c10', // Deep pitch black background
+    backgroundColor: '#090b0f', // Deep pitch black background
   },
   header: {
     paddingHorizontal: 22,
     paddingVertical: 18,
-    backgroundColor: '#0f1115',
+    backgroundColor: '#090b0f',
     borderBottomWidth: 1,
     borderBottomColor: '#1e293b',
     flexDirection: 'row',
@@ -3908,14 +4050,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '900',
     color: '#fff',
     letterSpacing: 1.5,
     flexShrink: 1,
   },
   headerSubtitle: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
     color: '#64748b',
     letterSpacing: 0.5,
@@ -3939,7 +4081,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   tabTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '800',
     color: '#f8fafc',
   },
@@ -3948,22 +4090,125 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#3b66ff',
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderRadius: 12,
   },
   actionButtonText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#fff',
     marginLeft: 6,
   },
   card: {
-    backgroundColor: '#12151c',
+    backgroundColor: '#181c24',
     borderRadius: 16,
     padding: 20,
     borderWidth: 1.5,
     borderColor: '#1e293b',
     marginBottom: 16,
+  },
+  // Dynamic status borders & glows
+  cardOpen: {
+    borderColor: 'rgba(59, 102, 255, 0.4)',
+    shadowColor: '#3b66ff',
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+  },
+  cardProgress: {
+    borderColor: 'rgba(234, 179, 8, 0.4)',
+    shadowColor: '#eab308',
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+  },
+  cardDone: {
+    borderColor: 'rgba(34, 197, 94, 0.4)',
+    shadowColor: '#22c55e',
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+  },
+  cardDelivered: {
+    borderColor: '#272e3f',
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 0,
+  },
+  cardInflow: {
+    borderColor: 'rgba(34, 197, 94, 0.3)',
+    shadowColor: '#22c55e',
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  cardOutflow: {
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+    shadowColor: '#ef4444',
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  // Structured card components
+  cardHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  cardHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  cardLabelText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#64748b',
+    letterSpacing: 0.8,
+    marginTop: 6,
+    textTransform: 'uppercase',
+  },
+  cardValueText: {
+    fontSize: 14,
+    color: '#cbd5e1',
+    fontWeight: 'normal',
+    marginTop: 2,
+  },
+  cardMainTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  cardSubtitleText: {
+    fontSize: 13,
+    color: '#94a3b8',
+    marginTop: 2,
+  },
+  cardFooterRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#272e3f',
+    paddingTop: 10,
+    marginTop: 10,
+  },
+  osStatusBadge: {
+    fontSize: 10,
+    fontWeight: '900',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    overflow: 'hidden',
+    borderWidth: 1,
   },
   heroCard: {
     backgroundColor: '#3b66ff',
@@ -3975,7 +4220,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
   },
   heroCardLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '900',
     color: '#bfdbfe',
     letterSpacing: 1.5,
@@ -3987,7 +4232,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   heroCardSub: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#dbeafe',
     marginTop: 8,
     fontWeight: '500',
@@ -4007,24 +4252,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   metricTitle: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
     color: '#94a3b8',
     letterSpacing: 0.5,
   },
   metricValue: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '800',
     color: '#f1f5f9',
     marginTop: 8,
   },
   sectionTitle: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '900',
     color: '#475569',
     letterSpacing: 1,
-    marginTop: 20,
-    marginBottom: 12,
+    marginTop: 24,
+    marginBottom: 14,
   },
   emptyContainer: {
     paddingVertical: 40,
@@ -4040,7 +4285,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#12151c',
+    backgroundColor: '#181c24',
     padding: 18,
     borderRadius: 16,
     borderWidth: 1.5,
@@ -4054,22 +4299,22 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   osNum: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: 'bold',
     color: '#f8fafc',
   },
   osDetails: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#cbd5e1',
     marginTop: 4,
   },
   osTotal: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: 'bold',
     color: '#fff',
   },
   osStatus: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 'bold',
     color: '#3b66ff',
   },
@@ -4082,27 +4327,27 @@ const styles = StyleSheet.create({
     padding: 18,
   },
   clientName: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#f8fafc',
   },
   clientDetails: {
-    fontSize: 12,
-    color: '#64748b',
+    fontSize: 13,
+    color: '#cbd5e1',
     marginTop: 4,
   },
   carRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 12,
-    backgroundColor: '#0a0c10',
+    backgroundColor: '#090b0f',
     padding: 12,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#1e293b',
   },
   carText: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#cbd5e1',
     fontWeight: 'bold',
   },
@@ -4116,12 +4361,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   osNumberLabel: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '900',
     color: '#3b66ff',
   },
   statusBadge: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '900',
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -4141,7 +4386,7 @@ const styles = StyleSheet.create({
     color: '#22c55e',
   },
   osLabel: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#64748b',
     marginTop: 4,
     fontWeight: '700',
@@ -4151,11 +4396,11 @@ const styles = StyleSheet.create({
     fontWeight: 'normal',
   },
   osDate: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#475569',
   },
   osTotalVal: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#22c55e',
   },
@@ -4164,7 +4409,7 @@ const styles = StyleSheet.create({
     paddingVertical: 22,
   },
   balanceLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '900',
     color: '#64748b',
     letterSpacing: 1,
@@ -4184,7 +4429,7 @@ const styles = StyleSheet.create({
     paddingTop: 14,
   },
   balanceSubText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: '#475569',
   },
@@ -4195,21 +4440,21 @@ const styles = StyleSheet.create({
     color: '#ef4444',
   },
   tDesc: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#f8fafc',
   },
   tDate: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#475569',
     marginTop: 4,
   },
   tAmount: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '900',
   },
   formLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '900',
     color: '#64748b',
     letterSpacing: 0.5,
@@ -4217,13 +4462,13 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   formInput: {
-    backgroundColor: '#0a0c10',
+    backgroundColor: '#090b0f',
     borderWidth: 1,
     borderColor: '#1e293b',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    fontSize: 14,
+    fontSize: 15,
     color: '#f1f5f9',
   },
   saveSettingsButton: {
@@ -4236,7 +4481,7 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     height: 64,
-    backgroundColor: '#0f1115',
+    backgroundColor: '#090b0f',
     borderTopWidth: 1,
     borderTopColor: '#1e293b',
     flexDirection: 'row',
@@ -4250,7 +4495,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   tabLabel: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
     color: '#64748b',
     marginTop: 3,
@@ -4261,7 +4506,7 @@ const styles = StyleSheet.create({
   // Modal & Loaders
   loadingContainer: {
     flex: 1,
-    backgroundColor: '#0a0c10',
+    backgroundColor: '#090b0f',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -4277,7 +4522,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.75)',
   },
   modalContent: {
-    backgroundColor: '#0f1115',
+    backgroundColor: '#181c24',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
@@ -4307,13 +4552,13 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   modalInput: {
-    backgroundColor: '#0a0c10',
+    backgroundColor: '#090b0f',
     borderWidth: 1,
     borderColor: '#1e293b',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    fontSize: 14,
+    fontSize: 15,
     color: '#f8fafc',
     marginBottom: 12,
   },
@@ -4336,7 +4581,7 @@ const styles = StyleSheet.create({
     borderColor: '#1e293b',
     borderRadius: 12,
     padding: 8,
-    backgroundColor: '#0a0c10',
+    backgroundColor: '#090b0f',
     marginBottom: 12,
     maxHeight: 150,
   },
@@ -4363,7 +4608,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   pickerTag: {
-    backgroundColor: '#0a0c10',
+    backgroundColor: '#090b0f',
     borderWidth: 1,
     borderColor: '#1e293b',
     paddingHorizontal: 12,
@@ -4431,7 +4676,7 @@ const styles = StyleSheet.create({
   },
   catalogSegmentContainer: {
     flexDirection: 'row',
-    backgroundColor: '#0a0c10',
+    backgroundColor: '#090b0f',
     borderWidth: 1,
     borderColor: '#1e293b',
     borderRadius: 12,
@@ -4462,7 +4707,7 @@ const styles = StyleSheet.create({
   catalogSearchWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0a0c10',
+    backgroundColor: '#090b0f',
     borderWidth: 1,
     borderColor: '#1e293b',
     borderRadius: 14,
@@ -4482,7 +4727,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#12151c',
+    backgroundColor: '#181c24',
     padding: 18,
     borderRadius: 16,
     borderWidth: 1.5,
@@ -4496,7 +4741,7 @@ const styles = StyleSheet.create({
   },
   catalogItemCodeBadge: {
     fontSize: 10,
-    backgroundColor: '#0a0c10',
+    backgroundColor: '#090b0f',
     borderWidth: 0.5,
     borderColor: '#1e293b',
     color: '#64748b',
@@ -4515,7 +4760,7 @@ const styles = StyleSheet.create({
   },
   catalogActionButton: {
     padding: 8,
-    backgroundColor: '#0a0c10',
+    backgroundColor: '#090b0f',
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#1e293b',
@@ -4537,13 +4782,13 @@ const styles = StyleSheet.create({
   // Auth Layout styles
   authContainer: {
     flex: 1,
-    backgroundColor: '#0a0c10',
+    backgroundColor: '#090b0f',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 28,
   },
   authCard: {
-    backgroundColor: '#0f1115',
+    backgroundColor: '#181c24',
     borderWidth: 1.5,
     borderColor: '#1e293b',
     borderRadius: 24,

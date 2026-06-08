@@ -27,7 +27,8 @@ export default function OSDetailScreen() {
     addBilling,
     updateWorkOrder,
     services,
-    parts
+    parts,
+    settings
   } = useDatabase();
 
   const [osWizardModalVisible, setOsWizardModalVisible] = useState(false);
@@ -135,13 +136,6 @@ export default function OSDetailScreen() {
   };
 
   const handleShareOS = async () => {
-    const settings = {
-      name: 'OficinaPro',
-      cnpj: '',
-      phone: '',
-      whatsapp: '',
-      address: '',
-    };
 
     const servicesListHTML = os.services
       .map((s: any) => `<tr>

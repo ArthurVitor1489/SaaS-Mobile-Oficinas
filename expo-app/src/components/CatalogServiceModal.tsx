@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView, Platform, StyleSheet, Alert
 } from 'react-native';
 import { X } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '../styles/theme';
 import { containsInjection } from '../utils/formatters';
 
@@ -36,6 +37,7 @@ export default function CatalogServiceModal({
   onClose,
   onSubmit,
 }: CatalogServiceModalProps) {
+  const insets = useSafeAreaInsets();
   const [form, setForm] = useState<ServiceForm>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
 
@@ -97,7 +99,7 @@ export default function CatalogServiceModal({
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.modalBg}
       >
-        <View style={styles.modalContent}>
+        <View style={[styles.modalContent, { paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : theme.spacing.xxl }]}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>
               {editingServiceId ? 'Editar Mão de Obra' : 'Adicionar Mão de Obra'}

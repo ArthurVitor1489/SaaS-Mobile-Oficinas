@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView, Platform, StyleSheet, Alert
 } from 'react-native';
 import { X } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '../styles/theme';
 import { validateEmail, validateCpfCnpj, validatePhone, containsInjection } from '../utils/formatters';
 
@@ -42,6 +43,7 @@ export default function ClientModal({
   onClose,
   onSubmit,
 }: ClientModalProps) {
+  const insets = useSafeAreaInsets();
   const [form, setForm] = useState<ClientForm>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
 
@@ -118,7 +120,7 @@ export default function ClientModal({
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.modalBg}
       >
-        <View style={styles.modalContent}>
+        <View style={[styles.modalContent, { paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : theme.spacing.xxl }]}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>
               {editingClientId ? 'Editar Cliente' : 'Cadastrar Novo Cliente'}

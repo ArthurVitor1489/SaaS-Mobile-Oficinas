@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView, Platform, StyleSheet, Alert
 } from 'react-native';
 import { X, Search, Check, ClipboardList, Play, CheckCircle } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '../styles/theme';
 import { formatCurrency, containsInjection } from '../utils/formatters';
 import { Client, Vehicle, ServiceItem, PartItem, OSItemService, OSItemPart, OSStatus } from '../types';
@@ -49,6 +50,7 @@ export default function OSWizardModal({
   onClose,
   onSubmit,
 }: OSWizardModalProps) {
+  const insets = useSafeAreaInsets();
   const [wizardStep, setWizardStep] = useState(1);
   const [form, setForm] = useState<OSForm>(emptyForm());
   const [clientSearch, setClientSearch] = useState('');
@@ -186,7 +188,7 @@ export default function OSWizardModal({
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.modalBg}
       >
-        <View style={styles.modalContent}>
+        <View style={[styles.modalContent, { paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : theme.spacing.xxl }]}>
           <View style={styles.modalHeader}>
             <View>
               <Text style={styles.modalTitle}>

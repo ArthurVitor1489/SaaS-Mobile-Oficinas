@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Modal, Alert, StyleSheet, Platform } from 'react-native';
-import { ArrowLeft, Edit2, PenTool, FileText, DollarSign, X, Check, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, Edit2, PenTool, FileText, DollarSign, X, Check } from 'lucide-react-native';
 import { SvgXml } from 'react-native-svg';
 import { useDatabase } from '../context/DatabaseContext';
 import { theme } from '../styles/theme';
@@ -135,61 +135,6 @@ export default function OSDetailScreen() {
     }
   };
 
-  const handleDeleteServiceFromOS = (index: number) => {
-    Alert.alert(
-      'Remover Serviço',
-      'Deseja remover este serviço desta ordem de serviço?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Remover',
-          style: 'destructive',
-          onPress: async () => {
-            const updatedServices = os.services.filter((_, idx) => idx !== index);
-            const servicesTotal = updatedServices.reduce((acc, s) => acc + (s.price * s.quantity), 0);
-            const grandTotal = servicesTotal + os.partsTotal;
-
-            const success = await updateWorkOrder(os.id, {
-              services: updatedServices,
-              servicesTotal,
-              grandTotal
-            });
-            if (success) {
-              Alert.alert('Sucesso', 'Serviço removido com sucesso!');
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  const handleDeletePartFromOS = (index: number) => {
-    Alert.alert(
-      'Remover Peça',
-      'Deseja remover esta peça desta ordem de serviço?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Remover',
-          style: 'destructive',
-          onPress: async () => {
-            const updatedParts = os.parts.filter((_, idx) => idx !== index);
-            const partsTotal = updatedParts.reduce((acc, p) => acc + (p.salePrice * p.quantity), 0);
-            const grandTotal = os.servicesTotal + partsTotal;
-
-            const success = await updateWorkOrder(os.id, {
-              parts: updatedParts,
-              partsTotal,
-              grandTotal
-            });
-            if (success) {
-              Alert.alert('Sucesso', 'Peça removida com sucesso!');
-            }
-          }
-        }
-      ]
-    );
-  };
 
   const handleShareOS = async () => {
 
@@ -662,19 +607,11 @@ export default function OSDetailScreen() {
                   <Text style={styles.detailItemName}>{s.name}</Text>
                   {s.code ? <Text style={styles.detailItemCode}>CÓD: {s.code}</Text> : null}
                 </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <View style={styles.detailItemRight}>
-                    <Text style={styles.detailItemPrice}>{formatCurrency(s.price * s.quantity)}</Text>
-                    {s.quantity > 1 ? (
-                      <Text style={styles.detailItemQtyMeta}>{s.quantity}x {formatCurrency(s.price)}</Text>
-                    ) : null}
-                  </View>
-                  <TouchableOpacity
-                    onPress={() => handleDeleteServiceFromOS(idx)}
-                    style={{ padding: 6 }}
-                  >
-                    <Trash2 size={16} color={theme.colors.error} />
-                  </TouchableOpacity>
+                <View style={styles.detailItemRight}>
+                  <Text style={styles.detailItemPrice}>{formatCurrency(s.price * s.quantity)}</Text>
+                  {s.quantity > 1 ? (
+                    <Text style={styles.detailItemQtyMeta}>{s.quantity}x {formatCurrency(s.price)}</Text>
+                  ) : null}
                 </View>
               </View>
             ))}
@@ -692,19 +629,11 @@ export default function OSDetailScreen() {
                   <Text style={styles.detailItemName}>{p.name}</Text>
                   {p.code ? <Text style={styles.detailItemCode}>SKU: {p.code}</Text> : null}
                 </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <View style={styles.detailItemRight}>
-                    <Text style={styles.detailItemPrice}>{formatCurrency(p.salePrice * p.quantity)}</Text>
-                    {p.quantity > 1 ? (
-                      <Text style={styles.detailItemQtyMeta}>{p.quantity}x {formatCurrency(p.salePrice)}</Text>
-                    ) : null}
-                  </View>
-                  <TouchableOpacity
-                    onPress={() => handleDeletePartFromOS(idx)}
-                    style={{ padding: 6 }}
-                  >
-                    <Trash2 size={16} color={theme.colors.error} />
-                  </TouchableOpacity>
+                <View style={styles.detailItemRight}>
+                  <Text style={styles.detailItemPrice}>{formatCurrency(p.salePrice * p.quantity)}</Text>
+                  {p.quantity > 1 ? (
+                    <Text style={styles.detailItemQtyMeta}>{p.quantity}x {formatCurrency(p.salePrice)}</Text>
+                  ) : null}
                 </View>
               </View>
             ))}

@@ -528,14 +528,14 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           clientId: wo.client_id,
           vehicleId: wo.vehicle_id,
           services: (srvsRes.data || []).map(s => ({
-            id: s.id,
+            id: s.service_id || s.id,
             name: s.name,
             price: parseFloat(s.price),
             quantity: s.quantity,
             code: s.code
           })),
           parts: (prtsRes.data || []).map(p => ({
-            id: p.id,
+            id: p.part_id || p.id,
             name: p.name,
             code: p.code,
             salePrice: parseFloat(p.sale_price),
@@ -1328,25 +1328,43 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       // 4. Save items (services & parts) in batch
       if (osData.services.length > 0) {
-        const srvsInsert = osData.services.map(s => ({
-          os_id: woData.id,
-          name: s.name,
-          price: s.price,
-          quantity: s.quantity,
-          code: s.code || null
-        }));
+        const srvsInsert = osData.services.map(s => {
+          const isCatalogService = state.services.some(cs => cs.id === s.id);
+          let service_id = isCatalogService ? s.id : null;
+          if (!service_id) {
+            const matched = state.services.find(cs => cs.name === s.name);
+            if (matched) service_id = matched.id;
+          }
+          return {
+            os_id: woData.id,
+            service_id,
+            name: s.name,
+            price: s.price,
+            quantity: s.quantity,
+            code: s.code || null
+          };
+        });
         const { error: srvError } = await supabase.from('work_order_services').insert(srvsInsert);
         if (srvError) throw srvError;
       }
 
       if (osData.parts.length > 0) {
-        const prtsInsert = osData.parts.map(p => ({
-          os_id: woData.id,
-          name: p.name,
-          code: p.code || null,
-          sale_price: p.salePrice,
-          quantity: p.quantity
-        }));
+        const prtsInsert = osData.parts.map(p => {
+          const isCatalogPart = state.parts.some(cp => cp.id === p.id);
+          let part_id = isCatalogPart ? p.id : null;
+          if (!part_id) {
+            const matched = state.parts.find(cp => cp.code === p.code || cp.name === p.name);
+            if (matched) part_id = matched.id;
+          }
+          return {
+            os_id: woData.id,
+            part_id,
+            name: p.name,
+            code: p.code || null,
+            sale_price: p.salePrice,
+            quantity: p.quantity
+          };
+        });
         const { error: prtError } = await supabase.from('work_order_parts').insert(prtsInsert);
         if (prtError) throw prtError;
 
@@ -1447,25 +1465,43 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       // Re-write services/parts if changed
       if (osData.services) {
         await supabase.from('work_order_services').delete().eq('os_id', id);
-        const srvsInsert = osData.services.map(s => ({
-          os_id: id,
-          name: s.name,
-          price: s.price,
-          quantity: s.quantity,
-          code: s.code || null
-        }));
+        const srvsInsert = osData.services.map(s => {
+          const isCatalogService = state.services.some(cs => cs.id === s.id);
+          let service_id = isCatalogService ? s.id : null;
+          if (!service_id) {
+            const matched = state.services.find(cs => cs.name === s.name);
+            if (matched) service_id = matched.id;
+          }
+          return {
+            os_id: id,
+            service_id,
+            name: s.name,
+            price: s.price,
+            quantity: s.quantity,
+            code: s.code || null
+          };
+        });
         await supabase.from('work_order_services').insert(srvsInsert);
       }
 
       if (osData.parts) {
         await supabase.from('work_order_parts').delete().eq('os_id', id);
-        const prtsInsert = osData.parts.map(p => ({
-          os_id: id,
-          name: p.name,
-          code: p.code || null,
-          sale_price: p.salePrice,
-          quantity: p.quantity
-        }));
+        const prtsInsert = osData.parts.map(p => {
+          const isCatalogPart = state.parts.some(cp => cp.id === p.id);
+          let part_id = isCatalogPart ? p.id : null;
+          if (!part_id) {
+            const matched = state.parts.find(cp => cp.code === p.code || cp.name === p.name);
+            if (matched) part_id = matched.id;
+          }
+          return {
+            os_id: id,
+            part_id,
+            name: p.name,
+            code: p.code || null,
+            sale_price: p.salePrice,
+            quantity: p.quantity
+          };
+        });
         await supabase.from('work_order_parts').insert(prtsInsert);
       }
 

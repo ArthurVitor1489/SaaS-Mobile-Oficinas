@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import aesjs from 'aes-js';
 import { createClient } from '@supabase/supabase-js';
+import { Platform } from 'react-native';
 
 // Swaps in public Expo environment variables dynamically
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://your-project-id.supabase.co';
@@ -26,6 +27,9 @@ class LargeSecureStore {
   }
 
   async getItem(key: string): Promise<string | null> {
+    if (Platform.OS === 'web') {
+      return AsyncStorage.getItem(key);
+    }
     const encrypted = await AsyncStorage.getItem(key);
     if (!encrypted) return null;
     
@@ -36,6 +40,9 @@ class LargeSecureStore {
   }
 
   async setItem(key: string, value: string): Promise<void> {
+    if (Platform.OS === 'web') {
+      return AsyncStorage.setItem(key, value);
+    }
     const encryptionKey = await this._getEncryptionKey();
     const cipher = new aesjs.ModeOfOperation.ctr(encryptionKey, new aesjs.Counter(1));
     const encryptedBytes = cipher.encrypt(aesjs.utils.utf8.toBytes(value));
@@ -57,3 +64,4 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: false
   }
 });
+

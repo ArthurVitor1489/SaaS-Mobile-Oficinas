@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Search, Plus, ClipboardCheck, ArrowLeft, ChevronRight, CheckCircle, 
-  Clock, Play, AlertCircle, Eye, FileText, PenTool, Check, DollarSign, AlertTriangle, X, Edit2 
+  Clock, Play, AlertCircle, Eye, FileText, PenTool, Check, DollarSign, AlertTriangle, X, Edit2, Trash2 
 } from 'lucide-react';
 import { useDatabase, WorkOrder, Client, Vehicle, OSStatus, OSItemService, OSItemPart } from '../context/DatabaseContext';
 import { SignaturePad } from '../components/SignaturePad';
@@ -10,7 +10,7 @@ import { PDFViewer } from '../components/PDFViewer';
 export const WorkOrdersScreen: React.FC = () => {
   const { 
     workOrders, clients, vehicles, services: serviceCatalog, parts: partCatalog, settings, billings,
-    addWorkOrder, updateWorkOrder, updateWorkOrderStatus, saveWorkOrderSignature, addBilling 
+    addWorkOrder, updateWorkOrder, updateWorkOrderStatus, saveWorkOrderSignature, addBilling, deleteWorkOrder 
   } = useDatabase();
 
   const [search, setSearch] = useState('');
@@ -142,6 +142,14 @@ export const WorkOrdersScreen: React.FC = () => {
     setNewOSNotes(selectedOS.notes);
     setIsCreatingOS(true);
     setWizardStep(1);
+  };
+
+  const handleDeleteOS = () => {
+    if (!selectedOS) return;
+    if (window.confirm('Tem certeza que deseja excluir permanentemente esta ordem de serviço? Esta ação não pode ser desfeita.')) {
+      deleteWorkOrder(selectedOS.id);
+      setSelectedOS(null);
+    }
   };
 
   const handleSaveOS = () => {
@@ -381,6 +389,13 @@ export const WorkOrdersScreen: React.FC = () => {
               >
                 <Edit2 size={15} />
                 Editar
+              </button>
+              <button 
+                onClick={handleDeleteOS}
+                className="p-1.5 hover:bg-dark-800 text-red-400 rounded-lg flex items-center gap-1 text-sm font-bold transition-colors"
+              >
+                <Trash2 size={15} />
+                Excluir
               </button>
             </div>
             

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Modal, Alert, StyleSheet, Platform } from 'react-native';
-import { ArrowLeft, Edit2, PenTool, FileText, DollarSign, X, Check } from 'lucide-react-native';
+import { ArrowLeft, Edit2, PenTool, FileText, DollarSign, X, Check, Trash2 } from 'lucide-react-native';
 import { SvgXml } from 'react-native-svg';
 import { useDatabase } from '../context/DatabaseContext';
 import { theme } from '../styles/theme';
@@ -26,6 +26,7 @@ export default function OSDetailScreen() {
     saveWorkOrderSignature,
     addBilling,
     updateWorkOrder,
+    deleteWorkOrder,
     services,
     parts,
     settings
@@ -61,6 +62,29 @@ export default function OSDetailScreen() {
   const client = clientMap.get(os.clientId);
   const vehicle = vehicleMap.get(os.vehicleId);
   const billing = billingMap.get(os.id);
+
+  const handleDeleteOS = () => {
+    Alert.alert(
+      'Excluir Ordem de Serviço',
+      'Tem certeza que deseja excluir permanentemente esta ordem de serviço? Esta ação não pode ser desfeita.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: async () => {
+            const success = await deleteWorkOrder(os.id);
+            if (success) {
+              Alert.alert('Sucesso', 'Ordem de serviço excluída com sucesso!');
+              navigation.goBack();
+            } else {
+              Alert.alert('Erro', 'Não foi possível excluir esta ordem de serviço.');
+            }
+          }
+        }
+      ]
+    );
+  };
 
   const handleOpenOSWizardForEdit = () => {
     setEditingOSForm({
@@ -538,13 +562,22 @@ export default function OSDetailScreen() {
           <Text style={styles.backButtonText}>Voltar</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity
-          onPress={handleOpenOSWizardForEdit}
-          style={styles.editOSButton}
-        >
-          <Edit2 size={14} color={theme.colors.primary} style={styles.editButtonIcon} />
-          <Text style={styles.editOSButtonText}>Editar</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+          <TouchableOpacity
+            onPress={handleOpenOSWizardForEdit}
+            style={styles.editOSButton}
+          >
+            <Edit2 size={14} color={theme.colors.primary} style={styles.editButtonIcon} />
+            <Text style={styles.editOSButtonText}>Editar</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleDeleteOS}
+            style={styles.deleteOSButton}
+          >
+            <Trash2 size={14} color={theme.colors.error} style={styles.deleteButtonIcon} />
+            <Text style={styles.deleteOSButtonText}>Excluir</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <Text style={styles.sectionTitle}>Status da Ordem</Text>
@@ -1303,5 +1336,22 @@ const styles = StyleSheet.create({
   },
   modalBillingScrollViewContent: {
     paddingBottom: 24,
+  },
+  deleteOSButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    minHeight: 40,
+  },
+  deleteOSButtonText: {
+    fontSize: 13,
+    color: theme.colors.error,
+    fontWeight: 'bold',
+  },
+  deleteButtonIcon: {
+    marginRight: 6,
   },
 });

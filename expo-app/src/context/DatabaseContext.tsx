@@ -717,6 +717,16 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       if (wsError) throw wsError;
 
+      // B2. Create user profile linking them securely to this workshop
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: authData.user.id,
+          workshop_id: wsData.id
+        });
+
+      if (profileError) throw profileError;
+
       // C. Update User Metadata with the workshop_id so that future RLS works!
       const { error: updateError } = await supabase.auth.updateUser({
         data: {

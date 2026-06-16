@@ -164,7 +164,7 @@ BEGIN
   END IF;
 
   -- Controle Multi-Tenant: Valida se o usuário autenticado tem acesso a esta oficina
-  IF v_workshop_id::TEXT != (auth.jwt() -> 'user_metadata' ->> 'workshop_id') THEN
+  IF v_workshop_id != get_user_workshop_id() THEN
     RAISE EXCEPTION 'Acesso não autorizado';
   END IF;
 
@@ -259,7 +259,7 @@ BEGIN
   END IF;
 
   -- Controle Multi-Tenant: Valida se o usuário autenticado tem acesso a esta oficina
-  IF v_workshop_id::TEXT != (auth.jwt() -> 'user_metadata' ->> 'workshop_id') THEN
+  IF v_workshop_id != get_user_workshop_id() THEN
     RAISE EXCEPTION 'Acesso não autorizado';
   END IF;
 

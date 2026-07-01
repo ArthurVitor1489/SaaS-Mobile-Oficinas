@@ -1,10 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
-import { supabase } from '../services/supabase';
-import { Session, User } from '@supabase/supabase-js';
-
-// --- TYPES & INTERFACES IMPORTED ---
 import { 
   Client, Vehicle, ServiceItem, PartItem, OSItemService, OSItemPart, 
   OSStatus, WorkOrder, PaymentMethod, BillingStatus, Installment, 
@@ -24,14 +20,8 @@ interface DatabaseState {
 }
 
 interface DatabaseContextProps extends DatabaseState {
-  user: User | null;
-  session: Session | null;
   loading: boolean;
   online: boolean;
-  
-  // Auth Operations
-  signUp: (email: string, password: string, companyName: string, cnpj: string) => Promise<boolean>;
-  signIn: (email: string, password: string) => Promise<boolean>;
   signOut: () => Promise<void>;
 
   // Client CRUD
@@ -72,8 +62,7 @@ interface DatabaseContextProps extends DatabaseState {
   // Settings operations
   updateSettings: (settings: Partial<CompanySettings>) => Promise<boolean>;
   
-  // Cache sync
-  syncWithSupabase: () => Promise<void>;
+  // Backup / local operations
   exportDatabaseJson: () => string;
   resetDatabase: () => Promise<void>;
   restoreBackup: (jsonStr: string) => Promise<boolean>;
@@ -348,10 +337,8 @@ const seedTransactions: FinancialTransaction[] = [
 ];
 
 export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [online, setOnline] = useState(true);
+  const [online, setOnline] = useState(false); // 100% local, no server status required
 
   const [state, setState] = useState<DatabaseState>({
     clients: [],
@@ -371,54 +358,28 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const cached = await AsyncStorage.getItem(CACHE_KEY);
         if (cached) {
           setState(JSON.parse(cached));
+        } else {
+          // If no cache, populate with seed data!
+          const seedState: DatabaseState = {
+            clients: seedClients,
+            vehicles: seedVehicles,
+            services: seedServices,
+            parts: seedParts,
+            workOrders: seedWorkOrders,
+            billings: seedBillings,
+            transactions: seedTransactions,
+            settings: defaultSettings
+          };
+          setState(seedState);
+          await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(seedState));
         }
       } catch (e) {
         console.error('Failed to load local cache', e);
+      } finally {
+        setLoading(false);
       }
     };
     loadCache();
-  }, []);
-
-  // Listen to Supabase Auth State
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session) {
-        syncData(session.user);
-      } else {
-        setLoading(false);
-      }
-    }).catch(err => {
-      console.warn('Supabase getSession failed, using local offline mode:', err);
-      setSession(null);
-      setUser(null);
-      setOnline(false);
-      setLoading(false);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session) {
-        syncData(session.user);
-      } else {
-        // Clear state on logout
-        setState({
-          clients: [],
-          vehicles: [],
-          services: [],
-          parts: [],
-          workOrders: [],
-          billings: [],
-          transactions: [],
-          settings: defaultSettings
-        });
-        setLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
   }, []);
 
   // Write changes to cache
@@ -430,538 +391,23 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  // Helper to fetch data from Supabase
-  const syncData = async (currentUser: User) => {
-    setLoading(true);
-    try {
-      const workshopId = currentUser.user_metadata.workshop_id;
-      if (!workshopId) {
-        setLoading(false);
-        return;
-      }
-
-      // Fetch workshop details
-      const { data: workshopData, error: wsError } = await supabase
-        .from('workshops')
-        .select('*')
-        .eq('id', workshopId)
-        .single();
-
-      if (wsError) throw wsError;
-
-      // Parallel fetch remaining tables
-      const [
-        clientsRes,
-        vehiclesRes,
-        servicesRes,
-        partsRes,
-        workOrdersRes,
-        billingsRes,
-        transactionsRes
-      ] = await Promise.all([
-        supabase.from('clients').select('*').eq('workshop_id', workshopId).order('name'),
-        supabase.from('vehicles').select('*, clients!inner(workshop_id)').eq('clients.workshop_id', workshopId),
-        supabase.from('catalog_services').select('*').eq('workshop_id', workshopId).order('name'),
-        supabase.from('catalog_parts').select('*').eq('workshop_id', workshopId).order('name'),
-        supabase.from('work_orders').select('*').eq('workshop_id', workshopId).order('created_at', { ascending: false }),
-        supabase.from('billings').select('*').eq('workshop_id', workshopId),
-        supabase.from('financial_transactions').select('*').eq('workshop_id', workshopId).order('date', { ascending: false })
-      ]);
-
-      // Resolve relational joins manually for details
-      const fetchedClients: Client[] = (clientsRes.data || []).map(c => ({
-        id: c.id,
-        name: c.name,
-        cpfCnpj: c.cpf_cnpj || '',
-        phone: c.phone,
-        whatsapp: c.whatsapp || '',
-        email: c.email || '',
-        address: c.address || '',
-        notes: c.notes || '',
-        createdAt: c.created_at
-      }));
-
-      const fetchedVehicles: Vehicle[] = (vehiclesRes.data || []).map(v => ({
-        id: v.id,
-        clientId: v.client_id,
-        plate: v.plate,
-        brand: v.brand,
-        model: v.model,
-        year: v.year,
-        chassis: v.chassis || '',
-        odometer: v.odometer || '0',
-        createdAt: v.created_at
-      }));
-
-      const fetchedServices: ServiceItem[] = (servicesRes.data || []).map(s => ({
-        id: s.id,
-        name: s.name,
-        description: s.description || '',
-        price: parseFloat(s.price),
-        code: s.code || ''
-      }));
-
-      const fetchedParts: PartItem[] = (partsRes.data || []).map(p => ({
-        id: p.id,
-        name: p.name,
-        code: p.code,
-        supplier: p.supplier || '',
-        purchasePrice: parseFloat(p.purchase_price),
-        salePrice: parseFloat(p.sale_price),
-        stock: p.stock
-      }));
-
-      // Workorders need sub-item services and parts
-      const rawWOs = workOrdersRes.data || [];
-      const fetchedWOs: WorkOrder[] = [];
-
-      for (const wo of rawWOs) {
-        const [srvsRes, prtsRes] = await Promise.all([
-          supabase.from('work_order_services').select('*').eq('os_id', wo.id),
-          supabase.from('work_order_parts').select('*').eq('os_id', wo.id)
-        ]);
-
-        fetchedWOs.push({
-          id: wo.id,
-          osNumber: wo.os_number,
-          date: wo.date,
-          clientId: wo.client_id,
-          vehicleId: wo.vehicle_id,
-          services: (srvsRes.data || []).map(s => ({
-            id: s.service_id || s.id,
-            name: s.name,
-            price: parseFloat(s.price),
-            quantity: s.quantity,
-            code: s.code
-          })),
-          parts: (prtsRes.data || []).map(p => ({
-            id: p.part_id || p.id,
-            name: p.name,
-            code: p.code,
-            salePrice: parseFloat(p.sale_price),
-            quantity: p.quantity
-          })),
-          notes: wo.notes || '',
-          status: wo.status,
-          servicesTotal: parseFloat(wo.services_total),
-          partsTotal: parseFloat(wo.parts_total),
-          grandTotal: parseFloat(wo.grand_total),
-          signature: wo.signature || '',
-          createdAt: wo.created_at
-        });
-      }
-
-      // Billings need installments
-      const rawBillings = billingsRes.data || [];
-      const fetchedBillings: Billing[] = [];
-
-      for (const b of rawBillings) {
-        const instsRes = await supabase.from('billing_installments').select('*').eq('billing_id', b.id).order('number');
-        fetchedBillings.push({
-          id: b.id,
-          osId: b.os_id,
-          amount: parseFloat(b.amount),
-          paymentMethod: b.payment_method as PaymentMethod,
-          status: b.status as BillingStatus,
-          dueDate: b.due_date,
-          createdAt: b.created_at,
-          installments: (instsRes.data || []).map(i => ({
-            number: i.number,
-            amount: parseFloat(i.amount),
-            dueDate: i.due_date,
-            status: i.status as 'Pendente' | 'Pago',
-            paidAt: i.paid_at
-          }))
-        });
-      }
-
-      const fetchedTransactions: FinancialTransaction[] = (transactionsRes.data || []).map(t => ({
-        id: t.id,
-        type: t.type as TransactionType,
-        category: t.category as TransactionCategory,
-        amount: parseFloat(t.amount),
-        date: t.date,
-        description: t.description || '',
-        createdAt: t.created_at
-      }));
-
-      const newSettings: CompanySettings = {
-        id: workshopData.id,
-        name: workshopData.name,
-        cnpj: workshopData.cnpj || '',
-        address: workshopData.address || '',
-        phone: workshopData.phone || '',
-        whatsapp: workshopData.whatsapp || '',
-        email: workshopData.email || '',
-        logoUrl: workshopData.logo_url || defaultSettings.logoUrl,
-        autoSequence: workshopData.auto_sequence,
-        nextOSNumber: workshopData.next_os_number,
-        pdfNotes: workshopData.pdf_notes || ''
-      };
-
-      const newState: DatabaseState = {
-        clients: fetchedClients,
-        vehicles: fetchedVehicles,
-        services: fetchedServices,
-        parts: fetchedParts,
-        workOrders: fetchedWOs,
-        billings: fetchedBillings,
-        transactions: fetchedTransactions,
-        settings: newSettings
-      };
-
-      setState(newState);
-      updateCache(newState);
-      setOnline(true);
-    } catch (e) {
-      console.error('Failed to sync from Supabase', e);
-      setOnline(false);
-      Alert.alert('Modo Offline', 'Não foi possível sincronizar os dados com o servidor. Exibindo informações em cache.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleNetworkError = (e?: any) => {
-    console.log('Database error detail:', e);
-    if (e && e.message) {
-      Alert.alert('Erro de Operação', `Não foi possível salvar os dados: ${e.message}`);
-    } else {
-      Alert.alert('Erro de Rede', 'Você parece estar offline ou sem comunicação com o servidor. Verifique a sua internet para salvar modificações.');
-    }
-  };
-
-  // --- AUTHENTICATION FLOWS ---
-
-  const signUp = async (email: string, password: string, companyName: string, cnpj: string) => {
-    try {
-      const isPlaceholder = !supabase || !supabase.auth || (supabase as any).supabaseUrl?.includes('your-project-id');
-      if (isPlaceholder || !online) {
-        // Local simulation of sign up
-        const customUser: User = {
-          id: 'mock-user-id-' + Math.random().toString(36).substr(2, 9),
-          app_metadata: {},
-          user_metadata: {
-            workshop_id: 'mock-workshop-id',
-            workshop_name: companyName
-          },
-          aud: 'authenticated',
-          created_at: new Date().toISOString(),
-          email: email,
-          role: 'authenticated'
-        };
-
-        const customSession: Session = {
-          access_token: 'mock-access-token-' + Math.random().toString(36).substr(2, 9),
-          refresh_token: 'mock-refresh-token',
-          expires_in: 3600,
-          token_type: 'bearer',
-          user: customUser
-        };
-
-        const customSettings: CompanySettings = {
-          ...defaultSettings,
-          name: companyName,
-          cnpj: cnpj || '',
-          email: email
-        };
-
-        const localState: DatabaseState = {
-          clients: seedClients,
-          vehicles: seedVehicles,
-          services: seedServices,
-          parts: seedParts,
-          workOrders: seedWorkOrders,
-          billings: seedBillings,
-          transactions: seedTransactions,
-          settings: customSettings
-        };
-
-        setState(localState);
-        await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(localState));
-        setSession(customSession);
-        setUser(customUser);
-
-        Alert.alert('Modo Demonstração', `Oficina "${companyName}" criada localmente com dados de teste!`);
-        return true;
-      }
-
-      // 1. Create a Workshop placeholder entry (using service_role bypass or RPC, but we can do a standard insert after user registers)
-      // Actually, we sign up the user, which auto-triggers the user profile. But to bypass RLS, we can do it after sign up.
-      // Better: we call Supabase signUp, and in the metadata we send the workshop properties.
-      // Let's do:
-      // A. SignUp user.
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            workshop_name: companyName
-          }
-        }
-      });
-
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Falha ao registrar usuário.');
-
-      // B. Create the Workshop (authenticated now)
-      const { data: wsData, error: wsError } = await supabase
-        .from('workshops')
-        .insert({
-          name: companyName,
-          cnpj: cnpj,
-          email: email
-        })
-        .select()
-        .single();
-
-      if (wsError) throw wsError;
-
-      // B2. Create user profile linking them securely to this workshop
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: authData.user.id,
-          workshop_id: wsData.id
-        });
-
-      if (profileError) throw profileError;
-
-      // C. Update User Metadata with the workshop_id so that future RLS works!
-      const { error: updateError } = await supabase.auth.updateUser({
-        data: {
-          workshop_id: wsData.id
-        }
-      });
-
-      if (updateError) throw updateError;
-
-      // Force refresh the session to update the JWT access token immediately with the new metadata
-      await supabase.auth.refreshSession().catch(err => {
-        console.log('Failed to refresh session JWT automatically:', err);
-      });
-
-      Alert.alert('Sucesso', 'Oficina cadastrada e conta criada! Faça login para começar.');
-      return true;
-    } catch (e: any) {
-      console.log('Cadastro erro:', e.message || e);
-      // Fallback in case of net/Supabase failure after standard signup try
-      if (e.message === 'Network request failed' || e.message?.includes('Fetch')) {
-        Alert.alert('Modo Demonstração', 'Sem conexão. Criando oficina em modo local...');
-        const customUser: User = {
-          id: 'mock-user-id',
-          app_metadata: {},
-          user_metadata: {
-            workshop_id: 'mock-workshop-id',
-            workshop_name: companyName
-          },
-          aud: 'authenticated',
-          created_at: new Date().toISOString(),
-          email: email,
-          role: 'authenticated'
-        };
-
-        const customSession: Session = {
-          access_token: 'mock-access-token',
-          refresh_token: 'mock-refresh-token',
-          expires_in: 3600,
-          token_type: 'bearer',
-          user: customUser
-        };
-
-        const customSettings: CompanySettings = {
-          ...defaultSettings,
-          name: companyName,
-          cnpj: cnpj || '',
-          email: email
-        };
-
-        const localState: DatabaseState = {
-          clients: seedClients,
-          vehicles: seedVehicles,
-          services: seedServices,
-          parts: seedParts,
-          workOrders: seedWorkOrders,
-          billings: seedBillings,
-          transactions: seedTransactions,
-          settings: customSettings
-        };
-
-        setState(localState);
-        await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(localState));
-        setSession(customSession);
-        setUser(customUser);
-        return true;
-      }
-      Alert.alert('Erro ao Cadastrar', e.message || 'Erro desconhecido.');
-      return false;
-    }
-  };
-
-  const signIn = async (email: string, password: string) => {
-    try {
-      const isPlaceholder = !supabase || !supabase.auth || (supabase as any).supabaseUrl?.includes('your-project-id');
-      if (isPlaceholder || !online) {
-        // Local sign in bypass
-        const customUser: User = {
-          id: 'mock-user-id',
-          app_metadata: {},
-          user_metadata: {
-            workshop_id: 'mock-workshop-id',
-            workshop_name: 'Minha Oficina'
-          },
-          aud: 'authenticated',
-          created_at: new Date().toISOString(),
-          email: email,
-          role: 'authenticated'
-        };
-
-        const customSession: Session = {
-          access_token: 'mock-access-token',
-          refresh_token: 'mock-refresh-token',
-          expires_in: 3600,
-          token_type: 'bearer',
-          user: customUser
-        };
-
-        const cached = await AsyncStorage.getItem(CACHE_KEY);
-        let localState: DatabaseState;
-        if (cached) {
-          localState = JSON.parse(cached);
-        } else {
-          localState = {
-            clients: seedClients,
-            vehicles: seedVehicles,
-            services: seedServices,
-            parts: seedParts,
-            workOrders: seedWorkOrders,
-            billings: seedBillings,
-            transactions: seedTransactions,
-            settings: {
-              ...defaultSettings,
-              email: email
-            }
-          };
-          await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(localState));
-        }
-
-        setState(localState);
-        setSession(customSession);
-        setUser(customUser);
-        Alert.alert('Modo Demonstração', 'Acesso efetuado no painel local offline!');
-        return true;
-      }
-
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      return true;
-    } catch (e: any) {
-      console.log('Login erro:', e.message || e);
-      if (e.message === 'Network request failed' || e.message?.includes('Fetch')) {
-        Alert.alert('Modo Demonstração', 'Sem conexão. Entrando no modo local...');
-        const customUser: User = {
-          id: 'mock-user-id',
-          app_metadata: {},
-          user_metadata: {
-            workshop_id: 'mock-workshop-id',
-            workshop_name: 'Minha Oficina'
-          },
-          aud: 'authenticated',
-          created_at: new Date().toISOString(),
-          email: email,
-          role: 'authenticated'
-        };
-
-        const customSession: Session = {
-          access_token: 'mock-access-token',
-          refresh_token: 'mock-refresh-token',
-          expires_in: 3600,
-          token_type: 'bearer',
-          user: customUser
-        };
-
-        const cached = await AsyncStorage.getItem(CACHE_KEY);
-        let localState: DatabaseState;
-        if (cached) {
-          localState = JSON.parse(cached);
-        } else {
-          localState = {
-            clients: seedClients,
-            vehicles: seedVehicles,
-            services: seedServices,
-            parts: seedParts,
-            workOrders: seedWorkOrders,
-            billings: seedBillings,
-            transactions: seedTransactions,
-            settings: {
-              ...defaultSettings,
-              email: email
-            }
-          };
-          await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(localState));
-        }
-
-        setState(localState);
-        setSession(customSession);
-        setUser(customUser);
-        return true;
-      }
-
-      let userMsg = 'E-mail ou senha incorretos.';
-      if (e.message === 'Email not confirmed') {
-        userMsg = 'E-mail não verificado. Por favor, confirme o e-mail na sua caixa de entrada ou desative a confirmação de e-mail no painel do Supabase.';
-      } else if (e.message?.includes('security purposes')) {
-        userMsg = 'Por motivos de segurança, aguarde alguns segundos antes de tentar novamente.';
-      } else if (e.message && e.message !== 'Invalid login credentials') {
-        userMsg = e.message;
-      }
-      Alert.alert('Erro de Acesso', userMsg);
-      return false;
-    }
-  };
-
   const signOut = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (e) {
-      console.warn('Failed to sign out from Supabase server, clearing session locally:', e);
-      setSession(null);
-      setUser(null);
-    }
+    Alert.alert('Modo Offline', 'Você está usando o painel 100% local. Não há conta online para sair.');
   };
 
-  // --- CRUD OPERATIONS WITH SUPABASE ---
-
+  // --- CLIENT CRUD ---
   const addClient = async (clientData: Omit<Client, 'id' | 'createdAt'>) => {
     try {
-      const workshopId = user?.user_metadata.workshop_id;
-      const { data, error } = await supabase
-        .from('clients')
-        .insert({
-          workshop_id: workshopId,
-          name: clientData.name,
-          cpf_cnpj: clientData.cpfCnpj,
-          phone: clientData.phone,
-          whatsapp: clientData.whatsapp,
-          email: clientData.email,
-          address: clientData.address,
-          notes: clientData.notes
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
       const newClient: Client = {
-        id: data.id,
-        name: data.name,
-        cpfCnpj: data.cpf_cnpj || '',
-        phone: data.phone,
-        whatsapp: data.whatsapp || '',
-        email: data.email || '',
-        address: data.address || '',
-        notes: data.notes || '',
-        createdAt: data.created_at
+        id: 'c-' + Math.random().toString(36).substr(2, 9),
+        name: clientData.name,
+        cpfCnpj: clientData.cpfCnpj,
+        phone: clientData.phone,
+        whatsapp: clientData.whatsapp || '',
+        email: clientData.email || '',
+        address: clientData.address || '',
+        notes: clientData.notes || '',
+        createdAt: new Date().toISOString()
       };
 
       const newState = {
@@ -969,94 +415,58 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         clients: [newClient, ...state.clients]
       };
       setState(newState);
-      updateCache(newState);
+      await updateCache(newState);
       return newClient;
     } catch (e) {
-      console.log('Database operation failed (returned null):', e);
-      handleNetworkError(e);
+      console.log('Database operation failed:', e);
       return null;
     }
   };
 
   const updateClient = async (id: string, clientData: Partial<Client>) => {
     try {
-      const { error } = await supabase
-        .from('clients')
-        .update({
-          name: clientData.name,
-          cpf_cnpj: clientData.cpfCnpj,
-          phone: clientData.phone,
-          whatsapp: clientData.whatsapp,
-          email: clientData.email,
-          address: clientData.address,
-          notes: clientData.notes
-        })
-        .eq('id', id);
-
-      if (error) throw error;
-
       const newState = {
         ...state,
         clients: state.clients.map(c => c.id === id ? { ...c, ...clientData } : c)
       };
       setState(newState);
-      updateCache(newState);
+      await updateCache(newState);
       return true;
     } catch (e) {
-      console.log('Database operation failed (returned false):', e);
-      handleNetworkError(e);
+      console.log('Database operation failed:', e);
       return false;
     }
   };
 
   const deleteClient = async (id: string) => {
     try {
-      const { error } = await supabase.from('clients').delete().eq('id', id);
-      if (error) throw error;
-
       const newState = {
         ...state,
         clients: state.clients.filter(c => c.id !== id),
         vehicles: state.vehicles.filter(v => v.clientId !== id) // cascade local
       };
       setState(newState);
-      updateCache(newState);
+      await updateCache(newState);
       return true;
     } catch (e) {
-      console.log('Database operation failed (returned false):', e);
-      handleNetworkError(e);
+      console.log('Database operation failed:', e);
       return false;
     }
   };
 
+  // --- VEHICLE CRUD ---
   const addVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'createdAt'>) => {
     try {
-      const { data, error } = await supabase
-        .from('vehicles')
-        .insert({
-          client_id: vehicleData.clientId,
-          plate: vehicleData.plate.toUpperCase(),
-          brand: vehicleData.brand,
-          model: vehicleData.model,
-          year: vehicleData.year,
-          chassis: vehicleData.chassis,
-          odometer: vehicleData.odometer
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
       const newVehicle: Vehicle = {
-        id: data.id,
-        clientId: data.client_id,
-        plate: data.plate,
-        brand: data.brand,
-        model: data.model,
-        year: data.year,
-        chassis: data.chassis || '',
-        odometer: data.odometer || '0',
-        createdAt: data.created_at
+        id: 'v-' + Math.random().toString(36).substr(2, 9),
+        clientId: vehicleData.clientId,
+        plate: vehicleData.plate.toUpperCase(),
+        brand: vehicleData.brand,
+        model: vehicleData.model,
+        year: vehicleData.year,
+        chassis: vehicleData.chassis || '',
+        odometer: vehicleData.odometer || '0',
+        createdAt: new Date().toISOString()
       };
 
       const newState = {
@@ -1064,351 +474,182 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         vehicles: [newVehicle, ...state.vehicles]
       };
       setState(newState);
-      updateCache(newState);
+      await updateCache(newState);
       return newVehicle;
     } catch (e) {
-      console.log('Database operation failed (returned null):', e);
-      handleNetworkError(e);
+      console.log('Database operation failed:', e);
       return null;
     }
   };
 
   const updateVehicle = async (id: string, vehicleData: Partial<Vehicle>) => {
     try {
-      const { error } = await supabase
-        .from('vehicles')
-        .update({
-          plate: vehicleData.plate?.toUpperCase(),
-          brand: vehicleData.brand,
-          model: vehicleData.model,
-          year: vehicleData.year,
-          chassis: vehicleData.chassis,
-          odometer: vehicleData.odometer
-        })
-        .eq('id', id);
-
-      if (error) throw error;
-
       const newState = {
         ...state,
         vehicles: state.vehicles.map(v => v.id === id ? { ...v, ...vehicleData } : v)
       };
       setState(newState);
-      updateCache(newState);
+      await updateCache(newState);
       return true;
     } catch (e) {
-      console.log('Database operation failed (returned false):', e);
-      handleNetworkError(e);
+      console.log('Database operation failed:', e);
       return false;
     }
   };
 
   const deleteVehicle = async (id: string) => {
     try {
-      const { error } = await supabase.from('vehicles').delete().eq('id', id);
-      if (error) throw error;
-
       const newState = {
         ...state,
         vehicles: state.vehicles.filter(v => v.id !== id)
       };
       setState(newState);
-      updateCache(newState);
+      await updateCache(newState);
       return true;
     } catch (e) {
-      console.log('Database operation failed (returned false):', e);
-      handleNetworkError(e);
+      console.log('Database operation failed:', e);
       return false;
     }
   };
 
+  // --- SERVICE CRUD ---
   const addService = async (serviceData: Omit<ServiceItem, 'id'>) => {
     try {
-      const workshopId = user?.user_metadata.workshop_id;
-      const { data, error } = await supabase
-        .from('catalog_services')
-        .insert({
-          workshop_id: workshopId,
-          name: serviceData.name,
-          code: serviceData.code,
-          description: serviceData.description,
-          price: serviceData.price
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
       const newService: ServiceItem = {
-        id: data.id,
-        name: data.name,
-        code: data.code || '',
-        description: data.description || '',
-        price: parseFloat(data.price)
+        id: 's-' + Math.random().toString(36).substr(2, 9),
+        name: serviceData.name,
+        code: serviceData.code || '',
+        description: serviceData.description || '',
+        price: serviceData.price
       };
 
       const newState = {
         ...state,
-        services: [...state.services, newService]
+        services: [newService, ...state.services]
       };
       setState(newState);
-      updateCache(newState);
+      await updateCache(newState);
       return newService;
     } catch (e) {
-      console.log('Database operation failed (returned null):', e);
-      handleNetworkError(e);
+      console.log('Database operation failed:', e);
       return null;
     }
   };
 
   const updateService = async (id: string, serviceData: Partial<ServiceItem>) => {
     try {
-      const { error } = await supabase
-        .from('catalog_services')
-        .update({
-          name: serviceData.name,
-          code: serviceData.code,
-          description: serviceData.description,
-          price: serviceData.price
-        })
-        .eq('id', id);
-
-      if (error) throw error;
-
       const newState = {
         ...state,
         services: state.services.map(s => s.id === id ? { ...s, ...serviceData } : s)
       };
       setState(newState);
-      updateCache(newState);
+      await updateCache(newState);
       return true;
     } catch (e) {
-      console.log('Database operation failed (returned false):', e);
-      handleNetworkError(e);
+      console.log('Database operation failed:', e);
       return false;
     }
   };
 
   const deleteService = async (id: string) => {
     try {
-      const { error } = await supabase.from('catalog_services').delete().eq('id', id);
-      if (error) throw error;
-
       const newState = {
         ...state,
         services: state.services.filter(s => s.id !== id)
       };
       setState(newState);
-      updateCache(newState);
+      await updateCache(newState);
       return true;
     } catch (e) {
-      console.log('Database operation failed (returned false):', e);
-      handleNetworkError(e);
+      console.log('Database operation failed:', e);
       return false;
     }
   };
 
+  // --- PART CRUD ---
   const addPart = async (partData: Omit<PartItem, 'id'>) => {
     try {
-      const workshopId = user?.user_metadata.workshop_id;
-      const { data, error } = await supabase
-        .from('catalog_parts')
-        .insert({
-          workshop_id: workshopId,
-          name: partData.name,
-          code: partData.code,
-          supplier: partData.supplier,
-          purchase_price: partData.purchasePrice,
-          sale_price: partData.salePrice,
-          stock: partData.stock
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
       const newPart: PartItem = {
-        id: data.id,
-        name: data.name,
-        code: data.code,
-        supplier: data.supplier || '',
-        purchasePrice: parseFloat(data.purchase_price),
-        salePrice: parseFloat(data.sale_price),
-        stock: data.stock
+        id: 'p-' + Math.random().toString(36).substr(2, 9),
+        name: partData.name,
+        code: partData.code || '',
+        supplier: partData.supplier || '',
+        purchasePrice: partData.purchasePrice,
+        salePrice: partData.salePrice,
+        stock: partData.stock
       };
 
       const newState = {
         ...state,
-        parts: [...state.parts, newPart]
+        parts: [newPart, ...state.parts]
       };
       setState(newState);
-      updateCache(newState);
+      await updateCache(newState);
       return newPart;
     } catch (e) {
-      console.log('Database operation failed (returned null):', e);
-      handleNetworkError(e);
+      console.log('Database operation failed:', e);
       return null;
     }
   };
 
   const updatePart = async (id: string, partData: Partial<PartItem>) => {
     try {
-      const { error } = await supabase
-        .from('catalog_parts')
-        .update({
-          name: partData.name,
-          code: partData.code,
-          supplier: partData.supplier,
-          purchase_price: partData.purchasePrice,
-          sale_price: partData.salePrice,
-          stock: partData.stock
-        })
-        .eq('id', id);
-
-      if (error) throw error;
-
       const newState = {
         ...state,
         parts: state.parts.map(p => p.id === id ? { ...p, ...partData } : p)
       };
       setState(newState);
-      updateCache(newState);
+      await updateCache(newState);
       return true;
     } catch (e) {
-      console.log('Database operation failed (returned false):', e);
-      handleNetworkError(e);
+      console.log('Database operation failed:', e);
       return false;
     }
   };
 
   const deletePart = async (id: string) => {
     try {
-      const { error } = await supabase.from('catalog_parts').delete().eq('id', id);
-      if (error) throw error;
-
       const newState = {
         ...state,
         parts: state.parts.filter(p => p.id !== id)
       };
       setState(newState);
-      updateCache(newState);
+      await updateCache(newState);
       return true;
     } catch (e) {
-      console.log('Database operation failed (returned false):', e);
-      handleNetworkError(e);
+      console.log('Database operation failed:', e);
       return false;
     }
   };
 
   // --- WORK ORDERS CRUD ---
-
   const addWorkOrder = async (osData: Omit<WorkOrder, 'id' | 'osNumber' | 'grandTotal' | 'servicesTotal' | 'partsTotal' | 'createdAt'>) => {
     try {
-      const workshopId = user?.user_metadata.workshop_id;
-
-      // 1. Calculate totals
       const servicesTotal = osData.services.reduce((acc, s) => acc + (s.price * s.quantity), 0);
       const partsTotal = osData.parts.reduce((acc, p) => acc + (p.salePrice * p.quantity), 0);
       const grandTotal = servicesTotal + partsTotal;
 
-      // 2. Increment auto sequence on settings
       const currentNext = state.settings.nextOSNumber;
       const osNumber = `OS-${String(currentNext).padStart(4, '0')}`;
-
-      // 3. Save OS to Supabase
-      const { data: woData, error: woError } = await supabase
-        .from('work_orders')
-        .insert({
-          workshop_id: workshopId,
-          client_id: osData.clientId,
-          vehicle_id: osData.vehicleId,
-          os_number: osNumber,
-          date: osData.date,
-          status: osData.status,
-          services_total: servicesTotal,
-          parts_total: partsTotal,
-          grand_total: grandTotal,
-          notes: osData.notes,
-          signature: osData.signature || ''
-        })
-        .select()
-        .single();
-
-      if (woError) throw woError;
-
-      // 4. Save items (services & parts) in batch
-      if (osData.services.length > 0) {
-        const srvsInsert = osData.services.map(s => {
-          const isCatalogService = state.services.some(cs => cs.id === s.id);
-          let service_id = isCatalogService ? s.id : null;
-          if (!service_id) {
-            const matched = state.services.find(cs => cs.name === s.name);
-            if (matched) service_id = matched.id;
-          }
-          return {
-            os_id: woData.id,
-            service_id,
-            name: s.name,
-            price: s.price,
-            quantity: s.quantity,
-            code: s.code || null
-          };
-        });
-        const { error: srvError } = await supabase.from('work_order_services').insert(srvsInsert);
-        if (srvError) throw srvError;
-      }
-
-      if (osData.parts.length > 0) {
-        const prtsInsert = osData.parts.map(p => {
-          const isCatalogPart = state.parts.some(cp => cp.id === p.id);
-          let part_id = isCatalogPart ? p.id : null;
-          if (!part_id) {
-            const matched = state.parts.find(cp => cp.code === p.code || cp.name === p.name);
-            if (matched) part_id = matched.id;
-          }
-          return {
-            os_id: woData.id,
-            part_id,
-            name: p.name,
-            code: p.code || null,
-            sale_price: p.salePrice,
-            quantity: p.quantity
-          };
-        });
-        const { error: prtError } = await supabase.from('work_order_parts').insert(prtsInsert);
-        if (prtError) throw prtError;
-
-        // Update local and remote inventory levels
-        for (const pt of osData.parts) {
-          const original = state.parts.find(p => p.code === pt.code || p.name === pt.name);
-          if (original) {
-            const newStock = Math.max(0, original.stock - pt.quantity);
-            await supabase.from('catalog_parts').update({ stock: newStock }).eq('id', original.id);
-          }
-        }
-      }
-
-      // 5. Update workshop next_os_number
-      await supabase.from('workshops').update({ next_os_number: currentNext + 1 }).eq('id', workshopId);
+      const newWOId = 'os-' + Math.random().toString(36).substr(2, 9);
 
       const newWO: WorkOrder = {
-        id: woData.id,
+        id: newWOId,
         osNumber,
-        date: woData.date,
-        clientId: woData.client_id,
-        vehicleId: woData.vehicle_id,
+        date: osData.date,
+        clientId: osData.clientId,
+        vehicleId: osData.vehicleId,
         services: osData.services,
         parts: osData.parts,
-        notes: woData.notes,
-        status: woData.status,
+        notes: osData.notes || '',
+        status: osData.status,
         servicesTotal,
         partsTotal,
         grandTotal,
-        signature: woData.signature || '',
-        createdAt: woData.created_at
+        signature: osData.signature || '',
+        createdAt: new Date().toISOString()
       };
 
-      // Refresh catalog parts locally with updated stock
       const updatedParts = state.parts.map(p => {
         const consumed = osData.parts.find(pt => pt.code === p.code || pt.name === p.name);
         return consumed ? { ...p, stock: Math.max(0, p.stock - consumed.quantity) } : p;
@@ -1425,9 +666,8 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       };
 
       setState(newState);
-      updateCache(newState);
+      await updateCache(newState);
 
-      // Trigger automatic billing if OS is completed/delivered
       if (osData.status === 'Concluída' || osData.status === 'Entregue') {
         await addBilling({
           osId: newWO.id,
@@ -1441,8 +681,7 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       return newWO;
     } catch (e) {
-      console.log('Database operation failed (returned null):', e);
-      handleNetworkError(e);
+      console.log('Database operation failed:', e);
       return null;
     }
   };
@@ -1458,66 +697,11 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const partsTotal = parts.reduce((acc, p) => acc + (p.salePrice * p.quantity), 0);
       const grandTotal = servicesTotal + partsTotal;
 
-      const { error: woError } = await supabase
-        .from('work_orders')
-        .update({
-          status: osData.status,
-          notes: osData.notes,
-          services_total: servicesTotal,
-          parts_total: partsTotal,
-          grand_total: grandTotal,
-          signature: osData.signature
-        })
-        .eq('id', id);
-
-      if (woError) throw woError;
-
-      // Re-write services/parts if changed
-      if (osData.services) {
-        await supabase.from('work_order_services').delete().eq('os_id', id);
-        const srvsInsert = osData.services.map(s => {
-          const isCatalogService = state.services.some(cs => cs.id === s.id);
-          let service_id = isCatalogService ? s.id : null;
-          if (!service_id) {
-            const matched = state.services.find(cs => cs.name === s.name);
-            if (matched) service_id = matched.id;
-          }
-          return {
-            os_id: id,
-            service_id,
-            name: s.name,
-            price: s.price,
-            quantity: s.quantity,
-            code: s.code || null
-          };
-        });
-        await supabase.from('work_order_services').insert(srvsInsert);
-      }
-
-      if (osData.parts) {
-        await supabase.from('work_order_parts').delete().eq('os_id', id);
-        const prtsInsert = osData.parts.map(p => {
-          const isCatalogPart = state.parts.some(cp => cp.id === p.id);
-          let part_id = isCatalogPart ? p.id : null;
-          if (!part_id) {
-            const matched = state.parts.find(cp => cp.code === p.code || cp.name === p.name);
-            if (matched) part_id = matched.id;
-          }
-          return {
-            os_id: id,
-            part_id,
-            name: p.name,
-            code: p.code || null,
-            sale_price: p.salePrice,
-            quantity: p.quantity
-          };
-        });
-        await supabase.from('work_order_parts').insert(prtsInsert);
-      }
-
       const updatedOS: WorkOrder = {
         ...original,
         ...osData,
+        services,
+        parts,
         servicesTotal,
         partsTotal,
         grandTotal
@@ -1529,11 +713,10 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       };
 
       setState(newState);
-      updateCache(newState);
+      await updateCache(newState);
       return true;
     } catch (e) {
-      console.log('Database operation failed (returned false):', e);
-      handleNetworkError(e);
+      console.log('Database operation failed:', e);
       return false;
     }
   };
@@ -1548,9 +731,6 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const deleteWorkOrder = async (id: string) => {
     try {
-      const { error } = await supabase.from('work_orders').delete().eq('id', id);
-      if (error) throw error;
-
       const newState = {
         ...state,
         workOrders: state.workOrders.filter(o => o.id !== id),
@@ -1558,60 +738,43 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       };
 
       setState(newState);
-      updateCache(newState);
+      await updateCache(newState);
       return true;
     } catch (e) {
-      console.log('Database operation failed (returned false):', e);
-      handleNetworkError(e);
+      console.log('Database operation failed:', e);
       return false;
     }
   };
 
-  // --- BILLING AND INSTALLMENTS ---
-
+  // --- BILLINGS CRUD ---
   const addBilling = async (billingData: Omit<Billing, 'id' | 'createdAt'>) => {
     try {
-      const { data, error } = await supabase.rpc('create_billing_transaction', {
-        p_os_id: billingData.osId,
-        p_amount: billingData.amount,
-        p_payment_method: billingData.paymentMethod,
-        p_status: billingData.status,
-        p_due_date: billingData.dueDate,
-        p_installments: billingData.installments
+      const newBillingId = 'b-' + Math.random().toString(36).substr(2, 9);
+      const newBilling: Billing = {
+        ...billingData,
+        id: newBillingId,
+        createdAt: new Date().toISOString()
+      };
+
+      let newTransactions: FinancialTransaction[] = [];
+      const os = state.workOrders.find(o => o.id === billingData.osId);
+      const osNum = os ? os.osNumber : 'S/N';
+
+      billingData.installments.forEach((inst, index) => {
+        if (inst.status === 'Pago') {
+          newTransactions.push({
+            id: 't-' + Math.random().toString(36).substr(2, 9) + '-' + index,
+            type: 'Entrada',
+            category: 'Pagamento OS',
+            amount: inst.amount,
+            date: inst.dueDate,
+            description: `Parcela ${inst.number}/${billingData.installments.length} da ${osNum}`,
+            createdAt: new Date().toISOString()
+          });
+        }
       });
 
-      if (error) throw error;
-
-      const result = data as {
-        success: boolean;
-        billing_id: string;
-        created_at: string;
-        transactions: any[];
-      };
-
-      const newBilling: Billing = {
-        id: result.billing_id,
-        osId: billingData.osId,
-        amount: billingData.amount,
-        paymentMethod: billingData.paymentMethod,
-        status: billingData.status as BillingStatus,
-        dueDate: billingData.dueDate,
-        createdAt: result.created_at,
-        installments: billingData.installments
-      };
-
-      const newTransactions: FinancialTransaction[] = (result.transactions || []).map(t => ({
-        id: t.id,
-        type: t.type as TransactionType,
-        category: t.category as TransactionCategory,
-        amount: typeof t.amount === 'string' ? parseFloat(t.amount) : t.amount,
-        date: t.date,
-        description: t.description,
-        createdAt: t.createdAt
-      }));
-
       setState(prev => {
-        // Filtra para remover qualquer rascunho anterior de cobrança desta OS que tenha sido deletado no banco
         const filteredBillings = prev.billings.filter(b => b.osId !== billingData.osId);
         const newState = {
           ...prev,
@@ -1621,10 +784,10 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         updateCache(newState);
         return newState;
       });
+
       return newBilling;
     } catch (e) {
-      console.log('Database operation failed (returned null):', e);
-      handleNetworkError(e);
+      console.log('Database operation failed:', e);
       return null;
     }
   };
@@ -1633,48 +796,43 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       const paidAtStr = new Date().toISOString();
       const billing = state.billings.find(b => b.id === billingId);
-      const os = state.workOrders.find(o => o.id === billing?.osId);
+      if (!billing) return false;
       
-      const totalInsts = billing?.installments.length || 1;
+      const os = state.workOrders.find(o => o.id === billing.osId);
+      const totalInsts = billing.installments.length;
       const transactionDescription = `Parcela ${installmentNumber}/${totalInsts} da ${os?.osNumber || 'OS'}`;
 
-      const { data, error } = await supabase.rpc('pay_billing_installment', {
-        p_billing_id: billingId,
-        p_installment_number: installmentNumber,
-        p_paid_at: paidAtStr,
-        p_transaction_date: paidAtStr.split('T')[0],
-        p_transaction_description: transactionDescription
+      let paidAmount = 0;
+      const updatedInstallments = billing.installments.map(i => {
+        if (i.number === installmentNumber) {
+          paidAmount = i.amount;
+          return { ...i, status: 'Pago' as const, paidAt: paidAtStr };
+        }
+        return i;
       });
 
-      if (error) throw error;
+      const totalPaidCount = updatedInstallments.filter(i => i.status === 'Pago').length;
+      let newStatus: BillingStatus = 'Pendente';
+      if (totalPaidCount === totalInsts) {
+        newStatus = 'Pago';
+      } else if (totalPaidCount > 0) {
+        newStatus = 'Parcialmente pago';
+      }
 
-      const result = data as {
-        success: boolean;
-        new_status: BillingStatus;
-        amount: number;
-        transaction_id: string;
-        transaction_created_at: string;
-      };
-
+      const newTransId = 't-' + Math.random().toString(36).substr(2, 9);
       const newTrans: FinancialTransaction = {
-        id: result.transaction_id,
+        id: newTransId,
         type: 'Entrada',
         category: 'Pagamento OS',
-        amount: result.amount,
+        amount: paidAmount,
         date: paidAtStr.split('T')[0],
         description: transactionDescription,
-        createdAt: result.transaction_created_at
+        createdAt: paidAtStr
       };
 
       const updatedBillings = state.billings.map(b => {
         if (b.id === billingId) {
-          const updatedInstallments = b.installments.map(i => {
-            if (i.number === installmentNumber) {
-              return { ...i, status: 'Pago' as const, paidAt: paidAtStr };
-            }
-            return i;
-          });
-          return { ...b, status: result.new_status, installments: updatedInstallments };
+          return { ...b, status: newStatus, installments: updatedInstallments };
         }
         return b;
       });
@@ -1688,42 +846,25 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         updateCache(newState);
         return newState;
       });
+
       return true;
     } catch (e) {
-      console.log('Database operation failed (returned false):', e);
-      handleNetworkError(e);
+      console.log('Database operation failed:', e);
       return false;
     }
   };
 
-  // --- FINANCIAL OPERATIONS ---
-
+  // --- FINANCIAL CRUD ---
   const addTransaction = async (transData: Omit<FinancialTransaction, 'id' | 'createdAt'>) => {
     try {
-      const workshopId = user?.user_metadata.workshop_id;
-      const { data, error } = await supabase
-        .from('financial_transactions')
-        .insert({
-          workshop_id: workshopId,
-          type: transData.type,
-          category: transData.category,
-          amount: transData.amount,
-          date: transData.date,
-          description: transData.description
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
       const newTrans: FinancialTransaction = {
-        id: data.id,
-        type: data.type as TransactionType,
-        category: data.category as TransactionCategory,
-        amount: parseFloat(data.amount),
-        date: data.date,
-        description: data.description || '',
-        createdAt: data.created_at
+        id: 't-' + Math.random().toString(36).substr(2, 9),
+        type: transData.type,
+        category: transData.category,
+        amount: transData.amount,
+        date: transData.date,
+        description: transData.description || '',
+        createdAt: new Date().toISOString()
       };
 
       setState(prev => {
@@ -1736,17 +877,13 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       });
       return newTrans;
     } catch (e) {
-      console.log('Database operation failed (returned null):', e);
-      handleNetworkError(e);
+      console.log('Database operation failed:', e);
       return null;
     }
   };
 
   const deleteTransaction = async (id: string) => {
     try {
-      const { error } = await supabase.from('financial_transactions').delete().eq('id', id);
-      if (error) throw error;
-
       setState(prev => {
         const newState = {
           ...prev,
@@ -1757,35 +894,14 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       });
       return true;
     } catch (e) {
-      console.log('Database operation failed (returned false):', e);
-      handleNetworkError(e);
+      console.log('Database operation failed:', e);
       return false;
     }
   };
 
-  // --- SETTINGS OPERATIONS ---
-
+  // --- SETTINGS CRUD ---
   const updateSettings = async (settingsData: Partial<CompanySettings>) => {
     try {
-      const workshopId = user?.user_metadata.workshop_id;
-      const { error } = await supabase
-        .from('workshops')
-        .update({
-          name: settingsData.name,
-          cnpj: settingsData.cnpj,
-          address: settingsData.address,
-          phone: settingsData.phone,
-          whatsapp: settingsData.whatsapp,
-          email: settingsData.email,
-          logo_url: settingsData.logoUrl,
-          auto_sequence: settingsData.autoSequence,
-          next_os_number: settingsData.nextOSNumber,
-          pdf_notes: settingsData.pdfNotes
-        })
-        .eq('id', workshopId);
-
-      if (error) throw error;
-
       const newSettings = {
         ...state.settings,
         ...settingsData
@@ -1796,20 +912,12 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         settings: newSettings
       };
       setState(newState);
-      updateCache(newState);
+      await updateCache(newState);
       Alert.alert('Sucesso', 'Configurações atualizadas com sucesso!');
       return true;
     } catch (e) {
-      console.log('Database operation failed (returned false):', e);
-      handleNetworkError(e);
+      console.log('Database operation failed:', e);
       return false;
-    }
-  };
-
-  // Cache Sync Trigger manually
-  const syncWithSupabase = async () => {
-    if (user) {
-      await syncData(user);
     }
   };
 
@@ -1868,12 +976,8 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   return (
     <DatabaseContext.Provider value={{
       ...state,
-      user,
-      session,
       loading,
       online,
-      signUp,
-      signIn,
       signOut,
       addClient,
       updateClient,
@@ -1897,7 +1001,6 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       addTransaction,
       deleteTransaction,
       updateSettings,
-      syncWithSupabase,
       exportDatabaseJson,
       resetDatabase,
       restoreBackup

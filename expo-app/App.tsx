@@ -35,204 +35,6 @@ import {
   ClientsStackParamList, OSStackParamList, FinanceStackParamList, MoreStackParamList 
 } from './src/types/navigation';
 
-// --- AUTHENTICATION SCREEN ---
-
-function AuthScreen() {
-  const { signIn, signUp } = useDatabase();
-  const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [companyName, setCompanyName] = useState('');
-  const [cnpj, setCnpj] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [failedAttempts, setFailedAttempts] = useState(0);
-  const [lockoutTime, setLockoutTime] = useState(0);
-
-  React.useEffect(() => {
-    if (lockoutTime > 0) {
-      const timer = setTimeout(() => {
-        setLockoutTime(prev => prev - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [lockoutTime]);
-
-  const handleSubmit = async () => {
-    if (isLogin && lockoutTime > 0) {
-      Alert.alert(
-        'Bloqueio de Segurança',
-        `Múltiplas tentativas de login incorretas. Aguarde ${lockoutTime} segundos.`
-      );
-      return;
-    }
-
-    if (!email || !password) {
-      Alert.alert('Erro', 'Por favor, preencha o e-mail e a senha.');
-      return;
-    }
-
-    if (!validateEmail(email.trim())) {
-      Alert.alert('Erro', 'Por favor, informe um endereço de e-mail válido.');
-      return;
-    }
-
-    if (password.length < 6) {
-      Alert.alert('Erro', 'A senha deve possuir no mínimo 6 caracteres.');
-      return;
-    }
-
-    setLoading(true);
-    if (isLogin) {
-      const success = await signIn(email.trim(), password);
-      setLoading(false);
-      if (success) {
-        setFailedAttempts(0);
-        setLockoutTime(0);
-      } else {
-        const nextAttempts = failedAttempts + 1;
-        setFailedAttempts(nextAttempts);
-        
-        let cooldown = 0;
-        if (nextAttempts === 2) {
-          cooldown = 5; // 5s progressive delay
-        } else if (nextAttempts === 3) {
-          cooldown = 15; // 15s progressive delay
-        } else if (nextAttempts === 4) {
-          cooldown = 30; // 30s progressive delay
-        } else if (nextAttempts >= 5) {
-          cooldown = 300; // 5-minute temporary lockout
-        }
-
-        if (cooldown > 0) {
-          setLockoutTime(cooldown);
-          if (nextAttempts >= 5) {
-            Alert.alert(
-              'Bloqueio Temporário',
-              'Limite de tentativas de login excedido. Acesso bloqueado por 5 minutos.'
-            );
-          } else {
-            Alert.alert(
-              'Suspensão Temporária',
-              `Dados de login incorretos. Por favor, aguarde ${cooldown} segundos para tentar novamente.`
-            );
-          }
-        } else {
-          Alert.alert('Erro no Login', 'E-mail ou senha incorretos.');
-        }
-      }
-    } else {
-      if (!companyName) {
-        Alert.alert('Erro', 'Por favor, informe o nome da oficina.');
-        setLoading(false);
-        return;
-      }
-      const success = await signUp(email.trim(), password, companyName, cnpj);
-      setLoading(false);
-      if (success) {
-        setIsLogin(true);
-      }
-    }
-  };
-
-  return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
-      style={styles.authContainer}
-    >
-      <StatusBar barStyle="light-content" />
-      <View style={styles.authCard}>
-        <Text style={styles.authTitle}>OFICINAPRO</Text>
-        <Text style={styles.authSubtitle}>
-          {isLogin ? 'Faça login para gerenciar sua oficina' : 'Cadastre sua oficina e crie sua conta SaaS'}
-        </Text>
-
-        {!isLogin && (
-          <>
-            <Text style={styles.inputLabel}>Nome da Oficina / Razão Social *</Text>
-            <TextInput 
-              placeholder="Ex: AutoTech Mecânica Premium" 
-              placeholderTextColor="#475569"
-              value={companyName} 
-              onChangeText={setCompanyName}
-              style={styles.modalInput} 
-            />
-
-            <Text style={styles.inputLabel}>CNPJ (Opcional)</Text>
-            <TextInput 
-              placeholder="Ex: 00.000.000/0001-00" 
-              placeholderTextColor="#475569"
-              value={cnpj} 
-              onChangeText={setCnpj}
-              style={styles.modalInput} 
-            />
-          </>
-        )}
-
-        <Text style={styles.inputLabel}>E-mail de Acesso *</Text>
-        <TextInput 
-          placeholder="seuemail@oficina.com" 
-          placeholderTextColor="#475569"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          value={email} 
-          onChangeText={setEmail}
-          style={styles.modalInput} 
-          editable={lockoutTime === 0}
-        />
-
-        <Text style={styles.inputLabel}>Senha *</Text>
-        <TextInput 
-          placeholder="••••••••" 
-          placeholderTextColor="#475569"
-          secureTextEntry
-          autoCapitalize="none"
-          value={password} 
-          onChangeText={setPassword}
-          style={styles.modalInput} 
-          editable={lockoutTime === 0}
-        />
-
-        {isLogin && failedAttempts > 0 && (
-          <Text style={styles.attemptsWarningText}>
-            {failedAttempts === 1 ? '1 falha. Mais 4 falhas bloquearão a conta por 5 min.' :
-             failedAttempts === 2 ? '2 falhas. Mais 3 falhas bloquearão a conta por 5 min.' :
-             failedAttempts === 3 ? '3 falhas. Mais 2 falhas bloquearão a conta por 5 min.' :
-             failedAttempts === 4 ? '4 falhas. Próxima falha bloqueará a conta por 5 min.' :
-             'Acesso bloqueado por segurança.'}
-          </Text>
-        )}
-
-        {loading ? (
-          <ActivityIndicator color="#3b66ff" style={styles.loadingIndicator} />
-        ) : (
-          <TouchableOpacity 
-            style={[styles.submitButton, lockoutTime > 0 ? { backgroundColor: theme.colors.border, opacity: 0.5 } : null]} 
-            onPress={handleSubmit}
-            disabled={lockoutTime > 0}
-          >
-            <Text style={styles.submitButtonText}>
-              {lockoutTime > 0 ? `Bloqueado (${lockoutTime}s)` : (isLogin ? 'Entrar no Painel' : 'Cadastrar Oficina')}
-            </Text>
-          </TouchableOpacity>
-        )}
-
-        <TouchableOpacity 
-          style={styles.switchAuthMode} 
-          onPress={() => {
-            setIsLogin(!isLogin);
-            setFailedAttempts(0);
-            setLockoutTime(0);
-          }}
-        >
-          <Text style={styles.switchAuthText}>
-            {isLogin ? 'Não tem conta? Cadastre sua oficina' : 'Já possui conta? Faça o Login'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
-  );
-}
-
 // --- SUB-STACK NAVIGATORS ---
 
 const DashboardStack = createStackNavigator<DashboardStackParamList>();
@@ -388,7 +190,7 @@ const MyDarkTheme = {
 };
 
 function AppContent() {
-  const { session, loading } = useDatabase();
+  const { loading } = useDatabase();
   
   if (loading) {
     return (
@@ -401,11 +203,7 @@ function AppContent() {
   return (
     <NavigationContainer theme={MyDarkTheme}>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
-        {session ? (
-          <RootStack.Screen name="MainTabs" component={MainTabNavigator} />
-        ) : (
-          <RootStack.Screen name="Auth" component={AuthScreen} />
-        )}
+        <RootStack.Screen name="MainTabs" component={MainTabNavigator} />
       </RootStack.Navigator>
     </NavigationContainer>
   );

@@ -1,30 +1,13 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Alert, StyleSheet } from 'react-native';
-import { ChevronRight, Tag, Settings, LogOut, Wifi, WifiOff } from 'lucide-react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { ChevronRight, Tag, Settings, Wifi } from 'lucide-react-native';
 import { useDatabase } from '../context/DatabaseContext';
 import { theme } from '../styles/theme';
 import { useNavigation } from '@react-navigation/native';
 
 export default function MoreMenuScreen() {
   const navigation = useNavigation<any>();
-  const { signOut, online, settings } = useDatabase();
-
-  const handleSignOutClick = () => {
-    Alert.alert(
-      'Sair da Conta',
-      'Deseja realmente desconectar-se e sair do painel?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Sair',
-          style: 'destructive',
-          onPress: async () => {
-            await signOut();
-          }
-        }
-      ]
-    );
-  };
+  const { settings } = useDatabase();
 
   return (
     <View style={styles.screenContainer}>
@@ -32,19 +15,10 @@ export default function MoreMenuScreen() {
         <Text style={styles.tabTitle}>Mais Opções</Text>
         <View style={[
           styles.networkBadge,
-          { backgroundColor: online ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)' }
+          { backgroundColor: 'rgba(34, 197, 94, 0.1)' }
         ]}>
-          {online ? (
-            <>
-              <Wifi size={12} color="#22c55e" />
-              <Text style={[styles.networkText, { color: '#22c55e' }]}>Online</Text>
-            </>
-          ) : (
-            <>
-              <WifiOff size={12} color="#ef4444" />
-              <Text style={[styles.networkText, { color: '#ef4444' }]}>Offline</Text>
-            </>
-          )}
+          <Wifi size={12} color="#22c55e" />
+          <Text style={[styles.networkText, { color: '#22c55e' }]}>Modo Local</Text>
         </View>
       </View>
 
@@ -67,7 +41,7 @@ export default function MoreMenuScreen() {
 
         <TouchableOpacity
           onPress={() => navigation.navigate('Settings')}
-          style={styles.menuItem}
+          style={[styles.menuItem, { borderBottomWidth: 0 }]}
         >
           <View style={styles.menuItemLeft}>
             <View style={[styles.iconBg, { backgroundColor: 'rgba(100, 116, 139, 0.1)' }]}>
@@ -76,22 +50,6 @@ export default function MoreMenuScreen() {
             <View>
               <Text style={styles.menuItemTitle}>Configurações da Oficina</Text>
               <Text style={styles.menuItemSubtitle}>Ajustes e exportação de backups</Text>
-            </View>
-          </View>
-          <ChevronRight size={18} color="#64748b" />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={handleSignOutClick}
-          style={[styles.menuItem, { borderBottomWidth: 0 }]}
-        >
-          <View style={styles.menuItemLeft}>
-            <View style={[styles.iconBg, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
-              <LogOut size={18} color={theme.colors.error} />
-            </View>
-            <View>
-              <Text style={[styles.menuItemTitle, { color: theme.colors.error }]}>Desconectar Oficina</Text>
-              <Text style={styles.menuItemSubtitle}>Sair do painel atual</Text>
             </View>
           </View>
           <ChevronRight size={18} color="#64748b" />

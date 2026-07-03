@@ -3,6 +3,7 @@ import {
   Smartphone, Database, Users, ClipboardList, Wallet, Menu, Info, Settings, ChevronRight, Monitor
 } from 'lucide-react';
 import { DatabaseProvider, useDatabase } from './mobile-app/context/DatabaseContext';
+import { LandingPage } from './LandingPage';
 
 // Import Mobile Screens
 import { DashboardScreen } from './mobile-app/screens/DashboardScreen';
@@ -15,7 +16,7 @@ import { BackupSettingsScreen } from './mobile-app/screens/BackupSettingsScreen'
 
 // --- MAIN PORTAL CONTROLLER ---
 
-const MainPortal: React.FC = () => {
+const MainPortal: React.FC<{ onBackToLanding: () => void }> = ({ onBackToLanding }) => {
   const db = useDatabase();
 
   // Active Simulated Mobile Tab: 'dashboard' | 'clients' | 'os' | 'finance' | 'more'
@@ -101,6 +102,13 @@ const MainPortal: React.FC = () => {
         
         {/* VIEW MODE SELECTION BAR */}
         <div className="flex gap-2 mb-5 bg-dark-900 p-1.5 rounded-2xl border border-dark-850 z-50 shadow-md flex-shrink-0">
+          <button 
+            onClick={onBackToLanding}
+            className="px-3.5 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all bg-dark-950 text-slate-300 hover:bg-dark-850"
+          >
+            ← Voltar ao Site
+          </button>
+          <div className="h-6 w-px bg-dark-800 self-center" />
           <button 
             onClick={() => setViewMode('developer')}
             className={`px-3.5 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all flex items-center gap-1.5 ${viewMode === 'developer' ? 'bg-brand-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
@@ -305,9 +313,15 @@ const MainPortal: React.FC = () => {
 };
 
 export default function App() {
+  const [currentView, setCurrentView] = useState<'landing' | 'simulator'>('landing');
+
   return (
     <DatabaseProvider>
-      <MainPortal />
+      {currentView === 'landing' ? (
+        <LandingPage onEnterSimulator={() => setCurrentView('simulator')} />
+      ) : (
+        <MainPortal onBackToLanding={() => setCurrentView('landing')} />
+      )}
     </DatabaseProvider>
   );
 }

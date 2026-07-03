@@ -1,73 +1,60 @@
-# React + TypeScript + Vite
+# 🚗 MecânicaPro — Sistema de Gestão para Oficinas
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+MecânicaPro é um software profissional para gerenciamento de oficinas mecânicas, auto elétricas, lava-jatos e centros automotivos. O projeto é composto por um **aplicativo móvel nativo** e um **portal web com simulador e site de vendas integrado**.
 
-Currently, two official plugins are available:
+O sistema opera no modelo **100% offline (offline-first)**, armazenando todas as informações (clientes, veículos, ordens de serviço, finanças e catálogo) no próprio dispositivo do usuário através de persistência local segura (AsyncStorage no celular e LocalStorage na Web).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## 📁 Estrutura do Repositório
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+* **`/expo-app`**: Código-fonte do aplicativo nativo multiplataforma (Android/iOS) desenvolvido com React Native, Expo e TypeScript.
+* **`/src`**: Código-fonte do portal web desenvolvido com React, Vite e Tailwind CSS, contendo:
+  * **Site de Vendas (Landing Page)**: Página promocional otimizada com calculadora de retorno financeiro interativa (ROI).
+  * **Simulador Embarcado**: Simulador interativo com moldura de celular e visualização expandida de desktop.
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## ⚡ Como Hospedar o Site de Vendas Grátis (Vercel)
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+A forma mais fácil de publicar o site de vendas na internet gratuitamente é utilizando a **Vercel**. Cada vez que você enviar um código para a branch `main` do GitHub, o site atualizará de forma automática.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Passo a Passo:
+1. Acesse [vercel.com](https://vercel.com/) e crie uma conta gratuita (clique em "Sign Up" e selecione "Continue with GitHub").
+2. No painel inicial da Vercel, clique no botão **"Add New..."** e selecione **"Project"**.
+3. Importe o repositório `SaaS-Mobile-Oficinas`.
+4. Nas configurações do projeto, a Vercel detectará automaticamente que é um projeto **Vite**.
+5. Clique em **"Deploy"**.
+6. Pronto! Em menos de 1 minuto seu site estará no ar com um link gratuito (ex: `nome-do-projeto.vercel.app`).
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+Se preferir, você também pode clicar no botão abaixo para iniciar a importação direta:
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FArthurVitor1489%2FSaaS-Mobile-Oficinas)
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+---
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## 🛠️ Como Executar Localmente
+
+### Portal Web
+1. Instale as dependências na raiz do projeto:
+   ```bash
+   npm install
+   ```
+2. Inicie o servidor de desenvolvimento local:
+   ```bash
+   npm run dev
+   ```
+
+### Aplicativo Móvel (Expo App)
+1. Navegue até a pasta do app:
+   ```bash
+   cd expo-app
+   ```
+2. Instale as dependências:
+   ```bash
+   npm install
+   ```
+3. Execute o servidor de desenvolvimento do Expo:
+   ```bash
+   npx expo start
+   ```

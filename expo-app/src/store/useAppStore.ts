@@ -356,14 +356,16 @@ export const useAppStore = create<AppState>()(
         if (get().isOnline) {
           try {
             await api.post('/clients', { id: newId, ...dto });
-          } catch (e) {
-            get().offlineQueue.push({
+          } catch (e: any) {
+            if (!e.response) {
+              get().offlineQueue.push({
               id: generateUUID(),
               action: 'CREATE',
               entity: 'clients',
               payload: { id: newId, ...dto },
               timestamp: Date.now(),
             });
+            }
           }
         } else {
           set((state) => ({
@@ -390,14 +392,16 @@ export const useAppStore = create<AppState>()(
         if (get().isOnline) {
           try {
             await api.patch(`/clients/${id}`, dto);
-          } catch (e) {
-            get().offlineQueue.push({
+          } catch (e: any) {
+            if (!e.response) {
+              get().offlineQueue.push({
               id: generateUUID(),
               action: 'UPDATE',
               entity: 'clients',
               payload: { id, dto },
               timestamp: Date.now(),
             });
+            }
           }
         } else {
           set((state) => ({
@@ -425,14 +429,16 @@ export const useAppStore = create<AppState>()(
         if (get().isOnline) {
           try {
             await api.delete(`/clients/${id}`);
-          } catch (e) {
-            get().offlineQueue.push({
+          } catch (e: any) {
+            if (!e.response) {
+              get().offlineQueue.push({
               id: generateUUID(),
               action: 'DELETE',
               entity: 'clients',
               payload: { id },
               timestamp: Date.now(),
             });
+            }
           }
         } else {
           set((state) => ({
@@ -465,14 +471,16 @@ export const useAppStore = create<AppState>()(
         if (get().isOnline) {
           try {
             await api.post('/vehicles', { id: newId, ...dto });
-          } catch (e) {
-            get().offlineQueue.push({
+          } catch (e: any) {
+            if (!e.response) {
+              get().offlineQueue.push({
               id: generateUUID(),
               action: 'CREATE',
               entity: 'vehicles',
               payload: { id: newId, ...dto },
               timestamp: Date.now(),
             });
+            }
           }
         } else {
           set((state) => ({
@@ -499,14 +507,16 @@ export const useAppStore = create<AppState>()(
         if (get().isOnline) {
           try {
             await api.patch(`/vehicles/${id}`, dto);
-          } catch (e) {
-            get().offlineQueue.push({
+          } catch (e: any) {
+            if (!e.response) {
+              get().offlineQueue.push({
               id: generateUUID(),
               action: 'UPDATE',
               entity: 'vehicles',
               payload: { id, dto },
               timestamp: Date.now(),
             });
+            }
           }
         } else {
           set((state) => ({
@@ -533,14 +543,16 @@ export const useAppStore = create<AppState>()(
         if (get().isOnline) {
           try {
             await api.delete(`/vehicles/${id}`);
-          } catch (e) {
-            get().offlineQueue.push({
+          } catch (e: any) {
+            if (!e.response) {
+              get().offlineQueue.push({
               id: generateUUID(),
               action: 'DELETE',
               entity: 'vehicles',
               payload: { id },
               timestamp: Date.now(),
             });
+            }
           }
         } else {
           set((state) => ({
@@ -572,14 +584,16 @@ export const useAppStore = create<AppState>()(
         if (get().isOnline) {
           try {
             await api.post('/services', { id: newId, ...dto });
-          } catch (e) {
-            get().offlineQueue.push({
+          } catch (e: any) {
+            if (!e.response) {
+              get().offlineQueue.push({
               id: generateUUID(),
               action: 'CREATE',
               entity: 'services',
               payload: { id: newId, ...dto },
               timestamp: Date.now(),
             });
+            }
           }
         } else {
           set((state) => ({
@@ -606,14 +620,16 @@ export const useAppStore = create<AppState>()(
         if (get().isOnline) {
           try {
             await api.patch(`/services/${id}`, dto);
-          } catch (e) {
-            get().offlineQueue.push({
+          } catch (e: any) {
+            if (!e.response) {
+              get().offlineQueue.push({
               id: generateUUID(),
               action: 'UPDATE',
               entity: 'services',
               payload: { id, dto },
               timestamp: Date.now(),
             });
+            }
           }
         } else {
           set((state) => ({
@@ -640,14 +656,16 @@ export const useAppStore = create<AppState>()(
         if (get().isOnline) {
           try {
             await api.delete(`/services/${id}`);
-          } catch (e) {
-            get().offlineQueue.push({
+          } catch (e: any) {
+            if (!e.response) {
+              get().offlineQueue.push({
               id: generateUUID(),
               action: 'DELETE',
               entity: 'services',
               payload: { id },
               timestamp: Date.now(),
             });
+            }
           }
         } else {
           set((state) => ({
@@ -679,14 +697,16 @@ export const useAppStore = create<AppState>()(
         if (get().isOnline) {
           try {
             await api.post('/parts', { id: newId, ...dto });
-          } catch (e) {
-            get().offlineQueue.push({
+          } catch (e: any) {
+            if (!e.response) {
+              get().offlineQueue.push({
               id: generateUUID(),
               action: 'CREATE',
               entity: 'parts',
               payload: { id: newId, ...dto },
               timestamp: Date.now(),
             });
+            }
           }
         } else {
           set((state) => ({
@@ -713,14 +733,16 @@ export const useAppStore = create<AppState>()(
         if (get().isOnline) {
           try {
             await api.patch(`/parts/${id}`, dto);
-          } catch (e) {
-            get().offlineQueue.push({
+          } catch (e: any) {
+            if (!e.response) {
+              get().offlineQueue.push({
               id: generateUUID(),
               action: 'UPDATE',
               entity: 'parts',
               payload: { id, dto },
               timestamp: Date.now(),
             });
+            }
           }
         } else {
           set((state) => ({
@@ -747,14 +769,16 @@ export const useAppStore = create<AppState>()(
         if (get().isOnline) {
           try {
             await api.delete(`/parts/${id}`);
-          } catch (e) {
-            get().offlineQueue.push({
+          } catch (e: any) {
+            if (!e.response) {
+              get().offlineQueue.push({
               id: generateUUID(),
               action: 'DELETE',
               entity: 'parts',
               payload: { id },
               timestamp: Date.now(),
             });
+            }
           }
         } else {
           set((state) => ({
@@ -841,14 +865,16 @@ export const useAppStore = create<AppState>()(
         if (get().isOnline) {
           try {
             await api.post('/orders', mappedPayload);
-          } catch (e) {
-            get().offlineQueue.push({
+          } catch (e: any) {
+            if (!e.response) {
+              get().offlineQueue.push({
               id: generateUUID(),
               action: 'CREATE',
               entity: 'workOrders',
               payload: mappedPayload,
               timestamp: Date.now(),
             });
+            }
           }
         } else {
           set((state) => ({
@@ -928,14 +954,16 @@ export const useAppStore = create<AppState>()(
         if (get().isOnline) {
           try {
             await api.patch(`/orders/${id}`, mappedDto);
-          } catch (e) {
-            get().offlineQueue.push({
+          } catch (e: any) {
+            if (!e.response) {
+              get().offlineQueue.push({
               id: generateUUID(),
               action: 'UPDATE',
               entity: 'workOrders',
               payload: { id, dto: mappedDto },
               timestamp: Date.now(),
             });
+            }
           }
         } else {
           set((state) => ({
@@ -971,14 +999,16 @@ export const useAppStore = create<AppState>()(
         if (get().isOnline) {
           try {
             await api.delete(`/orders/${id}`);
-          } catch (e) {
-            get().offlineQueue.push({
+          } catch (e: any) {
+            if (!e.response) {
+              get().offlineQueue.push({
               id: generateUUID(),
               action: 'DELETE',
               entity: 'workOrders',
               payload: { id },
               timestamp: Date.now(),
             });
+            }
           }
         } else {
           set((state) => ({
@@ -1043,14 +1073,16 @@ export const useAppStore = create<AppState>()(
         if (get().isOnline) {
           try {
             await api.post(`/finance/billings/${billingId}/pay`, { installmentNumber });
-          } catch (e) {
-            get().offlineQueue.push({
+          } catch (e: any) {
+            if (!e.response) {
+              get().offlineQueue.push({
               id: generateUUID(),
               action: 'UPDATE',
               entity: 'billings',
               payload: { id: billingId, installmentNumber },
               timestamp: Date.now(),
             });
+            }
           }
         } else {
           set((state) => ({
@@ -1089,14 +1121,16 @@ export const useAppStore = create<AppState>()(
         if (get().isOnline) {
           try {
             await api.post('/finance/transactions', mappedPayload);
-          } catch (e) {
-            get().offlineQueue.push({
+          } catch (e: any) {
+            if (!e.response) {
+              get().offlineQueue.push({
               id: generateUUID(),
               action: 'CREATE',
               entity: 'transactions',
               payload: mappedPayload,
               timestamp: Date.now(),
             });
+            }
           }
         } else {
           set((state) => ({
@@ -1123,14 +1157,16 @@ export const useAppStore = create<AppState>()(
         if (get().isOnline) {
           try {
             await api.delete(`/finance/transactions/${id}`);
-          } catch (e) {
-            get().offlineQueue.push({
+          } catch (e: any) {
+            if (!e.response) {
+              get().offlineQueue.push({
               id: generateUUID(),
               action: 'DELETE',
               entity: 'transactions',
               payload: { id },
               timestamp: Date.now(),
             });
+            }
           }
         } else {
           set((state) => ({
@@ -1156,14 +1192,16 @@ export const useAppStore = create<AppState>()(
         if (get().isOnline) {
           try {
             await api.patch('/tenant/settings', dto);
-          } catch (e) {
-            get().offlineQueue.push({
+          } catch (e: any) {
+            if (!e.response) {
+              get().offlineQueue.push({
               id: generateUUID(),
               action: 'UPDATE',
               entity: 'parts', // Mock entity wrapper since settings belongs to tenant
               payload: { settings: dto },
               timestamp: Date.now(),
             });
+            }
           }
         }
         return true;

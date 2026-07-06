@@ -5,7 +5,7 @@ const getBaseUrl = () => {
   if (process.env.EXPO_PUBLIC_API_URL) {
     return process.env.EXPO_PUBLIC_API_URL;
   }
-  return Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
+  return Platform.OS === 'android' ? 'http://10.0.2.2:3001' : 'http://localhost:3001';
 };
 
 const api = axios.create({

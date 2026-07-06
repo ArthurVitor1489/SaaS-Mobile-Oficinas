@@ -1,6 +1,6 @@
 import './src/services/polyfills';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   StyleSheet, Text, View, StatusBar, Alert, 
   KeyboardAvoidingView, Platform, ActivityIndicator, TextInput, TouchableOpacity
@@ -13,10 +13,10 @@ import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 
-// Context & Types
-import { DatabaseProvider, useDatabase } from './src/context/DatabaseContext';
+// Store & Services
+import { useAppStore } from './src/store/useAppStore';
+import { startSyncEngine, stopSyncEngine, processOfflineQueue } from './src/services/syncEngine';
 import { theme } from './src/styles/theme';
-import { validateEmail } from './src/utils/formatters';
 
 // Screen Stacks
 import DashboardScreen from './src/screens/DashboardScreen';
@@ -92,7 +92,9 @@ function MoreStackNavigator() {
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 function MainTabNavigator() {
-  const { settings, online } = useDatabase();
+  const settings = useAppStore((state) => state.settings);
+  const online = useAppStore((state) => state.isOnline);
+  const queueLength = useAppStore((state) => state.offlineQueue.length);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -102,15 +104,21 @@ function MainTabNavigator() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={styles.headerTitle} numberOfLines={1}>
-            {settings.name ? settings.name.toUpperCase() : 'OFICINAPRO'}
+            {settings.name ? settings.name.toUpperCase() : 'VOLTRUCK'}
           </Text>
           <View style={styles.headerSubRow}>
             <Text style={styles.headerSubtitle}>PAINEL SAAS</Text>
             <View style={online ? styles.statusBadgeOnline : styles.statusBadgeOffline}>
               {online ? (
-                <Wifi size={10} color="#22c55e" />
+                <>
+                  <Wifi size={10} color="#22c55e" />
+                  <Text style={styles.badgeText}>Online</Text>
+                </>
               ) : (
-                <WifiOff size={10} color="#ef4444" />
+                <>
+                  <WifiOff size={10} color="#ef4444" />
+                  <Text style={styles.badgeText}>Offline ({queueLength})</Text>
+                </>
               )}
             </View>
           </View>
@@ -171,6 +179,166 @@ function MainTabNavigator() {
   );
 }
 
+// --- AUTH SCREEN ---
+
+interface AuthScreenProps {
+  onLoginSuccess: () => void;
+}
+
+function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
+  const [isRegister, setIsRegister] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // Form fields
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [workshopName, setWorkshopName] = useState('');
+  const [cnpj, setCnpj] = useState('');
+  const [phone, setPhone] = useState('');
+
+  const store = useAppStore();
+
+  const handleAuth = async () => {
+    if (!email || !password) {
+      Alert.alert('Erro', 'Preencha o e-mail e a senha.');
+      return;
+    }
+
+    setLoading(true);
+    if (isRegister) {
+      if (!name || !workshopName) {
+        Alert.alert('Erro', 'Preencha seu nome e o nome da oficina.');
+        setLoading(false);
+        return;
+      }
+      const success = await store.signup({
+        name,
+        email,
+        password,
+        workshopName,
+        cnpj,
+        phone,
+      });
+      if (success) {
+        Alert.alert('Sucesso', 'Oficina cadastrada! Faça login para entrar.');
+        setIsRegister(false);
+      } else {
+        Alert.alert('Erro', 'Erro no cadastro. Verifique as informações.');
+      }
+    } else {
+      const success = await store.login({ email, password });
+      if (success) {
+        onLoginSuccess();
+      } else {
+        Alert.alert('Erro', 'E-mail ou senha incorretos.');
+      }
+    }
+    setLoading(false);
+  };
+
+  return (
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+      style={styles.authContainer}
+    >
+      <View style={styles.authCard}>
+        <Text style={styles.authTitle}>VOLTRUCK</Text>
+        <Text style={styles.authSubtitle}>
+          {isRegister ? 'Crie sua conta SaaS' : 'Acesse seu painel SaaS'}
+        </Text>
+
+        {isRegister && (
+          <>
+            <Text style={styles.inputLabel}>Seu Nome</Text>
+            <TextInput 
+              style={styles.modalInput} 
+              value={name} 
+              onChangeText={setName} 
+              placeholder="Digite seu nome"
+              placeholderTextColor="#64748b"
+            />
+
+            <Text style={styles.inputLabel}>Nome da Oficina</Text>
+            <TextInput 
+              style={styles.modalInput} 
+              value={workshopName} 
+              onChangeText={setWorkshopName} 
+              placeholder="Nome da sua oficina"
+              placeholderTextColor="#64748b"
+            />
+
+            <Text style={styles.inputLabel}>CNPJ (Opcional)</Text>
+            <TextInput 
+              style={styles.modalInput} 
+              value={cnpj} 
+              onChangeText={setCnpj} 
+              placeholder="00.000.000/0001-00"
+              placeholderTextColor="#64748b"
+              keyboardType="numeric"
+            />
+
+            <Text style={styles.inputLabel}>Telefone (Opcional)</Text>
+            <TextInput 
+              style={styles.modalInput} 
+              value={phone} 
+              onChangeText={setPhone} 
+              placeholder="(11) 99999-9999"
+              placeholderTextColor="#64748b"
+              keyboardType="phone-pad"
+            />
+          </>
+        )}
+
+        <Text style={styles.inputLabel}>E-mail</Text>
+        <TextInput 
+          style={styles.modalInput} 
+          value={email} 
+          onChangeText={setEmail} 
+          placeholder="seuemail@exemplo.com"
+          placeholderTextColor="#64748b"
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
+
+        <Text style={styles.inputLabel}>Senha</Text>
+        <TextInput 
+          style={styles.modalInput} 
+          value={password} 
+          onChangeText={setPassword} 
+          placeholder="••••••"
+          placeholderTextColor="#64748b"
+          secureTextEntry
+          autoCapitalize="none"
+        />
+
+        <TouchableOpacity 
+          style={styles.submitButton} 
+          onPress={handleAuth}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.submitButtonText}>
+              {isRegister ? 'CADASTRAR' : 'ENTRAR'}
+            </Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.switchAuthMode}
+          onPress={() => setIsRegister(!isRegister)}
+        >
+          <Text style={styles.switchAuthText}>
+            {isRegister ? 'Já tenho uma conta. Entrar' : 'Não tem conta? Cadastre-se'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
+  );
+}
+
 // --- MAIN NAVIGATOR ENTRYPOINT ---
 
 const RootStack = createStackNavigator<RootStackParamList>();
@@ -190,8 +358,21 @@ const MyDarkTheme = {
 };
 
 function AppContent() {
-  const { loading } = useDatabase();
-  
+  const user = useAppStore((state) => state.user);
+  const accessToken = useAppStore((state) => state.accessToken);
+  const loading = useAppStore((state) => state.loading);
+  const pullAll = useAppStore((state) => state.pullAll);
+
+  useEffect(() => {
+    startSyncEngine();
+    if (accessToken) {
+      pullAll();
+    }
+    return () => {
+      stopSyncEngine();
+    };
+  }, [accessToken]);
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -203,7 +384,13 @@ function AppContent() {
   return (
     <NavigationContainer theme={MyDarkTheme}>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
-        <RootStack.Screen name="MainTabs" component={MainTabNavigator} />
+        {!accessToken || !user ? (
+          <RootStack.Screen name="Auth" options={{ animationTypeForReplace: 'pop' }}>
+            {(props) => <AuthScreen {...props} onLoginSuccess={() => pullAll()} />}
+          </RootStack.Screen>
+        ) : (
+          <RootStack.Screen name="MainTabs" component={MainTabNavigator} />
+        )}
       </RootStack.Navigator>
     </NavigationContainer>
   );
@@ -212,9 +399,7 @@ function AppContent() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <DatabaseProvider>
-        <AppContent />
-      </DatabaseProvider>
+      <AppContent />
     </SafeAreaProvider>
   );
 }
@@ -247,7 +432,6 @@ const styles = StyleSheet.create({
     color: '#64748b',
     letterSpacing: 0.5,
   },
-
   tabBar: {
     flexDirection: 'row',
     height: 60,
@@ -308,28 +492,28 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   modalInput: {
-    backgroundColor: theme.colors.inputBg,
+    backgroundColor: '#1c2230',
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.roundness.md,
-    padding: theme.spacing.lg,
+    borderColor: '#2e394e',
+    borderRadius: 8,
+    padding: 14,
     fontSize: 15,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.xl,
-    minHeight: 56,
+    color: '#fff',
+    marginBottom: 16,
+    minHeight: 50,
   },
   submitButton: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.roundness.md,
-    height: 56,
+    backgroundColor: '#3b66ff',
+    borderRadius: 8,
+    height: 52,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: theme.spacing.md,
+    marginTop: 10,
   },
   submitButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: theme.colors.white,
+    color: '#fff',
   },
   switchAuthMode: {
     marginTop: 20,
@@ -340,27 +524,13 @@ const styles = StyleSheet.create({
     color: '#3b66ff',
     fontWeight: 'bold',
   },
-  attemptsWarningText: {
-    color: '#ef4444',
-    fontSize: 12,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 16,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  loadingIndicator: {
-    marginVertical: 20,
-  },
   headerLeft: {
     flex: 1,
   },
   headerSubRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     marginTop: 4,
   },
   statusBadgeOnline: {
@@ -380,6 +550,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 8,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#94a3b8',
+    letterSpacing: 0.5,
   },
   loadingContainer: {
     flex: 1,

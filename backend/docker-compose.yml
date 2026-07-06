@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: voltruck-db
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=ArTim94ake4
+      - POSTGRES_DB=voltruck_saas
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: voltruck-backend
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - DATABASE_URL=postgresql://postgres:ArTim94ake4@db:5432/voltruck_saas?schema=public
+      - JWT_SECRET=voltruck-saas-super-secret-access-key-2026
+      - JWT_REFRESH_SECRET=voltruck-saas-super-secret-refresh-key-2026
+      - JWT_EXPIRES_IN=1d
+      - JWT_REFRESH_EXPIRES_IN=7d
+      - ASAAS_API_URL=https://sandbox.asaas.com/api/v3
+      - ASAAS_API_KEY=$aae$v3$mockkeyvalue_for_saas_oficina_2026
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:

@@ -1,6 +1,6 @@
 {
   "cli": {
-    "version": ">= 19.1.0"
+    "version": ">= 10.0.0"
   },
   "build": {
     "development": {
@@ -13,7 +13,11 @@
         "buildType": "apk"
       }
     },
-    "production": {}
+    "production": {
+      "android": {
+        "buildType": "app-bundle"
+      }
+    }
   },
   "submit": {
     "production": {}

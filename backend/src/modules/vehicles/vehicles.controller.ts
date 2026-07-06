@@ -3,10 +3,11 @@ import { VehiclesService } from './vehicles.service';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { SubscriptionGuard } from '../auth/subscription.guard';
 import { Tenant } from '../../common/decorators/tenant.decorator';
 
 @Controller('vehicles')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, SubscriptionGuard)
 export class VehiclesController {
   constructor(private readonly vehiclesService: VehiclesService) {}
 

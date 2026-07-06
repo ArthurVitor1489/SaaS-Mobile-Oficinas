@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { 
-  Menu, Users, ClipboardList, Wallet, MoreHorizontal, Wifi, WifiOff 
+  Menu, Users, ClipboardList, Wallet, MoreHorizontal, Wifi, WifiOff, AlertTriangle, Lock
 } from 'lucide-react-native';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -96,6 +96,57 @@ function MainTabNavigator() {
   const settings = useAppStore((state) => state.settings);
   const online = useAppStore((state) => state.isOnline);
   const queueLength = useAppStore((state) => state.offlineQueue.length);
+  const subscription = useAppStore((state) => state.subscription);
+
+  const getSubscriptionStatus = () => {
+    if (!subscription) return { showWarning: false, isBlocked: false, message: '' };
+    
+    const { status, dueDate } = subscription;
+    const now = new Date();
+    const dueDateObj = new Date(dueDate);
+    
+    if (status === 'TRIAL') {
+      if (now > dueDateObj) {
+        return { 
+          showWarning: false, 
+          isBlocked: true, 
+          message: 'Período de avaliação de 30 dias expirado. Faça o pagamento para liberar.' 
+        };
+      }
+      const diffTime = dueDateObj.getTime() - now.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      if (diffDays <= 5 && diffDays >= 0) {
+        return { 
+          showWarning: true, 
+          isBlocked: false, 
+          message: `Faltam apenas ${diffDays} dias de teste gratuito. Regularize sua assinatura.` 
+        };
+      }
+    }
+    
+    if (status === 'OVERDUE' || status === 'PENDING') {
+      const diffTime = now.getTime() - dueDateObj.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays > 7) {
+        return { 
+          showWarning: false, 
+          isBlocked: true, 
+          message: 'Assinatura vencida há mais de 7 dias. Funções de cadastro bloqueadas.' 
+        };
+      } else if (diffDays >= 0) {
+        return { 
+          showWarning: true, 
+          isBlocked: false, 
+          message: `Assinatura pendente. Bloqueio em ${7 - diffDays} dias. Regularize o pagamento.` 
+        };
+      }
+    }
+    
+    return { showWarning: false, isBlocked: false, message: '' };
+  };
+
+  const subInfo = getSubscriptionStatus();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -125,6 +176,26 @@ function MainTabNavigator() {
           </View>
         </View>
       </View>
+
+      {/* BANNER DE AVISO DE COBRANÇA */}
+      {subInfo.showWarning && (
+        <View style={styles.warningBanner}>
+          <AlertTriangle size={12} color="#fff" style={{ marginRight: 6 }} />
+          <Text style={styles.warningText} numberOfLines={1}>
+            {subInfo.message}
+          </Text>
+        </View>
+      )}
+
+      {/* BANNER DE BLOQUEIO MODO LEITURA */}
+      {subInfo.isBlocked && (
+        <View style={styles.blockedBanner}>
+          <Lock size={12} color="#fff" style={{ marginRight: 6 }} />
+          <Text style={styles.blockedText} numberOfLines={1}>
+            {subInfo.message}
+          </Text>
+        </View>
+      )}
 
       <Tab.Navigator
         screenOptions={({ route }) => ({
@@ -411,6 +482,32 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#090b0f',
+  },
+  warningBanner: {
+    backgroundColor: '#f97316',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  warningText: {
+    fontSize: 11,
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  blockedBanner: {
+    backgroundColor: '#ef4444',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  blockedText: {
+    fontSize: 11,
+    color: '#fff',
+    fontWeight: 'bold',
   },
   header: {
     paddingHorizontal: 22,

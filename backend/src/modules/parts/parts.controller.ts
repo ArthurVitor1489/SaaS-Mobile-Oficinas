@@ -3,10 +3,11 @@ import { PartsService } from './parts.service';
 import { CreatePartDto } from './dto/create-part.dto';
 import { UpdatePartDto } from './dto/update-part.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { SubscriptionGuard } from '../auth/subscription.guard';
 import { Tenant } from '../../common/decorators/tenant.decorator';
 
 @Controller('parts')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, SubscriptionGuard)
 export class PartsController {
   constructor(private readonly partsService: PartsService) {}
 

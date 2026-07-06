@@ -1,4 +1,5 @@
 import React, { createContext, useContext } from 'react';
+import { Alert } from 'react-native';
 import { useAppStore } from '../store/useAppStore';
 import { 
   Client, Vehicle, ServiceItem, PartItem, 
@@ -73,9 +74,36 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     await store.logout();
   };
 
+  const isSubscriptionBlocked = () => {
+    const subscription = useAppStore.getState().subscription;
+    if (!subscription) return false;
+
+    const { status, dueDate } = subscription;
+    const now = new Date();
+    const dueDateObj = new Date(dueDate);
+
+    if (status === 'TRIAL') {
+      return now > dueDateObj;
+    }
+
+    if (status === 'OVERDUE' || status === 'PENDING') {
+      const diffTime = now.getTime() - dueDateObj.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays > 7;
+    }
+
+    return false;
+  };
+
+  const showBlockedAlert = () => {
+    Alert.alert(
+      'Acesso Bloqueado',
+      'Sua oficina está em Modo Leitura devido ao atraso no pagamento da assinatura (carência de 7 dias expirada). Por favor, regularize seu pagamento para liberar cadastros e edições.',
+      [{ text: 'OK' }]
+    );
+  };
+
   const addBilling = async (billingData: any) => {
-    // Billings are automatically created by backend on OS closure.
-    // Return mock or custom object for local compatibility.
     return {
       id: 'mock-bill-' + Math.random().toString(36).substr(2, 9),
       ...billingData,
@@ -135,36 +163,159 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     signOut,
     
-    // CRUD wraps linked to Zustand store actions
-    addClient: store.addClient,
-    updateClient: store.updateClient,
-    deleteClient: store.deleteClient,
+    // CRUD wraps with subscription locks
+    addClient: async (dto) => {
+      if (isSubscriptionBlocked()) {
+        showBlockedAlert();
+        return null;
+      }
+      return store.addClient(dto);
+    },
+    updateClient: async (id, dto) => {
+      if (isSubscriptionBlocked()) {
+        showBlockedAlert();
+        return false;
+      }
+      return store.updateClient(id, dto);
+    },
+    deleteClient: async (id) => {
+      if (isSubscriptionBlocked()) {
+        showBlockedAlert();
+        return false;
+      }
+      return store.deleteClient(id);
+    },
 
-    addVehicle: store.addVehicle,
-    updateVehicle: store.updateVehicle,
-    deleteVehicle: store.deleteVehicle,
+    addVehicle: async (dto) => {
+      if (isSubscriptionBlocked()) {
+        showBlockedAlert();
+        return null;
+      }
+      return store.addVehicle(dto);
+    },
+    updateVehicle: async (id, dto) => {
+      if (isSubscriptionBlocked()) {
+        showBlockedAlert();
+        return false;
+      }
+      return store.updateVehicle(id, dto);
+    },
+    deleteVehicle: async (id) => {
+      if (isSubscriptionBlocked()) {
+        showBlockedAlert();
+        return false;
+      }
+      return store.deleteVehicle(id);
+    },
 
-    addService: store.addService,
-    updateService: store.updateService,
-    deleteService: store.deleteService,
+    addService: async (dto) => {
+      if (isSubscriptionBlocked()) {
+        showBlockedAlert();
+        return null;
+      }
+      return store.addService(dto);
+    },
+    updateService: async (id, dto) => {
+      if (isSubscriptionBlocked()) {
+        showBlockedAlert();
+        return false;
+      }
+      return store.updateService(id, dto);
+    },
+    deleteService: async (id) => {
+      if (isSubscriptionBlocked()) {
+        showBlockedAlert();
+        return false;
+      }
+      return store.deleteService(id);
+    },
 
-    addPart: store.addPart,
-    updatePart: store.updatePart,
-    deletePart: store.deletePart,
+    addPart: async (dto) => {
+      if (isSubscriptionBlocked()) {
+        showBlockedAlert();
+        return null;
+      }
+      return store.addPart(dto);
+    },
+    updatePart: async (id, dto) => {
+      if (isSubscriptionBlocked()) {
+        showBlockedAlert();
+        return false;
+      }
+      return store.updatePart(id, dto);
+    },
+    deletePart: async (id) => {
+      if (isSubscriptionBlocked()) {
+        showBlockedAlert();
+        return false;
+      }
+      return store.deletePart(id);
+    },
 
-    addWorkOrder: store.addWorkOrder,
-    updateWorkOrder: store.updateWorkOrder,
-    updateWorkOrderStatus: store.updateWorkOrderStatus,
-    saveWorkOrderSignature: store.saveWorkOrderSignature,
-    deleteWorkOrder: store.deleteWorkOrder,
+    addWorkOrder: async (dto) => {
+      if (isSubscriptionBlocked()) {
+        showBlockedAlert();
+        return null;
+      }
+      return store.addWorkOrder(dto);
+    },
+    updateWorkOrder: async (id, dto) => {
+      if (isSubscriptionBlocked()) {
+        showBlockedAlert();
+        return false;
+      }
+      return store.updateWorkOrder(id, dto);
+    },
+    updateWorkOrderStatus: async (id, status) => {
+      if (isSubscriptionBlocked()) {
+        showBlockedAlert();
+        return false;
+      }
+      return store.updateWorkOrderStatus(id, status);
+    },
+    saveWorkOrderSignature: async (id, sig) => {
+      if (isSubscriptionBlocked()) {
+        showBlockedAlert();
+        return false;
+      }
+      return store.saveWorkOrderSignature(id, sig);
+    },
+    deleteWorkOrder: async (id) => {
+      if (isSubscriptionBlocked()) {
+        showBlockedAlert();
+        return false;
+      }
+      return store.deleteWorkOrder(id);
+    },
 
     addBilling,
-    payInstallment: store.payInstallment,
+    payInstallment: async (billingId, installmentNumber) => {
+      // Payment of OS bills remains unlocked so they can register money inflows
+      return store.payInstallment(billingId, installmentNumber);
+    },
 
-    addTransaction: store.addTransaction,
-    deleteTransaction: store.deleteTransaction,
+    addTransaction: async (dto) => {
+      if (isSubscriptionBlocked()) {
+        showBlockedAlert();
+        return null;
+      }
+      return store.addTransaction(dto);
+    },
+    deleteTransaction: async (id) => {
+      if (isSubscriptionBlocked()) {
+        showBlockedAlert();
+        return false;
+      }
+      return store.deleteTransaction(id);
+    },
 
-    updateSettings: store.updateSettings,
+    updateSettings: async (dto) => {
+      if (isSubscriptionBlocked()) {
+        showBlockedAlert();
+        return false;
+      }
+      return store.updateSettings(dto);
+    },
 
     exportDatabaseJson,
     resetDatabase,

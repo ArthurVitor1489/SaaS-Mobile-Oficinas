@@ -2,10 +2,11 @@ import { Controller, Get, Post, Delete, Body, Param, UseGuards, HttpCode, HttpSt
 import { FinanceService } from './finance.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { SubscriptionGuard } from '../auth/subscription.guard';
 import { Tenant } from '../../common/decorators/tenant.decorator';
 
 @Controller('finance')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, SubscriptionGuard)
 export class FinanceController {
   constructor(private readonly financeService: FinanceService) {}
 

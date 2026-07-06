@@ -49,6 +49,11 @@ interface AppState {
   billings: Billing[];
   transactions: FinancialTransaction[];
   settings: CompanySettings;
+  subscription: {
+    status: string;
+    dueDate: string;
+    paymentId?: string;
+  } | null;
 
   // Actions
   setAccessToken: (token: string | null) => void;
@@ -194,6 +199,7 @@ export const useAppStore = create<AppState>()(
       billings: [],
       transactions: [],
       settings: defaultSettings,
+      subscription: null,
 
       setAccessToken: (accessToken) => set({ accessToken }),
       setOnlineStatus: (isOnline) => set({ isOnline }),
@@ -265,6 +271,7 @@ export const useAppStore = create<AppState>()(
           transactions: [],
           offlineQueue: [],
           settings: defaultSettings,
+          subscription: null,
         });
       },
 
@@ -274,7 +281,7 @@ export const useAppStore = create<AppState>()(
         try {
           const [
             clientsRes, vehiclesRes, servicesRes, partsRes, 
-            ordersRes, billingsRes, transactionsRes, settingsRes
+            ordersRes, billingsRes, transactionsRes, settingsRes, subscriptionRes
           ] = await Promise.all([
             api.get('/clients'),
             api.get('/vehicles'),
@@ -284,6 +291,7 @@ export const useAppStore = create<AppState>()(
             api.get('/finance/billings'),
             api.get('/finance/transactions'),
             api.get('/tenant/settings'),
+            api.get('/subscription'),
           ]);
 
           // Normalize prices and types
@@ -327,6 +335,7 @@ export const useAppStore = create<AppState>()(
             billings,
             transactions,
             settings: settingsRes.data || get().settings,
+            subscription: subscriptionRes.data || null,
           });
         } catch (e) {
           console.error('Failed to pull remote database', e);

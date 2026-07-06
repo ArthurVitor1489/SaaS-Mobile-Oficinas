@@ -4,16 +4,17 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { SignUpDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcrypt';
+import { AsaasService } from '../subscription/asaas.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly asaasService: AsaasService,
   ) {}
 
   async signUp(dto: SignUpDto) {
-    // Check if email already exists
     const existingUser = await this.prisma.user.findUnique({
       where: { email: dto.email.toLowerCase() },
     });
@@ -21,12 +22,19 @@ export class AuthService {
       throw new BadRequestException('E-mail já cadastrado.');
     }
 
-    // Hash Password
+    // Call Asaas API outside database transaction to prevent pool blocking
+    const asaasCustomerId = await this.asaasService.createCustomer(
+      dto.workshopName,
+      dto.email,
+      dto.phone,
+      dto.cnpj,
+    );
+
+    const asaasSub = await this.asaasService.createSubscription(asaasCustomerId);
+
     const passwordHash = await bcrypt.hash(dto.password, 10);
 
-    // Create Tenant (Workshop) + User + Subscription Trial atomically
     return this.prisma.$transaction(async (tx) => {
-      // 1. Create Workshop
       const workshop = await tx.workshop.create({
         data: {
           name: dto.workshopName,
@@ -35,7 +43,6 @@ export class AuthService {
         },
       });
 
-      // 2. Create User Admin
       const user = await tx.user.create({
         data: {
           tenantId: workshop.id,
@@ -46,15 +53,16 @@ export class AuthService {
         },
       });
 
-      // 3. Create Subscription Trial (30 Days)
       const trialEndDate = new Date();
-      trialEndDate.setDate(trialEndDate.getDate() + 30); // 30 days trial
+      trialEndDate.setDate(trialEndDate.getDate() + 30);
       await tx.subscription.create({
         data: {
           tenantId: workshop.id,
           plan: 'BASIC',
           status: 'TRIAL',
           dueDate: trialEndDate,
+          paymentProvider: 'ASAAS',
+          paymentId: asaasSub.id,
         },
       });
 
@@ -63,6 +71,7 @@ export class AuthService {
         message: 'Oficina cadastrada com sucesso!',
         userId: user.id,
         tenantId: workshop.id,
+        invoiceUrl: asaasSub.invoiceUrl,
       };
     });
   }

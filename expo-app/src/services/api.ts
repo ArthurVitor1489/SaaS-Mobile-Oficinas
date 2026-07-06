@@ -58,6 +58,14 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
+    // Intercept 403 Forbidden errors (SaaS subscription writes block)
+    if (error.response?.status === 403) {
+      const message = error.response.data?.message || 'Ação bloqueada. Regularize o pagamento da sua assinatura para reativar as funções de escrita.';
+      const { Alert } = require('react-native');
+      Alert.alert('Acesso Bloqueado', message, [{ text: 'OK' }]);
+      return Promise.reject(error);
+    }
+    
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {

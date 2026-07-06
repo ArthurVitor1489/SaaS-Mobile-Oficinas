@@ -1,10 +1,19 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
 
+import Constants from 'expo-constants';
+
 const getBaseUrl = () => {
   if (process.env.EXPO_PUBLIC_API_URL) {
     return process.env.EXPO_PUBLIC_API_URL;
   }
+  
+  const debuggerHost = Constants.expoConfig?.hostUri;
+  if (debuggerHost) {
+    const ip = debuggerHost.split(':')[0];
+    return `http://${ip}:3001`;
+  }
+  
   return Platform.OS === 'android' ? 'http://10.0.2.2:3001' : 'http://localhost:3001';
 };
 

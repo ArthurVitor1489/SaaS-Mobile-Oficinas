@@ -17,6 +17,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { useAppStore } from './src/store/useAppStore';
 import { startSyncEngine, stopSyncEngine, processOfflineQueue } from './src/services/syncEngine';
 import { theme } from './src/styles/theme';
+import { DatabaseProvider } from './src/context/DatabaseContext';
 
 // Screen Stacks
 import DashboardScreen from './src/screens/DashboardScreen';
@@ -399,7 +400,9 @@ function AppContent() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <AppContent />
+      <DatabaseProvider>
+        <AppContent />
+      </DatabaseProvider>
     </SafeAreaProvider>
   );
 }

@@ -1,0 +1,235 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+  MECHANIC
+}
+
+enum OSStatus {
+  ABERTA
+  EM_ANDAMENTO
+  CONCLUIDA
+  ENTREGUE
+  CANCELADA
+}
+
+enum BillingStatus {
+  PAGO
+  PENDENTE
+  PARCIALMENTE_PAGO
+}
+
+enum TransactionType {
+  ENTRADA
+  SAIDA
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIAL
+  PENDING
+  OVERDUE
+  CANCELED
+  EXPIRED
+}
+
+model Workshop {
+  id           String    @id @default(uuid()) @db.Uuid
+  name         String    @db.VarChar(255)
+  cnpj         String?   @db.VarChar(20)
+  address      String?   @db.Text
+  phone        String?   @db.VarChar(20)
+  whatsapp     String?   @db.VarChar(20)
+  email        String?   @db.VarChar(255)
+  logoUrl      String?   @db.Text
+  autoSequence Boolean   @default(true)
+  nextOSNumber Int       @default(1)
+  pdfNotes     String?   @db.Text
+  createdAt    DateTime  @default(now())
+
+  users        User[]
+  clients      Client[]
+  services     ServiceItem[]
+  parts        PartItem[]
+  workOrders   WorkOrder[]
+  billings     Billing[]
+  transactions FinancialTransaction[]
+  subscription Subscription?
+}
+
+model User {
+  id               String   @id @default(uuid()) @db.Uuid
+  tenantId         String   @db.Uuid
+  name             String   @db.VarChar(255)
+  email            String   @unique @db.VarChar(255)
+  passwordHash     String   @db.Text
+  role             Role     @default(ADMIN)
+  refreshTokenHash String?  @db.Text
+  createdAt        DateTime @default(now())
+
+  workshop         Workshop @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model Client {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @db.Uuid
+  name      String   @db.VarChar(255)
+  cpfCnpj   String?  @db.VarChar(20)
+  phone     String   @db.VarChar(20)
+  whatsapp  String?  @db.VarChar(20)
+  email     String?  @db.VarChar(255)
+  address   String?  @db.Text
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+
+  workshop  Workshop  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicles  Vehicle[]
+  workOrders WorkOrder[]
+}
+
+model Vehicle {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @db.Uuid
+  clientId  String   @db.Uuid
+  plate     String   @db.VarChar(10)
+  brand     String   @db.VarChar(100)
+  model     String   @db.VarChar(150)
+  year      String   @db.VarChar(4)
+  chassis   String?  @db.VarChar(50)
+  odometer  String   @default("0") @db.VarChar(50)
+  createdAt DateTime @default(now())
+
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  workOrders WorkOrder[]
+}
+
+model ServiceItem {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @db.Uuid
+  name        String   @db.VarChar(255)
+  code        String?  @db.VarChar(50)
+  description String?  @db.Text
+  price       Decimal  @db.Decimal(10, 2)
+  createdAt   DateTime @default(now())
+
+  workshop    Workshop @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model PartItem {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @db.Uuid
+  name          String   @db.VarChar(255)
+  code          String?  @db.VarChar(50)
+  supplier      String?  @db.VarChar(255)
+  purchasePrice Decimal  @db.Decimal(10, 2)
+  salePrice     Decimal  @db.Decimal(10, 2)
+  stock         Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  workshop      Workshop @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model WorkOrder {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @db.Uuid
+  osNumber      String    @db.VarChar(50)
+  date          String    @db.VarChar(10) // YYYY-MM-DD
+  clientId      String    @db.Uuid
+  vehicleId     String    @db.Uuid
+  notes         String?   @db.Text
+  status        OSStatus  @default(ABERTA)
+  servicesTotal Decimal   @db.Decimal(10, 2)
+  partsTotal    Decimal   @db.Decimal(10, 2)
+  grandTotal    Decimal   @db.Decimal(10, 2)
+  signature     String?   @db.Text
+  createdAt     DateTime  @default(now())
+
+  workshop      Workshop  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client        Client    @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  vehicle       Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  services      WorkOrderService[]
+  parts         WorkOrderPart[]
+  billing       Billing?
+}
+
+model WorkOrderService {
+  id        String    @id @default(uuid()) @db.Uuid
+  osId      String    @db.Uuid
+  name      String    @db.VarChar(255)
+  price     Decimal   @db.Decimal(10, 2)
+  quantity  Int
+
+  workOrder WorkOrder @relation(fields: [osId], references: [id], onDelete: Cascade)
+}
+
+model WorkOrderPart {
+  id        String    @id @default(uuid()) @db.Uuid
+  osId      String    @db.Uuid
+  name      String    @db.VarChar(255)
+  code      String?   @db.VarChar(50)
+  salePrice Decimal   @db.Decimal(10, 2)
+  quantity  Int
+
+  workOrder WorkOrder @relation(fields: [osId], references: [id], onDelete: Cascade)
+}
+
+model Billing {
+  id            String        @id @default(uuid()) @db.Uuid
+  tenantId      String        @db.Uuid
+  osId          String        @unique @db.Uuid
+  amount        Decimal       @db.Decimal(10, 2)
+  paymentMethod String        @db.VarChar(50)
+  status        BillingStatus @default(PENDENTE)
+  dueDate       String        @db.VarChar(10) // YYYY-MM-DD
+  createdAt     DateTime      @default(now())
+
+  workshop      Workshop      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workOrder     WorkOrder     @relation(fields: [osId], references: [id], onDelete: Cascade)
+  installments  BillingInstallment[]
+}
+
+model BillingInstallment {
+  id        String   @id @default(uuid()) @db.Uuid
+  billingId String   @db.Uuid
+  number    Int
+  amount    Decimal  @db.Decimal(10, 2)
+  dueDate   String   @db.VarChar(10) // YYYY-MM-DD
+  status    String   @db.VarChar(20) // PAGO, PENDENTE
+  paidAt    DateTime?
+
+  billing   Billing  @relation(fields: [billingId], references: [id], onDelete: Cascade)
+}
+
+model FinancialTransaction {
+  id          String          @id @default(uuid()) @db.Uuid
+  tenantId    String          @db.Uuid
+  type        TransactionType
+  category    String          @db.VarChar(100)
+  amount      Decimal         @db.Decimal(10, 2)
+  date        String          @db.VarChar(10) // YYYY-MM-DD
+  description String?         @db.VarChar(255)
+  createdAt   DateTime        @default(now())
+
+  workshop    Workshop        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model Subscription {
+  id              String             @id @default(uuid()) @db.Uuid
+  tenantId        String             @unique @db.Uuid
+  plan            String             @db.VarChar(50) // BASIC, PRO
+  status          SubscriptionStatus @default(TRIAL)
+  dueDate         DateTime
+  paymentProvider String?            @db.VarChar(50)
+  paymentId       String?            @db.VarChar(255)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  workshop        Workshop           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}

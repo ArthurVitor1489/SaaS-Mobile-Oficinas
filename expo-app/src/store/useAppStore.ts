@@ -103,6 +103,21 @@ interface AppState {
 }
 
 // Mapping helpers from Local to API
+
+// RFC4122 v4 resilient UUID generator for offline/non-secure web environments
+const generateUUID = (): string => {
+  try {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+  } catch (e) {}
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
 const mapOSStatusLocalToApi = (status: OSStatus): string => {
   switch (status) {
     case 'Aberta': return 'ABERTA';
@@ -320,7 +335,7 @@ export const useAppStore = create<AppState>()(
 
       // CLIENT ACTIONS
       addClient: async (dto) => {
-        const newId = Crypto.randomUUID();
+        const newId = generateUUID();
         const newClient: Client = {
           id: newId,
           ...dto,
@@ -334,7 +349,7 @@ export const useAppStore = create<AppState>()(
             await api.post('/clients', { id: newId, ...dto });
           } catch (e) {
             get().offlineQueue.push({
-              id: Crypto.randomUUID(),
+              id: generateUUID(),
               action: 'CREATE',
               entity: 'clients',
               payload: { id: newId, ...dto },
@@ -346,7 +361,7 @@ export const useAppStore = create<AppState>()(
             offlineQueue: [
               ...state.offlineQueue,
               {
-                id: Crypto.randomUUID(),
+                id: generateUUID(),
                 action: 'CREATE',
                 entity: 'clients',
                 payload: { id: newId, ...dto },
@@ -368,7 +383,7 @@ export const useAppStore = create<AppState>()(
             await api.patch(`/clients/${id}`, dto);
           } catch (e) {
             get().offlineQueue.push({
-              id: Crypto.randomUUID(),
+              id: generateUUID(),
               action: 'UPDATE',
               entity: 'clients',
               payload: { id, dto },
@@ -380,7 +395,7 @@ export const useAppStore = create<AppState>()(
             offlineQueue: [
               ...state.offlineQueue,
               {
-                id: Crypto.randomUUID(),
+                id: generateUUID(),
                 action: 'UPDATE',
                 entity: 'clients',
                 payload: { id, dto },
@@ -403,7 +418,7 @@ export const useAppStore = create<AppState>()(
             await api.delete(`/clients/${id}`);
           } catch (e) {
             get().offlineQueue.push({
-              id: Crypto.randomUUID(),
+              id: generateUUID(),
               action: 'DELETE',
               entity: 'clients',
               payload: { id },
@@ -415,7 +430,7 @@ export const useAppStore = create<AppState>()(
             offlineQueue: [
               ...state.offlineQueue,
               {
-                id: Crypto.randomUUID(),
+                id: generateUUID(),
                 action: 'DELETE',
                 entity: 'clients',
                 payload: { id },
@@ -429,7 +444,7 @@ export const useAppStore = create<AppState>()(
 
       // VEHICLE ACTIONS
       addVehicle: async (dto) => {
-        const newId = Crypto.randomUUID();
+        const newId = generateUUID();
         const newVehicle: Vehicle = {
           id: newId,
           ...dto,
@@ -443,7 +458,7 @@ export const useAppStore = create<AppState>()(
             await api.post('/vehicles', { id: newId, ...dto });
           } catch (e) {
             get().offlineQueue.push({
-              id: Crypto.randomUUID(),
+              id: generateUUID(),
               action: 'CREATE',
               entity: 'vehicles',
               payload: { id: newId, ...dto },
@@ -455,7 +470,7 @@ export const useAppStore = create<AppState>()(
             offlineQueue: [
               ...state.offlineQueue,
               {
-                id: Crypto.randomUUID(),
+                id: generateUUID(),
                 action: 'CREATE',
                 entity: 'vehicles',
                 payload: { id: newId, ...dto },
@@ -477,7 +492,7 @@ export const useAppStore = create<AppState>()(
             await api.patch(`/vehicles/${id}`, dto);
           } catch (e) {
             get().offlineQueue.push({
-              id: Crypto.randomUUID(),
+              id: generateUUID(),
               action: 'UPDATE',
               entity: 'vehicles',
               payload: { id, dto },
@@ -489,7 +504,7 @@ export const useAppStore = create<AppState>()(
             offlineQueue: [
               ...state.offlineQueue,
               {
-                id: Crypto.randomUUID(),
+                id: generateUUID(),
                 action: 'UPDATE',
                 entity: 'vehicles',
                 payload: { id, dto },
@@ -511,7 +526,7 @@ export const useAppStore = create<AppState>()(
             await api.delete(`/vehicles/${id}`);
           } catch (e) {
             get().offlineQueue.push({
-              id: Crypto.randomUUID(),
+              id: generateUUID(),
               action: 'DELETE',
               entity: 'vehicles',
               payload: { id },
@@ -523,7 +538,7 @@ export const useAppStore = create<AppState>()(
             offlineQueue: [
               ...state.offlineQueue,
               {
-                id: Crypto.randomUUID(),
+                id: generateUUID(),
                 action: 'DELETE',
                 entity: 'vehicles',
                 payload: { id },
@@ -537,7 +552,7 @@ export const useAppStore = create<AppState>()(
 
       // SERVICE ACTIONS
       addService: async (dto) => {
-        const newId = Crypto.randomUUID();
+        const newId = generateUUID();
         const newService: ServiceItem = {
           id: newId,
           ...dto,
@@ -550,7 +565,7 @@ export const useAppStore = create<AppState>()(
             await api.post('/services', { id: newId, ...dto });
           } catch (e) {
             get().offlineQueue.push({
-              id: Crypto.randomUUID(),
+              id: generateUUID(),
               action: 'CREATE',
               entity: 'services',
               payload: { id: newId, ...dto },
@@ -562,7 +577,7 @@ export const useAppStore = create<AppState>()(
             offlineQueue: [
               ...state.offlineQueue,
               {
-                id: Crypto.randomUUID(),
+                id: generateUUID(),
                 action: 'CREATE',
                 entity: 'services',
                 payload: { id: newId, ...dto },
@@ -584,7 +599,7 @@ export const useAppStore = create<AppState>()(
             await api.patch(`/services/${id}`, dto);
           } catch (e) {
             get().offlineQueue.push({
-              id: Crypto.randomUUID(),
+              id: generateUUID(),
               action: 'UPDATE',
               entity: 'services',
               payload: { id, dto },
@@ -596,7 +611,7 @@ export const useAppStore = create<AppState>()(
             offlineQueue: [
               ...state.offlineQueue,
               {
-                id: Crypto.randomUUID(),
+                id: generateUUID(),
                 action: 'UPDATE',
                 entity: 'services',
                 payload: { id, dto },
@@ -618,7 +633,7 @@ export const useAppStore = create<AppState>()(
             await api.delete(`/services/${id}`);
           } catch (e) {
             get().offlineQueue.push({
-              id: Crypto.randomUUID(),
+              id: generateUUID(),
               action: 'DELETE',
               entity: 'services',
               payload: { id },
@@ -630,7 +645,7 @@ export const useAppStore = create<AppState>()(
             offlineQueue: [
               ...state.offlineQueue,
               {
-                id: Crypto.randomUUID(),
+                id: generateUUID(),
                 action: 'DELETE',
                 entity: 'services',
                 payload: { id },
@@ -644,7 +659,7 @@ export const useAppStore = create<AppState>()(
 
       // PART ACTIONS
       addPart: async (dto) => {
-        const newId = Crypto.randomUUID();
+        const newId = generateUUID();
         const newPart: PartItem = {
           id: newId,
           ...dto,
@@ -657,7 +672,7 @@ export const useAppStore = create<AppState>()(
             await api.post('/parts', { id: newId, ...dto });
           } catch (e) {
             get().offlineQueue.push({
-              id: Crypto.randomUUID(),
+              id: generateUUID(),
               action: 'CREATE',
               entity: 'parts',
               payload: { id: newId, ...dto },
@@ -669,7 +684,7 @@ export const useAppStore = create<AppState>()(
             offlineQueue: [
               ...state.offlineQueue,
               {
-                id: Crypto.randomUUID(),
+                id: generateUUID(),
                 action: 'CREATE',
                 entity: 'parts',
                 payload: { id: newId, ...dto },
@@ -691,7 +706,7 @@ export const useAppStore = create<AppState>()(
             await api.patch(`/parts/${id}`, dto);
           } catch (e) {
             get().offlineQueue.push({
-              id: Crypto.randomUUID(),
+              id: generateUUID(),
               action: 'UPDATE',
               entity: 'parts',
               payload: { id, dto },
@@ -703,7 +718,7 @@ export const useAppStore = create<AppState>()(
             offlineQueue: [
               ...state.offlineQueue,
               {
-                id: Crypto.randomUUID(),
+                id: generateUUID(),
                 action: 'UPDATE',
                 entity: 'parts',
                 payload: { id, dto },
@@ -725,7 +740,7 @@ export const useAppStore = create<AppState>()(
             await api.delete(`/parts/${id}`);
           } catch (e) {
             get().offlineQueue.push({
-              id: Crypto.randomUUID(),
+              id: generateUUID(),
               action: 'DELETE',
               entity: 'parts',
               payload: { id },
@@ -737,7 +752,7 @@ export const useAppStore = create<AppState>()(
             offlineQueue: [
               ...state.offlineQueue,
               {
-                id: Crypto.randomUUID(),
+                id: generateUUID(),
                 action: 'DELETE',
                 entity: 'parts',
                 payload: { id },
@@ -751,7 +766,7 @@ export const useAppStore = create<AppState>()(
 
       // WORK ORDER ACTIONS
       addWorkOrder: async (dto) => {
-        const newId = Crypto.randomUUID();
+        const newId = generateUUID();
         const servicesTotal = dto.services.reduce((acc, s) => acc + s.price * s.quantity, 0);
         const partsTotal = dto.parts.reduce((acc, p) => acc + p.salePrice * p.quantity, 0);
         const grandTotal = servicesTotal + partsTotal;
@@ -776,7 +791,7 @@ export const useAppStore = create<AppState>()(
 
         let newBillings = [...get().billings];
         if (dto.status === 'Concluída' || dto.status === 'Entregue') {
-          const billingId = 'b-' + Crypto.randomUUID().substring(0, 8);
+          const billingId = 'b-' + generateUUID().substring(0, 8);
           const todayStr = new Date().toISOString().split('T')[0];
           const newBilling: Billing = {
             id: billingId,
@@ -819,7 +834,7 @@ export const useAppStore = create<AppState>()(
             await api.post('/orders', mappedPayload);
           } catch (e) {
             get().offlineQueue.push({
-              id: Crypto.randomUUID(),
+              id: generateUUID(),
               action: 'CREATE',
               entity: 'workOrders',
               payload: mappedPayload,
@@ -831,7 +846,7 @@ export const useAppStore = create<AppState>()(
             offlineQueue: [
               ...state.offlineQueue,
               {
-                id: Crypto.randomUUID(),
+                id: generateUUID(),
                 action: 'CREATE',
                 entity: 'workOrders',
                 payload: mappedPayload,
@@ -868,7 +883,7 @@ export const useAppStore = create<AppState>()(
         if (dto.status && (dto.status === 'Concluída' || dto.status === 'Entregue')) {
           const hasBilling = get().billings.some((b) => b.osId === id);
           if (!hasBilling) {
-            const billingId = 'b-' + Crypto.randomUUID().substring(0, 8);
+            const billingId = 'b-' + generateUUID().substring(0, 8);
             const todayStr = new Date().toISOString().split('T')[0];
             const newBilling: Billing = {
               id: billingId,
@@ -906,7 +921,7 @@ export const useAppStore = create<AppState>()(
             await api.patch(`/orders/${id}`, mappedDto);
           } catch (e) {
             get().offlineQueue.push({
-              id: Crypto.randomUUID(),
+              id: generateUUID(),
               action: 'UPDATE',
               entity: 'workOrders',
               payload: { id, dto: mappedDto },
@@ -918,7 +933,7 @@ export const useAppStore = create<AppState>()(
             offlineQueue: [
               ...state.offlineQueue,
               {
-                id: Crypto.randomUUID(),
+                id: generateUUID(),
                 action: 'UPDATE',
                 entity: 'workOrders',
                 payload: { id, dto: mappedDto },
@@ -949,7 +964,7 @@ export const useAppStore = create<AppState>()(
             await api.delete(`/orders/${id}`);
           } catch (e) {
             get().offlineQueue.push({
-              id: Crypto.randomUUID(),
+              id: generateUUID(),
               action: 'DELETE',
               entity: 'workOrders',
               payload: { id },
@@ -961,7 +976,7 @@ export const useAppStore = create<AppState>()(
             offlineQueue: [
               ...state.offlineQueue,
               {
-                id: Crypto.randomUUID(),
+                id: generateUUID(),
                 action: 'DELETE',
                 entity: 'workOrders',
                 payload: { id },
@@ -1000,7 +1015,7 @@ export const useAppStore = create<AppState>()(
           newStatus = 'Parcialmente pago';
         }
 
-        const newTransId = 't-' + Crypto.randomUUID().substring(0, 8);
+        const newTransId = 't-' + generateUUID().substring(0, 8);
         const newTrans: FinancialTransaction = {
           id: newTransId,
           type: 'Entrada',
@@ -1021,7 +1036,7 @@ export const useAppStore = create<AppState>()(
             await api.post(`/finance/billings/${billingId}/pay`, { installmentNumber });
           } catch (e) {
             get().offlineQueue.push({
-              id: Crypto.randomUUID(),
+              id: generateUUID(),
               action: 'UPDATE',
               entity: 'billings',
               payload: { id: billingId, installmentNumber },
@@ -1033,7 +1048,7 @@ export const useAppStore = create<AppState>()(
             offlineQueue: [
               ...state.offlineQueue,
               {
-                id: Crypto.randomUUID(),
+                id: generateUUID(),
                 action: 'UPDATE',
                 entity: 'billings',
                 payload: { id: billingId, installmentNumber },
@@ -1047,7 +1062,7 @@ export const useAppStore = create<AppState>()(
 
       // FINANCIAL TRANSACTION ACTIONS
       addTransaction: async (dto) => {
-        const newId = Crypto.randomUUID();
+        const newId = generateUUID();
         const newTrans: FinancialTransaction = {
           id: newId,
           ...dto,
@@ -1067,7 +1082,7 @@ export const useAppStore = create<AppState>()(
             await api.post('/finance/transactions', mappedPayload);
           } catch (e) {
             get().offlineQueue.push({
-              id: Crypto.randomUUID(),
+              id: generateUUID(),
               action: 'CREATE',
               entity: 'transactions',
               payload: mappedPayload,
@@ -1079,7 +1094,7 @@ export const useAppStore = create<AppState>()(
             offlineQueue: [
               ...state.offlineQueue,
               {
-                id: Crypto.randomUUID(),
+                id: generateUUID(),
                 action: 'CREATE',
                 entity: 'transactions',
                 payload: mappedPayload,
@@ -1101,7 +1116,7 @@ export const useAppStore = create<AppState>()(
             await api.delete(`/finance/transactions/${id}`);
           } catch (e) {
             get().offlineQueue.push({
-              id: Crypto.randomUUID(),
+              id: generateUUID(),
               action: 'DELETE',
               entity: 'transactions',
               payload: { id },
@@ -1113,7 +1128,7 @@ export const useAppStore = create<AppState>()(
             offlineQueue: [
               ...state.offlineQueue,
               {
-                id: Crypto.randomUUID(),
+                id: generateUUID(),
                 action: 'DELETE',
                 entity: 'transactions',
                 payload: { id },
@@ -1134,7 +1149,7 @@ export const useAppStore = create<AppState>()(
             await api.patch('/tenant/settings', dto);
           } catch (e) {
             get().offlineQueue.push({
-              id: Crypto.randomUUID(),
+              id: generateUUID(),
               action: 'UPDATE',
               entity: 'parts', // Mock entity wrapper since settings belongs to tenant
               payload: { settings: dto },

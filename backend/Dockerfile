@@ -38,6 +38,7 @@ RUN npm ci --omit=dev
 
 # Copy generated Prisma Client and compiled NestJS code from builder
 COPY --from=builder /usr/src/app/node_modules/@prisma /usr/src/app/node_modules/@prisma
+COPY --from=builder /usr/src/app/node_modules/.prisma /usr/src/app/node_modules/.prisma
 COPY --from=builder /usr/src/app/dist ./dist
 COPY --from=builder /usr/src/app/prisma ./prisma
 

@@ -1,6 +1,8 @@
 # --- STAGE 1: BUILD ---
 FROM node:24-alpine AS builder
 
+RUN apk add --no-cache openssl libc6-compat
+
 WORKDIR /usr/src/app
 
 # Copy dependency manifests
@@ -21,6 +23,8 @@ RUN npm run build
 
 # --- STAGE 2: PRODUCTION RUNNER ---
 FROM node:24-alpine AS runner
+
+RUN apk add --no-cache openssl libc6-compat
 
 WORKDIR /usr/src/app
 

@@ -1,13 +1,13 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { ChevronRight, Tag, Settings, Wifi } from 'lucide-react-native';
+import { ChevronRight, Tag, Settings, Wifi, LogOut } from 'lucide-react-native';
 import { useDatabase } from '../context/DatabaseContext';
 import { theme } from '../styles/theme';
 import { useNavigation } from '@react-navigation/native';
 
 export default function MoreMenuScreen() {
   const navigation = useNavigation<any>();
-  const { settings } = useDatabase();
+  const { settings, signOut } = useDatabase();
 
   return (
     <View style={styles.screenContainer}>
@@ -41,7 +41,7 @@ export default function MoreMenuScreen() {
 
         <TouchableOpacity
           onPress={() => navigation.navigate('Settings')}
-          style={[styles.menuItem, { borderBottomWidth: 0 }]}
+          style={styles.menuItem}
         >
           <View style={styles.menuItemLeft}>
             <View style={[styles.iconBg, { backgroundColor: 'rgba(100, 116, 139, 0.1)' }]}>
@@ -53,6 +53,22 @@ export default function MoreMenuScreen() {
             </View>
           </View>
           <ChevronRight size={18} color="#64748b" />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={signOut}
+          style={[styles.menuItem, { borderBottomWidth: 0 }]}
+        >
+          <View style={styles.menuItemLeft}>
+            <View style={[styles.iconBg, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
+              <LogOut size={18} color="#ef4444" />
+            </View>
+            <View>
+              <Text style={[styles.menuItemTitle, { color: '#ef4444' }]}>Sair da Conta</Text>
+              <Text style={styles.menuItemSubtitle}>Desconectar do painel SaaS</Text>
+            </View>
+          </View>
+          <ChevronRight size={18} color="#ef4444" />
         </TouchableOpacity>
       </View>
 

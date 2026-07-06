@@ -45,4 +45,4 @@ COPY --from=builder /usr/src/app/prisma ./prisma
 EXPOSE 3001
 
 # Run database schema push to sync schema on startup, then boot NestJS
-CMD npx prisma db push --skip-generate && node dist/src/main.js
+CMD npx prisma db push --skip-generate && node dist/main.js

@@ -30,6 +30,7 @@ import BillingDetailScreen from './src/screens/BillingDetailScreen';
 import MoreMenuScreen from './src/screens/MoreMenuScreen';
 import CatalogScreen from './src/screens/CatalogScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import SubscriptionDetailsScreen from './src/screens/SubscriptionDetailsScreen';
 
 import { 
   RootStackParamList, MainTabParamList, DashboardStackParamList, 
@@ -84,6 +85,7 @@ function MoreStackNavigator() {
       <MoreStack.Screen name="MoreMenu" component={MoreMenuScreen} />
       <MoreStack.Screen name="Catalog" component={CatalogScreen} />
       <MoreStack.Screen name="Settings" component={SettingsScreen} />
+      <MoreStack.Screen name="SubscriptionDetails" component={SubscriptionDetailsScreen} />
     </MoreStack.Navigator>
   );
 }

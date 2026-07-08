@@ -3,7 +3,7 @@ import './src/services/polyfills';
 import React, { useState, useEffect } from 'react';
 import { 
   StyleSheet, Text, View, StatusBar, Alert, 
-  KeyboardAvoidingView, Platform, ActivityIndicator, TextInput, TouchableOpacity
+  KeyboardAvoidingView, Platform, ActivityIndicator, TextInput, TouchableOpacity, Linking
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { 
@@ -180,20 +180,40 @@ function MainTabNavigator() {
       {/* BANNER DE AVISO DE COBRANÇA */}
       {subInfo.showWarning && (
         <View style={styles.warningBanner}>
-          <AlertTriangle size={12} color="#fff" style={{ marginRight: 6 }} />
-          <Text style={styles.warningText} numberOfLines={1}>
-            {subInfo.message}
-          </Text>
+          <View style={styles.bannerLeft}>
+            <AlertTriangle size={12} color="#fff" style={{ marginRight: 6 }} />
+            <Text style={styles.warningText} numberOfLines={1}>
+              {subInfo.message}
+            </Text>
+          </View>
+          {subscription?.invoiceUrl && (
+            <TouchableOpacity
+              onPress={() => Linking.openURL(subscription.invoiceUrl!)}
+              style={styles.payButton}
+            >
+              <Text style={styles.payButtonText}>PAGAR</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
       {/* BANNER DE BLOQUEIO MODO LEITURA */}
       {subInfo.isBlocked && (
         <View style={styles.blockedBanner}>
-          <Lock size={12} color="#fff" style={{ marginRight: 6 }} />
-          <Text style={styles.blockedText} numberOfLines={1}>
-            {subInfo.message}
-          </Text>
+          <View style={styles.bannerLeft}>
+            <Lock size={12} color="#fff" style={{ marginRight: 6 }} />
+            <Text style={styles.blockedText} numberOfLines={1}>
+              {subInfo.message}
+            </Text>
+          </View>
+          {subscription?.invoiceUrl && (
+            <TouchableOpacity
+              onPress={() => Linking.openURL(subscription.invoiceUrl!)}
+              style={styles.payButtonBlocked}
+            >
+              <Text style={styles.payButtonTextBlocked}>PAGAR</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
@@ -485,29 +505,59 @@ const styles = StyleSheet.create({
   },
   warningBanner: {
     backgroundColor: '#f97316',
-    paddingVertical: 8,
+    paddingVertical: 6,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
   },
   warningText: {
     fontSize: 11,
     color: '#fff',
     fontWeight: 'bold',
+    flex: 1,
   },
   blockedBanner: {
     backgroundColor: '#ef4444',
-    paddingVertical: 8,
+    paddingVertical: 6,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
   },
   blockedText: {
     fontSize: 11,
     color: '#fff',
     fontWeight: 'bold',
+    flex: 1,
+  },
+  bannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  payButton: {
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  payButtonText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#f97316',
+  },
+  payButtonBlocked: {
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  payButtonTextBlocked: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#ef4444',
   },
   header: {
     paddingHorizontal: 22,

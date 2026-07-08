@@ -53,6 +53,7 @@ interface AppState {
     status: string;
     dueDate: string;
     paymentId?: string;
+    invoiceUrl?: string;
   } | null;
 
   // Actions

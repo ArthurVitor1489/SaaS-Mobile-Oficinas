@@ -63,6 +63,7 @@ export class AuthService {
           dueDate: trialEndDate,
           paymentProvider: 'ASAAS',
           paymentId: asaasSub.id,
+          invoiceUrl: asaasSub.invoiceUrl || null,
         },
       });
 

@@ -44,6 +44,7 @@ export class SubscriptionService {
         data: {
           status: 'ACTIVE',
           dueDate: newDueDate,
+          invoiceUrl: payment.invoiceUrl || payment.paymentLink || undefined,
         },
       });
       console.log(`Tenant ${sub.tenantId} subscription updated to ACTIVE until ${newDueDate.toISOString()}`);

@@ -228,6 +228,7 @@ model Subscription {
   dueDate         DateTime
   paymentProvider String?            @db.VarChar(50)
   paymentId       String?            @db.VarChar(255)
+  invoiceUrl      String?            @db.Text
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
 

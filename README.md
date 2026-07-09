@@ -78,11 +78,11 @@ cd SaaS-Mobile-Oficinas/backend
 Crie um arquivo `.env` com as variáveis de conexão:
 ```ini
 PORT=3001
-DATABASE_URL="postgresql://postgres:ArTim94ake4@db.bjerhywsqufmvqjibpub.supabase.co:5432/postgres?schema=voltruck_saas"
-JWT_SECRET="voltruck-saas-super-secret-access-key-2026"
-JWT_REFRESH_SECRET="voltruck-saas-super-secret-refresh-key-2026"
+DATABASE_URL="postgresql://USUARIO:SENHA@HOST:PORTA/DATABASE?schema=mecanicapro_saas"
+JWT_SECRET="seu_jwt_secret_aqui"
+JWT_REFRESH_SECRET="seu_jwt_refresh_secret_aqui"
 ASAAS_API_URL="https://sandbox.asaas.com/api/v3"
-ASAAS_API_KEY="sua_chave_mock_do_asaas"
+ASAAS_API_KEY="sua_chave_do_asaas_aqui"
 ```
 
 Execute as migrações do banco e inicie em modo desenvolvimento:

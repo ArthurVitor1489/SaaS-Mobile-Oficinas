@@ -222,6 +222,7 @@ function MainTabNavigator() {
       <Tab.Navigator
         screenOptions={({ route }) => ({
           headerShown: false,
+          unmountOnBlur: true,
           tabBarStyle: styles.tabBar,
           tabBarActiveTintColor: '#3b66ff',
           tabBarInactiveTintColor: '#64748b',

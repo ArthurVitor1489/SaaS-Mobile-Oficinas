@@ -1,94 +1,127 @@
-# 🚗 Voltruck / MecânicaPro — Sistema de Gestão SaaS para Oficinas
+# 🚗 Voltruck — Sistema SaaS Multi-Tenant & Offline-First para Gestão de Oficinas
 
-**Voltruck (MecânicaPro)** é um ecossistema de software premium completo para gerenciamento de oficinas mecânicas, auto elétricas, centros automotivos, lava-jatos e funilarias. O sistema é estruturado como um **SaaS Multi-Tenant** moderno, possuindo um aplicativo móvel nativo resiliente a falhas de rede (offline-first) e um portal de vendas interativo.
+[![React Native](https://img.shields.io/badge/React_Native-0.74+-61DAFB?logo=react&logoColor=black&style=for-the-badge)](https://reactnative.dev/)
+[![NestJS](https://img.shields.io/badge/NestJS-11.0+-E0234E?logo=nestjs&logoColor=white&style=for-the-badge)](https://nestjs.com/)
+[![Prisma ORM](https://img.shields.io/badge/Prisma_ORM-5.22+-2D3748?logo=prisma&logoColor=white&style=for-the-badge)](https://www.prisma.io/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white&style=for-the-badge)](https://www.postgresql.org/)
+[![Docker](https://img.shields.io/badge/Docker-Compatible-2496ED?logo=docker&logoColor=white&style=for-the-badge)](https://www.docker.com/)
+
+**Voltruck** é uma plataforma de nível empresarial (enterprise-grade) desenvolvida para gerenciar oficinas mecânicas e centros automotivos de ponta a ponta. O projeto foi projetado com uma arquitetura moderna **SaaS Multi-Tenant** e opera sob o conceito de **Offline-First**, garantindo que mecânicos e gestores possam continuar trabalhando sem sinal de internet de forma reativa e segura.
+
+Este projeto é um excelente demonstrativo de engenharia de software aplicada, abordando desafios de **sincronização de dados, segurança multi-tenant, integração com gateways de pagamento (Asaas) e resiliência offline**.
 
 ---
 
-## 🛠️ Arquitetura do Sistema V2 SaaS
+## 💡 Destaques de Engenharia e Arquitetura de Software
 
-Esta versão traz uma reformulação arquitetural completa voltada para escalabilidade comercial, segurança e robustez offline:
+Esta plataforma foi desenvolvida utilizando as melhores práticas do mercado, demonstrando domínio nos seguintes conceitos:
 
-### 1. Backend Multi-Tenant (NestJS & Prisma)
-* **Isolamento de Dados**: Separação total de dados entre oficinas utilizando esquemas isolados PostgreSQL (`voltruck_saas`).
-* **Segurança e JWT**: Controle de sessões com Access e Refresh Tokens JWT, validando e vinculando cada requisição à respectiva oficina (`tenantId`).
-* **Compilação e Docker**: Preparado com um `Dockerfile` multi-stage otimizado para produção e configurações prontas para deploy em nuvem (Render/Railway) ou self-hosting.
+* **Arquitetura Multi-Tenant com Isolamento Físico/Lógico**: Separação total de dados e configurações de cada oficina inquilina (`tenantId`) a nível de banco de dados e aplicação. Proteção contra vazamento de dados (*data leakage*) garantida via NestJS Guards.
+* **Motor de Sincronização Offline-First Reativo**:
+  * Utilização de **Zustand + AsyncStorage** para persistência e atualizações instantâneas de UI com latência zero.
+  * Fila de replicação sequencial cronológica (`syncEngine`) que reenvia as alterações locais para a API quando a rede estabiliza.
+  * **Resiliência a Falhas de Validação**: Descarte automático de payloads inconsistentes (erros 400/404) para evitar o travamento permanente da fila.
+* **Geração de UUIDs RFC4122 v4 Resiliente**: Fallback em JavaScript puro para ambientes de testes locais (HTTP/sem HTTPS) onde as APIs nativas de criptografia de navegadores/dispositivos móveis estão indisponíveis.
+* **Segurança e Fluxo de Autenticação Robusto**:
+  * Autenticação baseada em **JWT (Access & Refresh Tokens)** criptografados com senhas hashed via **bcrypt**.
+  * Decoplagem de chamadas externas de faturamento Asaas fora das transações do PostgreSQL, prevenindo o esgotamento do pool de conexões sob alta carga.
+* **Bloqueios Inteligentes de Inadimplência**:
+  * **SubscriptionGuard**: NestJS Guard que bloqueia chamadas de escrita (`POST`, `PATCH`, `DELETE`) em endpoints de negócio caso o faturamento do cliente esteja suspenso.
+  * **Modo Leitura Liberado**: Mantém rotas de leitura (`GET`), histórico de ordens e exportação de backups sempre acessíveis, em total conformidade com a legislação de retenção de dados do cliente.
+  * **Banners Reativos**: A UI móvel atualiza banners laranja (carência de 7 dias de atraso) e vermelhos (bloqueio ativo) com atalhos dinâmicos de pagamento.
 
-### 2. Motor de Sincronização Offline (Zustand & Sync Engine)
-* **Offline-First Reativo**: O aplicativo armazena e lê dados localmente via Zustand e AsyncStorage instantaneamente.
-* **Fila de Replicação Resiliente**: Ações de escrita executadas sem sinal de internet são enfileiradas de forma cronológica e replicadas automaticamente para o servidor no momento em que a rede for restabelecida.
-* **Resiliência a Erros**: O motor descarta erros de validação (rejeições 400/404) evitando o travamento da fila e trata inteligentemente quedas de conexão no meio da sincronização.
-* **UUIDs RFC4122 v4**: Geração local segura de identificadores únicos compatível com contextos não-HTTPS.
+---
 
-### 3. Integração Financeira (Gateway Asaas)
-* **Assinatura Automática**: Ao se cadastrar, o cliente (oficina) é registrado no Asaas de forma assíncrona, gerando a cobrança (PIX, boleto ou cartão) em ambiente Sandbox/Produção.
-* **Webhooks de Faturamento**: Endpoint público que recebe confirmações de pagamento (`PAYMENT_RECEIVED`) e atrasos (`PAYMENT_OVERDUE`), reativando ou suspendendo o status do inquilino em tempo real.
+## 🛠️ Stack Tecnológica
 
-### 4. Regras de Carência e Bloqueio de Escritas (`SubscriptionGuard`)
-* **Carência de 7 dias**: Oficinas inadimplentes recebem banners informativos de aviso amigáveis, mantendo a operação de cadastro liberada por uma semana.
-* **Bloqueio Parcial (Modo Leitura)**: Expirado o prazo, o `SubscriptionGuard` bloqueia todas as rotas de escrita (`POST`, `PATCH`, `DELETE`), mas mantém a leitura (`GET`) e exportação de backups totalmente liberadas.
+### 📲 Aplicativo Móvel (Multiplataforma)
+* **Framework**: React Native & Expo (TypeScript)
+* **Gerenciamento de Estado**: Zustand (Persistência Offline reativa)
+* **Ícones & Estilização**: Lucide React Native & TailwindCSS / Custom Themes
+* **Navegação**: React Navigation (Bottom Tabs & Stack Navigators)
+
+### 💻 Backend (API RESTful)
+* **Framework**: NestJS (TypeScript)
+* **ORM / Banco de Dados**: Prisma ORM & PostgreSQL (Hospedado no Supabase)
+* **Criptografia & Sessão**: Passport JWT & bcrypt
+* **Integração de Pagamentos**: Asaas API (PIX, Boleto e Cartão de Crédito)
+
+### 🐳 DevOps & Deploy
+* **Docker / Docker Compose**: Automação multi-stage para subir o banco PostgreSQL local e a API com um único comando (`docker compose up -d`).
+* **EAS Build**: Perfis de compilação configurados em `eas.json` para geração automática de APKs (testes) e AABs (produção na Google Play Store).
 
 ---
 
 ## 📁 Estrutura do Repositório
 
-* **`/backend`**: API REST escrita em NestJS com TypeScript, persistência Prisma ORM, configurações Docker e script de automação Compose.
-* **`/expo-app`**: Código-fonte do aplicativo nativo multiplataforma (Android/iOS) desenvolvido com React Native, Expo, Zustand, Axios e TailwindCSS.
-* **`/src`**: Portal web comercial com site de vendas (Landing Page), simulador e calculadora interativa de ROI.
-
----
-
-## ⚡ Como Hospedar no seu Notebook/PC Antigo (Self-Hosting)
-
-Se você tem um notebook antigo ou computador extra em casa, você pode usá-lo como servidor de produção totalmente de graça!
-
-### Pré-requisitos
-Instale o **Docker** e o **Docker Compose** na sua máquina servidora (recomendamos instalar o sistema leve **Ubuntu Server 24.04 LTS** no PC antigo).
-
-### Passo a Passo
-1. Acesse o seu servidor via terminal/SSH.
-2. Clone este repositório:
-   ```bash
-   git clone https://github.com/ArthurVitor1489/SaaS-Mobile-Oficinas.git
-   ```
-3. Navegue até a pasta do backend:
-   ```bash
-   cd SaaS-Mobile-Oficinas/backend
-   ```
-4. Suba o banco de dados PostgreSQL e o servidor NestJS juntos com um único comando:
-   ```bash
-   sudo docker compose up -d --build
-   ```
-5. **Pronto!** O banco estará rodando na porta `5432` e a API respondendo na porta `3001` no IP da sua máquina local (ex: `http://192.168.1.79:3001`).
-
----
-
-## 🚀 Como Executar Localmente em Modo Desenvolvimento
-
-### 1. Iniciar o Backend
 ```bash
-cd backend
+├── /backend            # API NestJS, Prisma Schema, Migrations e Dockerfiles
+├── /expo-app           # Aplicativo React Native (Expo) com motor de sincronização offline
+├── /src                # Landing Page promocional e Simulador Web interativo
+```
+
+---
+
+## ⚡ Instalação e Execução Local
+
+### 1. Pré-requisitos
+* Node.js v20+
+* Docker e Docker Compose (caso queira rodar localmente via contêiner)
+
+### 2. Configurando o Servidor (Backend)
+Clone o repositório e acesse a pasta do backend:
+```bash
+git clone https://github.com/ArthurVitor1489/SaaS-Mobile-Oficinas.git
+cd SaaS-Mobile-Oficinas/backend
+```
+
+Crie um arquivo `.env` com as variáveis de conexão:
+```ini
+PORT=3001
+DATABASE_URL="postgresql://postgres:ArTim94ake4@db.bjerhywsqufmvqjibpub.supabase.co:5432/postgres?schema=voltruck_saas"
+JWT_SECRET="voltruck-saas-super-secret-access-key-2026"
+JWT_REFRESH_SECRET="voltruck-saas-super-secret-refresh-key-2026"
+ASAAS_API_URL="https://sandbox.asaas.com/api/v3"
+ASAAS_API_KEY="sua_chave_mock_do_asaas"
+```
+
+Execute as migrações do banco e inicie em modo desenvolvimento:
+```bash
 npm install
-npx prisma generate
+npx prisma db push
 npm run start:dev
 ```
 
-### 2. Iniciar o App Móvel (Expo)
-Crie um arquivo `.env` dentro da pasta `expo-app` contendo a URL da API do seu backend local:
+### 3. Configurando o Aplicativo Móvel (Expo App)
+Abra um novo terminal e acesse a pasta `expo-app`:
+```bash
+cd ../expo-app
+npm install
+```
+
+Crie um arquivo `.env` na raiz do app móvel definindo o IP do seu backend:
 ```ini
 EXPO_PUBLIC_API_URL=http://localhost:3001
 ```
-E execute:
+
+Inicie o Metro Bundler:
 ```bash
-cd expo-app
-npm install
 npx expo start
 ```
-* Aperte **`a`** para rodar no Emulador Android.
-* Aperte **`w`** para rodar na Web.
+* Pressione a tecla **`a`** para abrir o app no Emulador Android.
+* Pressione a tecla **`w`** para abrir o simulador na Web.
 
-### 3. Iniciar o Portal Web de Vendas
+---
+
+## 🐳 Executando com Docker Compose (Notebook / PC Antigo)
+
+O projeto está totalmente preparado para rodar em servidores caseiros ou VPS com um único comando. Na pasta `/backend`, execute:
+
 ```bash
-npm install
-npm run dev
+sudo docker compose up -d --build
 ```
-👉 Acesse no seu navegador: **`http://localhost:5173`**
+
+Isso fará o download e inicialização automática:
+1. Do contêiner **PostgreSQL (Porta 5432)** persistido em volume Docker.
+2. Da **API NestJS (Porta 3001)** compilada através de uma build multi-stage leve em Alpine Linux.
+3. Executará automaticamente o sincronismo de tabelas do Prisma no banco de dados local.

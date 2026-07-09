@@ -48,7 +48,7 @@ export default function SubscriptionDetailsScreen() {
         <View style={styles.planCard}>
           <View style={styles.planHeader}>
             <View>
-              <Text style={styles.planTitle}>Plano Básico Voltruck</Text>
+              <Text style={styles.planTitle}>Plano Básico MecânicaPro</Text>
               <Text style={styles.planPrice}>R$ 99,90<Text style={styles.planPeriod}> / mês</Text></Text>
             </View>
             <View style={[styles.statusBadge, { backgroundColor: statusInfo.bg }]}>

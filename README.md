@@ -1,4 +1,4 @@
-# 🚗 Voltruck — Sistema SaaS Multi-Tenant & Offline-First para Gestão de Oficinas
+# 🚗 MecânicaPro — Sistema SaaS Multi-Tenant & Offline-First para Gestão de Oficinas
 
 [![React Native](https://img.shields.io/badge/React_Native-0.74+-61DAFB?logo=react&logoColor=black&style=for-the-badge)](https://reactnative.dev/)
 [![NestJS](https://img.shields.io/badge/NestJS-11.0+-E0234E?logo=nestjs&logoColor=white&style=for-the-badge)](https://nestjs.com/)
@@ -6,7 +6,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white&style=for-the-badge)](https://www.postgresql.org/)
 [![Docker](https://img.shields.io/badge/Docker-Compatible-2496ED?logo=docker&logoColor=white&style=for-the-badge)](https://www.docker.com/)
 
-**Voltruck** é uma plataforma de nível empresarial (enterprise-grade) desenvolvida para gerenciar oficinas mecânicas e centros automotivos de ponta a ponta. O projeto foi projetado com uma arquitetura moderna **SaaS Multi-Tenant** e opera sob o conceito de **Offline-First**, garantindo que mecânicos e gestores possam continuar trabalhando sem sinal de internet de forma reativa e segura.
+**MecânicaPro** é uma plataforma de nível empresarial (enterprise-grade) desenvolvida para gerenciar oficinas mecânicas e centros automotivos de ponta a ponta. O projeto foi projetado com uma arquitetura moderna **SaaS Multi-Tenant** e opera sob o conceito de **Offline-First**, garantindo que mecânicos e gestores possam continuar trabalhando sem sinal de internet de forma reativa e segura.
 
 Este projeto é um excelente demonstrativo de engenharia de software aplicada, abordando desafios de **sincronização de dados, segurança multi-tenant, integração com gateways de pagamento (Asaas) e resiliência offline**.
 

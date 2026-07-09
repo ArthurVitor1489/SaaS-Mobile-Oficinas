@@ -57,7 +57,7 @@ export class AsaasService {
           value,
           nextDueDate,
           cycle: 'MONTHLY',
-          description: 'Assinatura Mensal Voltruck SaaS',
+          description: 'Assinatura Mensal MecânicaPro SaaS',
         },
         { headers: this.headers },
       );

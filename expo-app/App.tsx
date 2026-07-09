@@ -158,7 +158,7 @@ function MainTabNavigator() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={styles.headerTitle} numberOfLines={1}>
-            {settings.name ? settings.name.toUpperCase() : 'VOLTRUCK'}
+             {settings.name ? settings.name.toUpperCase() : 'MECÂNICAPRO'}
           </Text>
           <View style={styles.headerSubRow}>
             <Text style={styles.headerSubtitle}>PAINEL SAAS</Text>
@@ -337,7 +337,7 @@ function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
       style={styles.authContainer}
     >
       <View style={styles.authCard}>
-        <Text style={styles.authTitle}>VOLTRUCK</Text>
+         <Text style={styles.authTitle}>MECÂNICAPRO</Text>
         <Text style={styles.authSubtitle}>
           {isRegister ? 'Crie sua conta SaaS' : 'Acesse seu painel SaaS'}
         </Text>

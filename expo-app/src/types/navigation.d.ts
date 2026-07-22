@@ -37,4 +37,5 @@ export type MoreStackParamList = {
   Catalog: undefined;
   Settings: undefined;
   SubscriptionDetails: undefined;
+  FiscalSettings: undefined;
 };

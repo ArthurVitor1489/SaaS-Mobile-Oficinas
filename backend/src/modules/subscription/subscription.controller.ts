@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Headers } from '@nestjs/common';
 import { SubscriptionService } from './subscription.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Tenant } from '../../common/decorators/tenant.decorator';
@@ -17,4 +17,13 @@ export class SubscriptionController {
   handleWebhook(@Body() body: any) {
     return this.subscriptionService.handleWebhook(body);
   }
+
+  @Post('webhook/revenuecat')
+  handleRevenueCatWebhook(
+    @Body() body: any,
+    @Headers('authorization') authHeader?: string
+  ) {
+    return this.subscriptionService.handleRevenueCatWebhook(body, authHeader);
+  }
 }
+

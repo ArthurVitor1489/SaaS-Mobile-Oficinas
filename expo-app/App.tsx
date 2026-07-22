@@ -9,7 +9,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { 
   Menu, Users, ClipboardList, Wallet, MoreHorizontal, Wifi, WifiOff, AlertTriangle, Lock
 } from 'lucide-react-native';
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, useNavigation, CommonActions } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 
@@ -18,6 +18,9 @@ import { useAppStore } from './src/store/useAppStore';
 import { startSyncEngine, stopSyncEngine, processOfflineQueue } from './src/services/syncEngine';
 import { theme } from './src/styles/theme';
 import { DatabaseProvider } from './src/context/DatabaseContext';
+import Purchases from 'react-native-purchases';
+import Constants from 'expo-constants';
+
 
 // Screen Stacks
 import DashboardScreen from './src/screens/DashboardScreen';
@@ -31,6 +34,7 @@ import MoreMenuScreen from './src/screens/MoreMenuScreen';
 import CatalogScreen from './src/screens/CatalogScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import SubscriptionDetailsScreen from './src/screens/SubscriptionDetailsScreen';
+import FiscalSettingsScreen from './src/screens/FiscalSettingsScreen';
 
 import { 
   RootStackParamList, MainTabParamList, DashboardStackParamList, 
@@ -86,6 +90,7 @@ function MoreStackNavigator() {
       <MoreStack.Screen name="Catalog" component={CatalogScreen} />
       <MoreStack.Screen name="Settings" component={SettingsScreen} />
       <MoreStack.Screen name="SubscriptionDetails" component={SubscriptionDetailsScreen} />
+      <MoreStack.Screen name="FiscalSettings" component={FiscalSettingsScreen} />
     </MoreStack.Navigator>
   );
 }
@@ -99,6 +104,7 @@ function MainTabNavigator() {
   const online = useAppStore((state) => state.isOnline);
   const queueLength = useAppStore((state) => state.offlineQueue.length);
   const subscription = useAppStore((state) => state.subscription);
+  const navigation = useNavigation<any>();
 
   const getSubscriptionStatus = () => {
     if (!subscription) return { showWarning: false, isBlocked: false, message: '' };
@@ -166,7 +172,7 @@ function MainTabNavigator() {
               {online ? (
                 <>
                   <Wifi size={10} color="#22c55e" />
-                  <Text style={styles.badgeText}>Online</Text>
+                   <Text style={styles.badgeText}>Online</Text>
                 </>
               ) : (
                 <>
@@ -188,14 +194,12 @@ function MainTabNavigator() {
               {subInfo.message}
             </Text>
           </View>
-          {subscription?.invoiceUrl && (
-            <TouchableOpacity
-              onPress={() => Linking.openURL(subscription.invoiceUrl!)}
-              style={styles.payButton}
-            >
-              <Text style={styles.payButtonText}>PAGAR</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            onPress={() => navigation.navigate('MoreTab', { screen: 'SubscriptionDetails' })}
+            style={styles.payButton}
+          >
+            <Text style={styles.payButtonText}>VER STATUS</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -208,16 +212,15 @@ function MainTabNavigator() {
               {subInfo.message}
             </Text>
           </View>
-          {subscription?.invoiceUrl && (
-            <TouchableOpacity
-              onPress={() => Linking.openURL(subscription.invoiceUrl!)}
-              style={styles.payButtonBlocked}
-            >
-              <Text style={styles.payButtonTextBlocked}>PAGAR</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            onPress={() => navigation.navigate('MoreTab', { screen: 'SubscriptionDetails' })}
+            style={styles.payButtonBlocked}
+          >
+            <Text style={styles.payButtonTextBlocked}>ASSINAR</Text>
+          </TouchableOpacity>
         </View>
       )}
+
 
       <Tab.Navigator
         screenOptions={({ route }) => ({
@@ -253,21 +256,93 @@ function MainTabNavigator() {
           name="ClientsTab"
           component={ClientsStackNavigator}
           options={{ tabBarLabel: 'Clientes' }}
+          listeners={({ navigation }) => ({
+            tabPress: (e) => {
+              e.preventDefault();
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 0,
+                  routes: [
+                    {
+                      name: 'ClientsTab',
+                      state: {
+                        routes: [{ name: 'ClientsList' }],
+                      },
+                    },
+                  ],
+                })
+              );
+            },
+          })}
         />
         <Tab.Screen
           name="OSTab"
           component={OSStackNavigator}
           options={{ tabBarLabel: 'Serviços' }}
+          listeners={({ navigation }) => ({
+            tabPress: (e) => {
+              e.preventDefault();
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 0,
+                  routes: [
+                    {
+                      name: 'OSTab',
+                      state: {
+                        routes: [{ name: 'OSList' }],
+                      },
+                    },
+                  ],
+                })
+              );
+            },
+          })}
         />
         <Tab.Screen
           name="FinanceTab"
           component={FinanceStackNavigator}
           options={{ tabBarLabel: 'Financeiro' }}
+          listeners={({ navigation }) => ({
+            tabPress: (e) => {
+              e.preventDefault();
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 0,
+                  routes: [
+                    {
+                      name: 'FinanceTab',
+                      state: {
+                        routes: [{ name: 'FinanceFlow' }],
+                      },
+                    },
+                  ],
+                })
+              );
+            },
+          })}
         />
         <Tab.Screen
           name="MoreTab"
           component={MoreStackNavigator}
           options={{ tabBarLabel: 'Mais' }}
+          listeners={({ navigation }) => ({
+            tabPress: (e) => {
+              e.preventDefault();
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 0,
+                  routes: [
+                    {
+                      name: 'MoreTab',
+                      state: {
+                        routes: [{ name: 'MoreMenu' }],
+                      },
+                    },
+                  ],
+                })
+              );
+            },
+          })}
         />
       </Tab.Navigator>
     </SafeAreaView>
@@ -301,6 +376,9 @@ function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
     }
 
     setLoading(true);
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
+
     if (isRegister) {
       if (!name || !workshopName) {
         Alert.alert('Erro', 'Preencha seu nome e o nome da oficina.');
@@ -308,12 +386,12 @@ function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
         return;
       }
       const success = await store.signup({
-        name,
-        email,
-        password,
-        workshopName,
-        cnpj,
-        phone,
+        name: name.trim(),
+        email: trimmedEmail,
+        password: trimmedPassword,
+        workshopName: workshopName.trim(),
+        cnpj: cnpj.trim(),
+        phone: phone.trim(),
       });
       if (success) {
         Alert.alert('Sucesso', 'Oficina cadastrada! Faça login para entrar.');
@@ -322,7 +400,7 @@ function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
         Alert.alert('Erro', 'Erro no cadastro. Verifique as informações.');
       }
     } else {
-      const success = await store.login({ email, password });
+      const success = await store.login({ email: trimmedEmail, password: trimmedPassword });
       if (success) {
         onLoginSuccess();
       } else {
@@ -460,13 +538,36 @@ function AppContent() {
 
   useEffect(() => {
     startSyncEngine();
-    if (accessToken) {
+    if (accessToken && user) {
       pullAll();
+      const isExpoGo = Constants.appOwnership === 'expo';
+      if (isExpoGo) {
+        console.log('Skipping RevenueCat initialization: running inside Expo Go');
+      } else {
+        try {
+          // Initialize RevenueCat SDK
+          const REVENUECAT_API_KEY = Platform.select({
+            android: 'goog_placeholder_api_key_mecanicapro',
+            ios: 'appl_placeholder_api_key_mecanicapro',
+            default: '',
+          });
+
+          if (REVENUECAT_API_KEY) {
+            Purchases.configure({ 
+              apiKey: REVENUECAT_API_KEY, 
+              appUserID: user.tenantId 
+            });
+            console.log('RevenueCat initialized for tenantId:', user.tenantId);
+          }
+        } catch (err) {
+          console.error('Failed to initialize RevenueCat Purchases SDK', err);
+        }
+      }
     }
     return () => {
       stopSyncEngine();
     };
-  }, [accessToken]);
+  }, [accessToken, user]);
 
   if (loading) {
     return (

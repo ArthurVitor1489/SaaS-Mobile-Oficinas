@@ -1,30 +1,101 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Linking, ScrollView } from 'react-native';
-import { ArrowLeft, CreditCard, Calendar, ShieldCheck, HelpCircle, ExternalLink } from 'lucide-react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Linking, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { ArrowLeft, CreditCard, Calendar, ShieldCheck, HelpCircle, ExternalLink, RefreshCw } from 'lucide-react-native';
 import { useAppStore } from '../store/useAppStore';
 import { theme } from '../styles/theme';
 import { useNavigation } from '@react-navigation/native';
+import Purchases, { PurchasesPackage } from 'react-native-purchases';
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
 export default function SubscriptionDetailsScreen() {
   const navigation = useNavigation();
   const subscription = useAppStore((state) => state.subscription);
+  const pullAll = useAppStore((state) => state.pullAll);
+
+  const [purchaseLoading, setPurchaseLoading] = useState(false);
+  const [offeringPackage, setOfferingPackage] = useState<PurchasesPackage | null>(null);
+  const [loadingOfferings, setLoadingOfferings] = useState(true);
+
+  const isExpoGo = Constants.appOwnership === 'expo';
+
+  useEffect(() => {
+    if (isExpoGo) {
+      setLoadingOfferings(false);
+      return;
+    }
+    async function loadOfferings() {
+      try {
+        const offerings = await Purchases.getOfferings();
+        if (offerings.current && offerings.current.monthly) {
+          setOfferingPackage(offerings.current.monthly);
+        }
+      } catch (err) {
+        console.warn('Failed to load offerings from RevenueCat', err);
+      } finally {
+        setLoadingOfferings(false);
+      }
+    }
+    loadOfferings();
+  }, []);
+
+  const handleSubscribe = async () => {
+    if (!offeringPackage) {
+      Alert.alert('Erro', 'As informações de faturamento do Google Play estão indisponíveis no momento. Tente novamente mais tarde.');
+      return;
+    }
+    
+    setPurchaseLoading(true);
+    try {
+      const { customerInfo } = await Purchases.purchasePackage(offeringPackage);
+      // Verificar se o entitlement 'premium' está ativo
+      if (customerInfo.entitlements.active['premium'] !== undefined) {
+        Alert.alert('Sucesso', 'Assinatura realizada com sucesso! A liberação é imediata.');
+        await pullAll();
+      }
+    } catch (e: any) {
+      if (!e.userCancelled) {
+        Alert.alert('Erro na compra', e.message || 'Ocorreu um erro ao processar a compra na Google Play.');
+      }
+    } finally {
+      setPurchaseLoading(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    setPurchaseLoading(true);
+    try {
+      const customerInfo = await Purchases.restorePurchases();
+      await pullAll();
+      
+      if (customerInfo.entitlements.active['premium'] !== undefined) {
+        Alert.alert('Sucesso', 'Sua assinatura foi restaurada com sucesso!');
+      } else {
+        Alert.alert('Informação', 'Nenhuma assinatura ativa encontrada na sua conta Google Play.');
+      }
+    } catch (e: any) {
+      Alert.alert('Erro ao restaurar', e.message || 'Ocorreu um erro ao restaurar suas compras.');
+    } finally {
+      setPurchaseLoading(false);
+    }
+  };
 
   const getStatusDetails = () => {
-    if (!subscription) return { label: 'Inativa', color: '#64748b', bg: 'rgba(100, 116, 139, 0.1)' };
+    if (!subscription) return { label: 'Inativa', color: '#64748b', bg: 'rgba(100, 116, 139, 0.1)', isActive: false };
     const { status } = subscription;
 
     switch (status) {
       case 'ACTIVE':
-        return { label: 'Ativa / Paga', color: '#22c55e', bg: 'rgba(34, 197, 94, 0.1)' };
+        return { label: 'Ativa / Paga', color: '#22c55e', bg: 'rgba(34, 197, 94, 0.1)', isActive: true };
       case 'TRIAL':
-        return { label: 'Período de Testes', color: '#f97316', bg: 'rgba(249, 115, 22, 0.1)' };
+        return { label: 'Período de Testes', color: '#f97316', bg: 'rgba(249, 115, 22, 0.1)', isActive: true };
       case 'OVERDUE':
       case 'PENDING':
-        return { label: 'Assinatura Pendente', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)' };
+        return { label: 'Assinatura Pendente', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)', isActive: false };
       case 'CANCELED':
-        return { label: 'Cancelada', color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.1)' };
+        return { label: 'Cancelada', color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.1)', isActive: false };
       default:
-        return { label: status, color: '#3b66ff', bg: 'rgba(59, 102, 255, 0.1)' };
+        return { label: status, color: '#3b66ff', bg: 'rgba(59, 102, 255, 0.1)', isActive: false };
     }
   };
 
@@ -32,6 +103,10 @@ export default function SubscriptionDetailsScreen() {
   const formattedDate = subscription?.dueDate 
     ? new Date(subscription.dueDate).toLocaleDateString('pt-BR') 
     : 'N/A';
+
+  const priceLabel = offeringPackage?.product?.priceString 
+    ? offeringPackage.product.priceString 
+    : 'R$ 99,90';
 
   return (
     <View style={styles.container}>
@@ -44,12 +119,25 @@ export default function SubscriptionDetailsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {isExpoGo && (
+          <View style={styles.expoGoWarning}>
+            <Text style={styles.expoGoWarningTitle}>⚠️ Atenção (Ambiente de Testes)</Text>
+            <Text style={styles.expoGoWarningDesc}>
+              O Expo Go não oferece suporte a compras nativas da Google Play Store (módulos nativos indisponíveis).
+              Para testar o fluxo de assinaturas e pagamentos nativos, utilize o arquivo APK de desenvolvimento:
+            </Text>
+            <Text style={styles.expoGoWarningPath}>
+              mecanicapro-debug.apk
+            </Text>
+          </View>
+        )}
+
         {/* CARD PRINCIPAL */}
         <View style={styles.planCard}>
           <View style={styles.planHeader}>
             <View>
-              <Text style={styles.planTitle}>Plano Básico MecânicaPro</Text>
-              <Text style={styles.planPrice}>R$ 99,90<Text style={styles.planPeriod}> / mês</Text></Text>
+              <Text style={styles.planTitle}>Plano Profissional MecânicaPro</Text>
+              <Text style={styles.planPrice}>{priceLabel}<Text style={styles.planPeriod}> / mês</Text></Text>
             </View>
             <View style={[styles.statusBadge, { backgroundColor: statusInfo.bg }]}>
               <Text style={[styles.statusText, { color: statusInfo.color }]}>{statusInfo.label}</Text>
@@ -75,25 +163,44 @@ export default function SubscriptionDetailsScreen() {
             </View>
             <View>
               <Text style={styles.detailLabel}>Meio de Faturamento</Text>
-              <Text style={styles.detailValue}>PIX / Boleto / Cartão de Crédito</Text>
+              <Text style={styles.detailValue}>Google Play Store</Text>
             </View>
           </View>
 
-          {/* BOTÃO DE PAGAMENTO */}
-          {subscription?.invoiceUrl ? (
-            <TouchableOpacity 
-              style={styles.payButton}
-              onPress={() => Linking.openURL(subscription.invoiceUrl!)}
-            >
-              <Text style={styles.payButtonText}>Ir para Tela de Pagamento</Text>
-              <ExternalLink size={16} color="#fff" style={{ marginLeft: 8 }} />
-            </TouchableOpacity>
-          ) : (
+          {/* BOTÕES DE COMPRA E RESTAURAÇÃO */}
+          {statusInfo.isActive ? (
             <View style={styles.noInvoiceContainer}>
               <ShieldCheck size={18} color="#22c55e" />
-              <Text style={styles.noInvoiceText}>Nenhuma fatura pendente de pagamento.</Text>
+              <Text style={styles.noInvoiceText}>Sua assinatura está ativa e regularizada!</Text>
+            </View>
+          ) : (
+            <View style={{ gap: 12 }}>
+              <TouchableOpacity 
+                style={styles.payButton}
+                onPress={handleSubscribe}
+                disabled={purchaseLoading || loadingOfferings}
+              >
+                {purchaseLoading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Text style={styles.payButtonText}>Assinar Agora com Google Play</Text>
+                    <ExternalLink size={16} color="#fff" style={{ marginLeft: 8 }} />
+                  </>
+                )}
+              </TouchableOpacity>
             </View>
           )}
+
+          {/* Botão de Restaurar compras sempre visível para suporte de diretrizes */}
+          <TouchableOpacity 
+            style={[styles.restoreButton, { marginTop: statusInfo.isActive ? 16 : 12 }]}
+            onPress={handleRestore}
+            disabled={purchaseLoading}
+          >
+            <RefreshCw size={14} color="#64748b" style={{ marginRight: 6 }} />
+            <Text style={styles.restoreButtonText}>Restaurar Assinatura Google Play</Text>
+          </TouchableOpacity>
         </View>
 
         {/* SEÇÃO INFORMATIVA / FAQ */}
@@ -243,6 +350,21 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#fff',
   },
+  restoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: '#334155',
+    borderRadius: 10,
+  },
+  restoreButtonText: {
+    color: '#94a3b8',
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
   noInvoiceContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -292,5 +414,31 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     lineHeight: 18,
     paddingLeft: 24,
+  },
+  expoGoWarning: {
+    backgroundColor: 'rgba(234, 179, 8, 0.1)',
+    borderRadius: theme.roundness.md,
+    borderWidth: 1.5,
+    borderColor: '#eab308',
+    padding: 16,
+    marginBottom: 16,
+  },
+  expoGoWarningTitle: {
+    color: '#eab308',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 6,
+  },
+  expoGoWarningDesc: {
+    color: '#94a3b8',
+    fontSize: 11,
+    lineHeight: 16,
+  },
+  expoGoWarningPath: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: 'bold',
+    marginTop: 6,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
 });

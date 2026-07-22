@@ -12,6 +12,7 @@ import { PartsModule } from './modules/parts/parts.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { SubscriptionModule } from './modules/subscription/subscription.module';
+import { FiscalModule } from './modules/fiscal/fiscal.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { SubscriptionModule } from './modules/subscription/subscription.module';
     OrdersModule,
     FinanceModule,
     SubscriptionModule,
+    FiscalModule,
   ],
   controllers: [AppController],
   providers: [AppService],

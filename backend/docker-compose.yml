@@ -31,7 +31,9 @@ services:
       - JWT_REFRESH_EXPIRES_IN=7d
       - ASAAS_API_URL=https://sandbox.asaas.com/api/v3
       - ASAAS_API_KEY=$aae$v3$mockkeyvalue_for_saas_oficina_2026
+      - REVENUECAT_WEBHOOK_TOKEN=rc_webhook_secret_mecanicapro_2026
     depends_on:
+
       - db
 
 volumes:

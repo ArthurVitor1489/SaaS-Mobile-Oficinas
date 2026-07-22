@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { ChevronRight, Tag, Settings, Wifi, LogOut, CreditCard } from 'lucide-react-native';
+import { ChevronRight, Tag, Settings, Wifi, LogOut, CreditCard, FileText } from 'lucide-react-native';
 import { useDatabase } from '../context/DatabaseContext';
 import { theme } from '../styles/theme';
 import { useNavigation } from '@react-navigation/native';
@@ -66,6 +66,22 @@ export default function MoreMenuScreen() {
             <View>
               <Text style={styles.menuItemTitle}>Minha Assinatura</Text>
               <Text style={styles.menuItemSubtitle}>Status do plano e faturamento</Text>
+            </View>
+          </View>
+          <ChevronRight size={18} color="#64748b" />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => navigation.navigate('FiscalSettings')}
+          style={styles.menuItem}
+        >
+          <View style={styles.menuItemLeft}>
+            <View style={[styles.iconBg, { backgroundColor: 'rgba(234, 179, 8, 0.1)' }]}>
+              <FileText size={18} color="#eab308" />
+            </View>
+            <View>
+              <Text style={styles.menuItemTitle}>Configurações Fiscais</Text>
+              <Text style={styles.menuItemSubtitle}>Certificado A1 e dados fiscais</Text>
             </View>
           </View>
           <ChevronRight size={18} color="#64748b" />

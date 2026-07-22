@@ -2,6 +2,7 @@
   "expo": {
     "name": "MecânicaPro",
     "slug": "mecanicapro-mobile",
+    "icon": "./assets/icon.jpg",
     "version": "1.0.0",
     "orientation": "portrait",
     "splash": {

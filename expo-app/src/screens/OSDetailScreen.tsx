@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Modal, Alert, StyleSheet, Platform } from 'react-native';
-import { ArrowLeft, Edit2, PenTool, FileText, DollarSign, X, Check, Trash2 } from 'lucide-react-native';
+import React, { useMemo, useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Modal, Alert, StyleSheet, Platform, Linking, ActivityIndicator } from 'react-native';
+import { ArrowLeft, Edit2, PenTool, FileText, DollarSign, X, Check, Trash2, ExternalLink, RefreshCw } from 'lucide-react-native';
 import { SvgXml } from 'react-native-svg';
 import { useDatabase } from '../context/DatabaseContext';
 import { theme } from '../styles/theme';
@@ -11,6 +11,7 @@ import * as Sharing from 'expo-sharing';
 import OSWizardModal from '../components/OSWizardModal';
 import SignaturePad from '../components/SignaturePad';
 import { WorkOrder, OSStatus, PaymentMethod } from '../types';
+import api from '../services/api';
 
 export default function OSDetailScreen() {
   const navigation = useNavigation<any>();
@@ -37,6 +38,9 @@ export default function OSDetailScreen() {
   const [signingOS, setSigningOS] = useState(false);
   const [showBillingPanel, setShowBillingPanel] = useState(false);
 
+  const [fiscalInvoices, setFiscalInvoices] = useState<any[]>([]);
+  const [fiscalLoading, setFiscalLoading] = useState(false);
+
   const [billingForm, setBillingForm] = useState<{ paymentMethod: PaymentMethod; installmentsCount: string }>({
     paymentMethod: 'PIX',
     installmentsCount: '1',
@@ -52,7 +56,15 @@ export default function OSDetailScreen() {
     return (
       <View style={[styles.screenContainer, { justifyContent: 'center', alignItems: 'center' }]}>
         <Text style={{ color: theme.colors.textMuted }}>Ordem de serviço não encontrada.</Text>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backButton, { marginTop: 12 }]}>
+        <TouchableOpacity 
+          onPress={() => {
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'OSList' }],
+            });
+          }} 
+          style={[styles.backButton, { marginTop: 12 }]}
+        >
           <Text style={styles.backButtonText}>Voltar</Text>
         </TouchableOpacity>
       </View>
@@ -62,6 +74,35 @@ export default function OSDetailScreen() {
   const client = clientMap.get(os.clientId);
   const vehicle = vehicleMap.get(os.vehicleId);
   const billing = billingMap.get(os.id);
+
+  const fetchFiscalInvoices = async () => {
+    try {
+      const res = await api.get(`/fiscal/invoices/${os.id}`);
+      setFiscalInvoices(res.data || []);
+    } catch (e) {
+      console.warn('Erro ao carregar notas fiscais:', e);
+    }
+  };
+
+  useEffect(() => {
+    if (os.id) {
+      fetchFiscalInvoices();
+    }
+  }, [os.id]);
+
+  const handleEmitInvoice = async () => {
+    setFiscalLoading(true);
+    try {
+      await api.post(`/fiscal/invoice/emit/${os.id}`);
+      Alert.alert('Sucesso', 'Transmissão iniciada! A nota fiscal está sendo processada pela prefeitura/SEFAZ.');
+      await fetchFiscalInvoices();
+    } catch (err: any) {
+      Alert.alert('Erro na Emissão', err.response?.data?.message || 'Falha ao iniciar transmissão.');
+    } finally {
+      setFiscalLoading(false);
+    }
+  };
+
 
   const handleDeleteOS = () => {
     Alert.alert(
@@ -555,7 +596,12 @@ export default function OSDetailScreen() {
       <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
         <View style={styles.screenHeaderOS}>
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={() => {
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'OSList' }],
+            });
+          }}
           style={styles.backButton}
         >
           <ArrowLeft size={20} color={theme.colors.primary} style={styles.backButtonIcon} />
@@ -743,7 +789,83 @@ export default function OSDetailScreen() {
         )}
       </View>
 
+      {/* MÓDULO FISCAL */}
+      {(os.status === 'Concluída' || os.status === 'Entregue') && (
+        <View style={styles.fiscalCard}>
+          <View style={styles.fiscalCardHeader}>
+            <Text style={styles.fiscalCardTitle}>NOTAS FISCAIS ELETRÔNICAS</Text>
+            <TouchableOpacity onPress={fetchFiscalInvoices} style={styles.fiscalRefreshBtn}>
+              <RefreshCw size={14} color={theme.colors.primary} />
+            </TouchableOpacity>
+          </View>
+
+          {fiscalInvoices.length > 0 ? (
+            <View style={styles.invoiceList}>
+              {fiscalInvoices.map((inv) => {
+                const isAuthorized = inv.status === 'AUTORIZADA';
+                const isRejected = inv.status === 'REJEITADA';
+                const isProcessing = inv.status === 'PROCESSANDO';
+
+                return (
+                  <View key={inv.id} style={styles.invoiceRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.invoiceTypeName}>
+                        {inv.type === 'NFSE' ? 'NFS-e (Nota de Serviço)' : 'NF-e (Nota de Peças)'}
+                      </Text>
+                      <Text style={[
+                        styles.invoiceStatusBadge,
+                        isAuthorized && styles.statusAuth,
+                        isRejected && styles.statusRejected,
+                        isProcessing && styles.statusProcessing
+                      ]}>
+                        {inv.status}
+                      </Text>
+                      {isAuthorized && inv.invoiceNumber && (
+                        <Text style={styles.invoiceNumberText}>Número: {inv.invoiceNumber}</Text>
+                      )}
+                      {isRejected && inv.errorMessage && (
+                        <Text style={styles.invoiceErrorText}>{inv.errorMessage}</Text>
+                      )}
+                    </View>
+
+                    {isAuthorized && inv.pdfUrl && (
+                      <TouchableOpacity 
+                        onPress={() => Linking.openURL(inv.pdfUrl)}
+                        style={styles.openInvoiceBtn}
+                      >
+                        <ExternalLink size={16} color="#fff" />
+                        <Text style={styles.openInvoiceBtnText}>Ver PDF</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          ) : (
+            <View style={{ alignItems: 'center', paddingVertical: 10 }}>
+              <Text style={styles.noInvoicesText}>Nenhuma nota fiscal emitida para esta OS.</Text>
+            </View>
+          )}
+
+          {/* Botão de emissão se não houver notas processando/autorizadas */}
+          {!fiscalInvoices.some(i => i.status === 'AUTORIZADA' || i.status === 'PROCESSANDO') && (
+            <TouchableOpacity 
+              onPress={handleEmitInvoice}
+              disabled={fiscalLoading}
+              style={styles.emitInvoiceBtn}
+            >
+              {fiscalLoading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.emitInvoiceBtnText}>Emitir Nota Fiscal (NFS-e / NF-e)</Text>
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
       <OSWizardModal 
+
         visible={osWizardModalVisible}
         editingOSId={os.id}
         initialForm={editingOSForm}
@@ -1354,4 +1476,114 @@ const styles = StyleSheet.create({
   deleteButtonIcon: {
     marginRight: 6,
   },
+  fiscalCard: {
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.roundness.md,
+    borderWidth: 1.5,
+    borderColor: theme.colors.border,
+    padding: 16,
+    marginTop: 16,
+    marginBottom: 16,
+  },
+  fiscalCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  fiscalCardTitle: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: theme.colors.textMuted,
+    letterSpacing: 0.5,
+  },
+  fiscalRefreshBtn: {
+    padding: 4,
+  },
+  invoiceList: {
+    gap: 12,
+    marginBottom: 8,
+  },
+  invoiceRow: {
+    backgroundColor: '#0f1115',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 8,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  invoiceTypeName: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  invoiceStatusBadge: {
+    alignSelf: 'flex-start',
+    fontSize: 10,
+    fontWeight: 'bold',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    color: '#94a3b8',
+    backgroundColor: 'rgba(148, 163, 184, 0.1)',
+  },
+  statusAuth: {
+    color: '#22c55e',
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+  },
+  statusRejected: {
+    color: '#ef4444',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+     overflow: 'hidden',
+  },
+  statusProcessing: {
+    color: '#eab308',
+    backgroundColor: 'rgba(234, 179, 8, 0.1)',
+  },
+  invoiceNumberText: {
+    fontSize: 11,
+    color: theme.colors.textMuted,
+    marginTop: 4,
+  },
+  invoiceErrorText: {
+    fontSize: 11,
+    color: '#ef4444',
+    marginTop: 4,
+    lineHeight: 14,
+  },
+  openInvoiceBtn: {
+    backgroundColor: theme.colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  openInvoiceBtnText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  noInvoicesText: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+  },
+  emitInvoiceBtn: {
+    backgroundColor: '#eab308',
+    height: 44,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  emitInvoiceBtnText: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#000',
+  },
 });
+

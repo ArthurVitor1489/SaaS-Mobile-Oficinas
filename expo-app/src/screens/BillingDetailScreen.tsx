@@ -29,7 +29,15 @@ import {
 } from 'lucide-react-native';
 import { useDatabase } from '../context/DatabaseContext';
 import { theme, useTheme } from '../styles/theme';
-import { formatCurrency, formatDate } from '../utils/formatters';
+import {
+  formatCurrency,
+  formatDate,
+  getTodayBR,
+  maskDate,
+  parseDateToISO,
+  isValidDateBR,
+  addDaysToBRDate
+} from '../utils/formatters';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Billing } from '../types';
 
@@ -106,48 +114,38 @@ export default function BillingDetailScreen() {
   };
 
   const addDaysToCurrentDate = (days: number) => {
-    try {
-      const parts = (editDueDateStr || new Date().toISOString().split('T')[0]).split('-');
-      if (parts.length === 3) {
-        const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-        d.setDate(d.getDate() + days);
-        setEditDueDateStr(d.toISOString().split('T')[0]);
-        return;
-      }
-    } catch (e) {}
-    const d = new Date();
-    d.setDate(d.getDate() + days);
-    setEditDueDateStr(d.toISOString().split('T')[0]);
+    setEditDueDateStr(addDaysToBRDate(editDueDateStr || getTodayBR(), days));
   };
 
   const handleOpenEditDueDate = (installmentNumber: number, currentDueDate: string) => {
     setEditingInstallmentNum(installmentNumber);
-    setEditDueDateStr(currentDueDate);
+    setEditDueDateStr(formatDate(currentDueDate));
     setEditingModalVisible(true);
   };
 
   const handleConfirmUpdateDueDate = async () => {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(editDueDateStr)) {
-      Alert.alert('Data Inválida', 'Informe a data no formato AAAA-MM-DD (ex: 2026-11-20).');
+    if (!isValidDateBR(editDueDateStr)) {
+      Alert.alert('Data Inválida', 'Informe a data no formato DD/MM/AAAA (ex: 22/10/2026).');
       return;
     }
 
+    const isoDate = parseDateToISO(editDueDateStr);
     setUpdatingDate(true);
-    const success = await updateInstallmentDueDate(billing.id, editingInstallmentNum, editDueDateStr);
+    const success = await updateInstallmentDueDate(billing.id, editingInstallmentNum, isoDate);
     setUpdatingDate(false);
 
     if (success) {
       const updatedInstallments = billing.installments.map(i =>
-        i.number === editingInstallmentNum ? { ...i, dueDate: editDueDateStr } : i
+        i.number === editingInstallmentNum ? { ...i, dueDate: isoDate } : i
       );
-      const newMainDueDate = editingInstallmentNum === 1 ? editDueDateStr : billing.dueDate;
+      const newMainDueDate = editingInstallmentNum === 1 ? isoDate : billing.dueDate;
       setLocalBillingState({
         ...billing,
         dueDate: newMainDueDate,
         installments: updatedInstallments,
       });
       setEditingModalVisible(false);
-      Alert.alert('Sucesso', `Data de vencimento da parcela ${editingInstallmentNum} atualizada para ${formatDate(editDueDateStr)}!`);
+      Alert.alert('Sucesso', `Data de vencimento da parcela ${editingInstallmentNum} atualizada para ${formatDate(isoDate)}!`);
     } else {
       Alert.alert('Erro', 'Não foi possível atualizar o vencimento.');
     }
@@ -453,12 +451,14 @@ export default function BillingDetailScreen() {
             </View>
 
             <View style={styles.editModalBody}>
-              <Text style={[styles.editModalLabel, { color: colors.textMuted }]}>Novo Vencimento (AAAA-MM-DD):</Text>
+              <Text style={[styles.editModalLabel, { color: colors.textMuted }]}>Novo Vencimento (DD/MM/AAAA):</Text>
               <TextInput
                 value={editDueDateStr}
-                onChangeText={setEditDueDateStr}
-                placeholder="2026-11-20"
+                onChangeText={t => setEditDueDateStr(maskDate(t))}
+                placeholder="Ex: 22/10/2026"
                 placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
+                keyboardType="numeric"
+                maxLength={10}
                 style={[styles.editModalInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
               />
 
@@ -485,7 +485,7 @@ export default function BillingDetailScreen() {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.editQuickChip, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                  onPress={() => setEditDueDateStr(new Date().toISOString().split('T')[0])}
+                  onPress={() => setEditDueDateStr(getTodayBR())}
                 >
                   <Text style={[styles.editQuickChipText, { color: colors.primary }]}>Hoje</Text>
                 </TouchableOpacity>

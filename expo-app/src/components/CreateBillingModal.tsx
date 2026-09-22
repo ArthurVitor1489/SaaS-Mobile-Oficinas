@@ -11,7 +11,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDatabase } from '../context/DatabaseContext';
 import { theme, useTheme } from '../styles/theme';
 import { PaymentMethod, Installment, BillingStatus } from '../types';
-import { formatCurrency } from '../utils/formatters';
+import {
+  formatCurrency,
+  formatDate,
+  getTodayBR,
+  maskDate,
+  parseDateToISO,
+  isValidDateBR,
+  addDaysToBRDate
+} from '../utils/formatters';
 
 interface CreateBillingModalProps {
   visible: boolean;
@@ -47,7 +55,7 @@ export default function CreateBillingModal({
   // Payment conditions
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('PIX');
   const [installmentsCount, setInstallmentsCount] = useState<number>(1);
-  const [firstDueDate, setFirstDueDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [firstDueDate, setFirstDueDate] = useState<string>(getTodayBR());
   const [isPaidNow, setIsPaidNow] = useState<boolean>(true);
   const [loading, setLoading] = useState(false);
 
@@ -101,51 +109,33 @@ export default function CreateBillingModal({
     return Math.max(0, baseAmount - discount + surcharge);
   }, [baseAmount, discountStr, surchargeStr]);
 
-  // Helper to add N days to a date string YYYY-MM-DD
-  const addDaysStr = (baseDateStr: string, days: number): string => {
-    try {
-      const parts = (baseDateStr || '').split('-');
-      if (parts.length === 3) {
-        const y = parseInt(parts[0], 10);
-        const m = parseInt(parts[1], 10);
-        const d = parseInt(parts[2], 10);
-        const date = new Date(y, m - 1, d);
-        date.setDate(date.getDate() + days);
-        return date.toISOString().split('T')[0];
-      }
-    } catch (e) {}
-    const date = new Date();
-    date.setDate(date.getDate() + days);
-    return date.toISOString().split('T')[0];
-  };
-
   const applyBoletoPreset = (preset: string, total: number = finalAmount) => {
     setBoletoPreset(preset);
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayBR = getTodayBR();
     let dates: string[] = [];
     let firstPaid = false;
 
     switch (preset) {
       case '30d':
-        dates = [addDaysStr(todayStr, 30)];
+        dates = [addDaysToBRDate(todayBR, 30)];
         break;
       case '30_60d':
-        dates = [addDaysStr(todayStr, 30), addDaysStr(todayStr, 60)];
+        dates = [addDaysToBRDate(todayBR, 30), addDaysToBRDate(todayBR, 60)];
         break;
       case '30_60_90d':
-        dates = [addDaysStr(todayStr, 30), addDaysStr(todayStr, 60), addDaysStr(todayStr, 90)];
+        dates = [addDaysToBRDate(todayBR, 30), addDaysToBRDate(todayBR, 60), addDaysToBRDate(todayBR, 90)];
         break;
       case '15_30_45d':
-        dates = [addDaysStr(todayStr, 15), addDaysStr(todayStr, 30), addDaysStr(todayStr, 45)];
+        dates = [addDaysToBRDate(todayBR, 15), addDaysToBRDate(todayBR, 30), addDaysToBRDate(todayBR, 45)];
         break;
       case 'entrada_30_60d':
-        dates = [todayStr, addDaysStr(todayStr, 30), addDaysStr(todayStr, 60)];
+        dates = [todayBR, addDaysToBRDate(todayBR, 30), addDaysToBRDate(todayBR, 60)];
         firstPaid = true;
         break;
       default:
         dates = customInstallments.length > 0
-          ? customInstallments.map(i => i.dueDate)
-          : [addDaysStr(todayStr, 30)];
+          ? customInstallments.map(i => formatDate(i.dueDate))
+          : [addDaysToBRDate(todayBR, 30)];
         break;
     }
 
@@ -183,7 +173,7 @@ export default function CreateBillingModal({
       setIsPaidNow(true);
       setDiscountStr('');
       setSurchargeStr('');
-      setFirstDueDate(new Date().toISOString().split('T')[0]);
+      setFirstDueDate(getTodayBR());
       setCustomInstallments([]);
       setBoletoPreset('30d');
     }
@@ -195,7 +185,8 @@ export default function CreateBillingModal({
       setIsPaidNow(true);
       setInstallmentsCount(1);
     } else if (paymentMethod === 'Crédito') {
-      setIsPaidNow(false);
+      // No cartão de crédito, a adquirente repassa o valor total da venda para a oficina (venda quitada)
+      setIsPaidNow(true);
     } else if (paymentMethod === 'Boleto') {
       setIsPaidNow(false);
       applyBoletoPreset(boletoPreset || '30d', finalAmount);
@@ -219,7 +210,7 @@ export default function CreateBillingModal({
     setCustomInstallments(prev => {
       const copy = [...prev];
       if (copy[index]) {
-        copy[index] = { ...copy[index], dueDate: newDate };
+        copy[index] = { ...copy[index], dueDate: maskDate(newDate) };
       }
       return copy;
     });
@@ -239,8 +230,8 @@ export default function CreateBillingModal({
   };
 
   const handleAddBoleto = () => {
-    const lastDate = customInstallments[customInstallments.length - 1]?.dueDate || new Date().toISOString().split('T')[0];
-    const nextDate = addDaysStr(lastDate, 30);
+    const lastDate = customInstallments[customInstallments.length - 1]?.dueDate || getTodayBR();
+    const nextDate = addDaysToBRDate(lastDate, 30);
     const newCount = customInstallments.length + 1;
     const baseVal = Math.floor((finalAmount / newCount) * 100) / 100;
     const diff = Math.round((finalAmount - baseVal * newCount) * 100) / 100;
@@ -306,25 +297,35 @@ export default function CreateBillingModal({
     const diff = Math.round((finalAmount - (baseVal * count)) * 100) / 100;
 
     const list: Installment[] = [];
-    const [year, month, day] = firstDueDate.split('-').map(Number);
-    const startDate = new Date(year, (month || 1) - 1, day || 1);
+    let startDate: Date;
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(firstDueDate.trim())) {
+      const [day, month, year] = firstDueDate.trim().split('/').map(Number);
+      startDate = new Date(year, (month || 1) - 1, day || 1);
+    } else if (firstDueDate.includes('-')) {
+      const [year, month, day] = firstDueDate.split('-').map(Number);
+      startDate = new Date(year, (month || 1) - 1, day || 1);
+    } else {
+      startDate = new Date();
+    }
 
     for (let i = 1; i <= count; i++) {
       const d = new Date(startDate);
       d.setMonth(d.getMonth() + (i - 1));
       const instAmount = i === count ? (baseVal + diff) : baseVal;
       
-      const isFirstPaid = i === 1 && isPaidNow;
+      // No Cartão de Crédito com repasse total marcado, todas as parcelas são dadas como pagas (adquirente liquida integralmente)
+      const isCardFullPaid = paymentMethod === 'Crédito' && isPaidNow;
+      const isPaid = isCardFullPaid || (i === 1 && isPaidNow);
       list.push({
         number: i,
         amount: instAmount,
         dueDate: d.toISOString().split('T')[0],
-        status: isFirstPaid ? 'Pago' : 'Pendente',
-        paidAt: isFirstPaid ? new Date().toISOString() : undefined,
+        status: isPaid ? 'Pago' : 'Pendente',
+        paidAt: isPaid ? new Date().toISOString() : undefined,
       });
     }
     return list;
-  }, [finalAmount, installmentsCount, firstDueDate, isPaidNow]);
+  }, [finalAmount, installmentsCount, firstDueDate, isPaidNow, paymentMethod]);
 
   const handleSave = async () => {
     if (billingMode === 'os' && !selectedOsId) {
@@ -350,9 +351,9 @@ export default function CreateBillingModal({
     }
 
     if (paymentMethod === 'Boleto') {
-      const hasInvalidDate = effectiveInstallments.some(i => !/^\d{4}-\d{2}-\d{2}$/.test(i.dueDate));
+      const hasInvalidDate = effectiveInstallments.some(i => !isValidDateBR(i.dueDate));
       if (hasInvalidDate) {
-        Alert.alert('Data Inválida', 'Preencha as datas dos boletos no formato AAAA-MM-DD (ex: 2026-10-15).');
+        Alert.alert('Data Inválida', 'Preencha as datas dos boletos no formato DD/MM/AAAA (ex: 15/10/2026).');
         return;
       }
       if (Math.abs(customSumDiff) > 0.05) {
@@ -364,6 +365,11 @@ export default function CreateBillingModal({
       }
     }
 
+    if (paymentMethod === 'Crédito' && !isValidDateBR(firstDueDate)) {
+      Alert.alert('Data Inválida', 'Preencha a data no formato DD/MM/AAAA (ex: 22/09/2026).');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -371,29 +377,42 @@ export default function CreateBillingModal({
       const anyPaid = effectiveInstallments.some(i => i.status === 'Pago');
       const billingStatus: BillingStatus = allPaid ? 'Pago' : anyPaid ? 'Parcialmente pago' : 'Pendente';
 
+      const normalizedInstallments = effectiveInstallments.map(i => ({
+        ...i,
+        dueDate: parseDateToISO(i.dueDate),
+      }));
+
       const billingPayload = {
         osId: billingMode === 'os' ? selectedOsId : 'AVULSO-' + Date.now(),
         amount: finalAmount,
         paymentMethod,
         status: billingStatus,
-        installments: effectiveInstallments,
-        dueDate: effectiveInstallments[0]?.dueDate || firstDueDate,
+        installments: normalizedInstallments,
+        dueDate: normalizedInstallments[0]?.dueDate || parseDateToISO(firstDueDate),
         customClientName: billingMode === 'custom' ? customClientName.trim() : undefined,
         customDescription: billingMode === 'custom' ? customDescription.trim() : undefined,
       };
 
       const newBilling = await addBilling(billingPayload);
 
-      // If marked as paid now or first installment paid, register money entry in transactions flow
+      // Se marcado como recebido ou se primeira parcela foi paga, registra entrada no caixa
       if (isPaidNow || (effectiveInstallments[0] && effectiveInstallments[0].status === 'Pago')) {
-        const paidAmount = effectiveInstallments.length === 1 ? finalAmount : effectiveInstallments[0].amount;
+        // No cartão de crédito com repasse ou pagamento à vista, o valor que entra no caixa é o TOTAL (finalAmount)
+        const paidAmount = (paymentMethod === 'Crédito' && isPaidNow) || effectiveInstallments.length === 1
+          ? finalAmount
+          : (effectiveInstallments[0]?.status === 'Pago' ? effectiveInstallments[0].amount : finalAmount);
+
         const osLabel = currentSelectedOs ? currentSelectedOs.osNumber : 'Balcão';
+        const methodDesc = paymentMethod === 'Crédito' && installmentsCount > 1
+          ? `Cartão de Crédito ${installmentsCount}x - Repasse Integral`
+          : paymentMethod;
+
         await addTransaction({
           type: 'Entrada',
           category: 'Pagamento OS',
           amount: paidAmount,
           date: new Date().toISOString().split('T')[0],
-          description: `Recebimento ${osLabel} (${paymentMethod})`,
+          description: `Recebimento ${osLabel} (${methodDesc})`,
         });
       }
 
@@ -677,12 +696,14 @@ export default function CreateBillingModal({
 
                           {/* Data de Vencimento com TextInput e Chips */}
                           <View style={{ marginTop: 8 }}>
-                            <Text style={styles.fieldSubLabel}>Data de Vencimento (AAAA-MM-DD):</Text>
+                            <Text style={styles.fieldSubLabel}>Data de Vencimento (DD/MM/AAAA):</Text>
                             <TextInput
-                              value={inst.dueDate}
+                              value={formatDate(inst.dueDate)}
                               onChangeText={(text) => handleUpdateInstallmentDueDate(index, text)}
-                              placeholder="2026-10-15"
+                              placeholder="Ex: 15/10/2026"
                               placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
+                              keyboardType="numeric"
+                              maxLength={10}
                               style={styles.boletoDateInput}
                             />
 
@@ -690,31 +711,31 @@ export default function CreateBillingModal({
                             <View style={styles.dateChipsRow}>
                               <TouchableOpacity
                                 style={styles.dateQuickChip}
-                                onPress={() => handleUpdateInstallmentDueDate(index, todayStr)}
+                                onPress={() => handleUpdateInstallmentDueDate(index, getTodayBR())}
                               >
                                 <Text style={styles.dateQuickChipText}>Hoje</Text>
                               </TouchableOpacity>
                               <TouchableOpacity
                                 style={styles.dateQuickChip}
-                                onPress={() => handleUpdateInstallmentDueDate(index, addDaysStr(todayStr, 15))}
+                                onPress={() => handleUpdateInstallmentDueDate(index, addDaysToBRDate(getTodayBR(), 15))}
                               >
                                 <Text style={styles.dateQuickChipText}>+15d</Text>
                               </TouchableOpacity>
                               <TouchableOpacity
                                 style={styles.dateQuickChip}
-                                onPress={() => handleUpdateInstallmentDueDate(index, addDaysStr(todayStr, 30))}
+                                onPress={() => handleUpdateInstallmentDueDate(index, addDaysToBRDate(getTodayBR(), 30))}
                               >
                                 <Text style={styles.dateQuickChipText}>+30d</Text>
                               </TouchableOpacity>
                               <TouchableOpacity
                                 style={styles.dateQuickChip}
-                                onPress={() => handleUpdateInstallmentDueDate(index, addDaysStr(todayStr, 45))}
+                                onPress={() => handleUpdateInstallmentDueDate(index, addDaysToBRDate(getTodayBR(), 45))}
                               >
                                 <Text style={styles.dateQuickChipText}>+45d</Text>
                               </TouchableOpacity>
                               <TouchableOpacity
                                 style={styles.dateQuickChip}
-                                onPress={() => handleUpdateInstallmentDueDate(index, addDaysStr(todayStr, 60))}
+                                onPress={() => handleUpdateInstallmentDueDate(index, addDaysToBRDate(getTodayBR(), 60))}
                               >
                                 <Text style={styles.dateQuickChipText}>+60d</Text>
                               </TouchableOpacity>
@@ -795,23 +816,43 @@ export default function CreateBillingModal({
                     ))}
                   </View>
 
-                  <Text style={styles.fieldLabel}>Vencimento da 1ª Parcela (AAAA-MM-DD)</Text>
+                  <Text style={styles.fieldLabel}>Data da Operação / 1º Vencimento (DD/MM/AAAA)</Text>
                   <TextInput
                     value={firstDueDate}
-                    onChangeText={setFirstDueDate}
-                    placeholder="2026-07-25"
+                    onChangeText={t => setFirstDueDate(maskDate(t))}
+                    placeholder="Ex: 22/09/2026"
                     placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
+                    keyboardType="numeric"
+                    maxLength={10}
                     style={styles.textInput}
                   />
+
+                  {/* SWITCH REPASSE INTEGRAL DO CARTÃO */}
+                  <View style={[styles.switchRow, { marginTop: 4, marginBottom: 12 }]}>
+                    <View style={{ flex: 1, paddingRight: 10 }}>
+                      <Text style={styles.switchTitle}>Repasse integral pelo cartão?</Text>
+                      <Text style={styles.switchDesc}>
+                        A operadora repassa o valor total da venda para o caixa e liquida todas as parcelas.
+                      </Text>
+                    </View>
+                    <Switch
+                      value={isPaidNow}
+                      onValueChange={setIsPaidNow}
+                      trackColor={{ false: colors.border, true: colors.success }}
+                      thumbColor="#fff"
+                    />
+                  </View>
 
                   {/* PREVIEW DAS PARCELAS DE CARTÃO */}
                   {generatedInstallments.length > 0 && (
                     <View style={styles.installmentsPreview}>
-                      <Text style={styles.previewTitle}>Plano de Parcelas Gerado:</Text>
+                      <Text style={styles.previewTitle}>
+                        {isPaidNow ? 'Plano de Parcelas (Quitado pelo Cartão):' : 'Plano de Parcelas a Receber:'}
+                      </Text>
                       {generatedInstallments.map(inst => (
                         <View key={inst.number} style={styles.previewRow}>
                           <Text style={styles.previewInstNum}>Parcela {inst.number}/{generatedInstallments.length}</Text>
-                          <Text style={styles.previewDueDate}>{inst.dueDate}</Text>
+                          <Text style={styles.previewDueDate}>{formatDate(inst.dueDate)}</Text>
                           <Text style={styles.previewAmount}>{formatCurrency(inst.amount)}</Text>
                           <View style={[styles.previewStatus, inst.status === 'Pago' ? styles.statusPaid : styles.statusPending]}>
                             <Text style={styles.previewStatusText}>{inst.status}</Text>

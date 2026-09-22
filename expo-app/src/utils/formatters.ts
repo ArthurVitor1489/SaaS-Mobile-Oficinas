@@ -5,7 +5,9 @@ export const formatCurrency = (val: number | string) => {
 
 export const formatDate = (dateStr: string) => {
   if (!dateStr) return '';
-  // Se for formato AAAA-MM-DD
+  // Se já for DD/MM/AAAA
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) return dateStr;
+  // Se for formato AAAA-MM-DD ou ISO
   if (dateStr.includes('-')) {
     const parts = dateStr.split('T')[0].split('-');
     if (parts.length === 3) {
@@ -13,6 +15,97 @@ export const formatDate = (dateStr: string) => {
     }
   }
   return dateStr;
+};
+
+/**
+ * Retorna a data de hoje no formato brasileiro DD/MM/AAAA
+ */
+export const getTodayBR = (): string => {
+  const d = new Date();
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
+/**
+ * Aplica máscara de data brasileira enquanto o usuário digita (DD/MM/AAAA)
+ */
+export const maskDate = (val: string): string => {
+  const cleaned = val.replace(/\D/g, '').slice(0, 8);
+  if (cleaned.length <= 2) return cleaned;
+  if (cleaned.length <= 4) return `${cleaned.slice(0, 2)}/${cleaned.slice(2)}`;
+  return `${cleaned.slice(0, 2)}/${cleaned.slice(2, 4)}/${cleaned.slice(4)}`;
+};
+
+/**
+ * Converte data DD/MM/AAAA ou ISO para ISO AAAA-MM-DD para armazenamento
+ */
+export const parseDateToISO = (dateStr: string): string => {
+  if (!dateStr) return new Date().toISOString().split('T')[0];
+  const trimmed = dateStr.trim();
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(trimmed)) {
+    const [day, month, year] = trimmed.split('/');
+    return `${year}-${month}-${day}`;
+  }
+  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+    return trimmed.split('T')[0];
+  }
+  return trimmed;
+};
+
+/**
+ * Valida se uma string representa uma data válida no formato DD/MM/AAAA (ou AAAA-MM-DD)
+ */
+export const isValidDateBR = (dateStr: string): boolean => {
+  if (!dateStr) return false;
+  const trimmed = dateStr.trim();
+  
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(trimmed)) {
+    const [dayStr, monthStr, yearStr] = trimmed.split('/');
+    const day = parseInt(dayStr, 10);
+    const month = parseInt(monthStr, 10);
+    const year = parseInt(yearStr, 10);
+    if (month < 1 || month > 12) return false;
+    if (year < 1900 || year > 2100) return false;
+    const daysInMonth = new Date(year, month, 0).getDate();
+    return day >= 1 && day <= daysInMonth;
+  }
+  
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    const [yearStr, monthStr, dayStr] = trimmed.split('-');
+    const day = parseInt(dayStr, 10);
+    const month = parseInt(monthStr, 10);
+    const year = parseInt(yearStr, 10);
+    if (month < 1 || month > 12) return false;
+    if (year < 1900 || year > 2100) return false;
+    const daysInMonth = new Date(year, month, 0).getDate();
+    return day >= 1 && day <= daysInMonth;
+  }
+  
+  return false;
+};
+
+/**
+ * Adiciona dias a uma data (aceita DD/MM/AAAA ou ISO) e retorna no formato DD/MM/AAAA
+ */
+export const addDaysToBRDate = (baseDateStr: string, days: number): string => {
+  let date: Date;
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(baseDateStr)) {
+    const [d, m, y] = baseDateStr.split('/').map(Number);
+    date = new Date(y, m - 1, d);
+  } else if (baseDateStr && baseDateStr.includes('-')) {
+    const [y, m, d] = baseDateStr.split('T')[0].split('-').map(Number);
+    date = new Date(y, m - 1, d);
+  } else {
+    date = new Date();
+  }
+  
+  date.setDate(date.getDate() + days);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
 };
 
 export const formatPhone = (phone: string) => {

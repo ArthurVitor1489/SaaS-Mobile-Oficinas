@@ -7,7 +7,7 @@ import { X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme, useTheme } from '../styles/theme';
 import { TransactionCategory } from '../types';
-import { containsInjection } from '../utils/formatters';
+import { containsInjection, getTodayBR, maskDate, parseDateToISO, isValidDateBR } from '../utils/formatters';
 
 interface ExpenseForm {
   description: string;
@@ -22,7 +22,7 @@ interface ExpenseModalProps {
   onSubmit: (form: ExpenseForm) => Promise<boolean>;
 }
 
-const getTodayString = () => new Date().toISOString().split('T')[0];
+const getTodayString = () => getTodayBR();
 
 const emptyForm = (): ExpenseForm => ({
   description: '',
@@ -64,10 +64,9 @@ export default function ExpenseModal({
       return;
     }
 
-    // Validar formato de data simples AAAA-MM-DD
-    const datePattern = /^\d{4}-\d{2}-\d{2}$/;
-    if (!datePattern.test(form.date.trim())) {
-      Alert.alert('Erro', 'Por favor, informe a data no formato AAAA-MM-DD (ex: 2026-06-03).');
+    // Validar formato de data brasileira DD/MM/AAAA
+    if (!isValidDateBR(form.date.trim())) {
+      Alert.alert('Data Inválida', 'Por favor, informe uma data válida no formato DD/MM/AAAA (ex: 22/09/2026).');
       return;
     }
 
@@ -86,7 +85,7 @@ export default function ExpenseModal({
         ...form,
         amount: value.toString(),
         description: form.description.trim(),
-        date: form.date.trim(),
+        date: parseDateToISO(form.date.trim()),
       });
       if (success) {
         handleClose();
@@ -138,12 +137,13 @@ export default function ExpenseModal({
               style={inputStyle}
             />
 
-            <Text style={labelStyle}>Data do Pagamento (AAAA-MM-DD) *</Text>
+            <Text style={labelStyle}>Data do Pagamento (DD/MM/AAAA) *</Text>
             <TextInput
-              placeholder="Ex: 2026-06-03"
+              placeholder="Ex: 22/09/2026"
               placeholderTextColor={placeholderColor}
+              keyboardType="numeric"
               value={form.date}
-              onChangeText={t => setForm(prev => ({ ...prev, date: t }))}
+              onChangeText={t => setForm(prev => ({ ...prev, date: maskDate(t) }))}
               maxLength={10}
               style={inputStyle}
             />

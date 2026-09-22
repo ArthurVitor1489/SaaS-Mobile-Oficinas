@@ -9,7 +9,7 @@ import {
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDatabase } from '../context/DatabaseContext';
-import { theme } from '../styles/theme';
+import { theme, useTheme } from '../styles/theme';
 import { PaymentMethod, Installment, BillingStatus } from '../types';
 import { formatCurrency } from '../utils/formatters';
 
@@ -26,6 +26,8 @@ export default function CreateBillingModal({
   onSuccess,
   preselectedOsId,
 }: CreateBillingModalProps) {
+  const { colors, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const insets = useSafeAreaInsets();
   const { workOrders, clients, vehicles, billings, addBilling, addTransaction } = useDatabase();
 
@@ -426,7 +428,7 @@ export default function CreateBillingModal({
               <Text style={styles.modalSubtitle}>Faturamento de pedido ou venda avulsa</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <X size={20} color="#94a3b8" />
+              <X size={20} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
 
@@ -437,7 +439,7 @@ export default function CreateBillingModal({
                 style={[styles.modeToggleBtn, billingMode === 'os' && styles.modeToggleBtnActive]}
                 onPress={() => setBillingMode('os')}
               >
-                <FileText size={16} color={billingMode === 'os' ? '#fff' : '#64748b'} style={{ marginRight: 6 }} />
+                <FileText size={16} color={billingMode === 'os' ? '#fff' : colors.textMuted} style={{ marginRight: 6 }} />
                 <Text style={[styles.modeToggleText, billingMode === 'os' && styles.modeToggleTextActive]}>
                   Ordem de Serviço (OS)
                 </Text>
@@ -447,7 +449,7 @@ export default function CreateBillingModal({
                 style={[styles.modeToggleBtn, billingMode === 'custom' && styles.modeToggleBtnActive]}
                 onPress={() => setBillingMode('custom')}
               >
-                <DollarSign size={16} color={billingMode === 'custom' ? '#fff' : '#64748b'} style={{ marginRight: 6 }} />
+                <DollarSign size={16} color={billingMode === 'custom' ? '#fff' : colors.textMuted} style={{ marginRight: 6 }} />
                 <Text style={[styles.modeToggleText, billingMode === 'custom' && styles.modeToggleTextActive]}>
                   Venda Avulsa / Balcão
                 </Text>
@@ -468,12 +470,12 @@ export default function CreateBillingModal({
                 ) : (
                   <>
                     <View style={styles.searchBar}>
-                      <Search size={14} color="#64748b" style={{ marginRight: 8 }} />
+                      <Search size={14} color={colors.textMuted} style={{ marginRight: 8 }} />
                       <TextInput
                         value={osSearch}
                         onChangeText={setOsSearch}
                         placeholder="Buscar por OS, cliente ou placa..."
-                        placeholderTextColor="#64748b"
+                        placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
                         style={styles.searchInput}
                       />
                     </View>
@@ -491,10 +493,10 @@ export default function CreateBillingModal({
                             onPress={() => setSelectedOsId(os.id)}
                           >
                             <View style={styles.osCardSelectHeader}>
-                              <Text style={[styles.osCardSelectNum, isSelected && { color: '#3b66ff' }]}>
+                              <Text style={[styles.osCardSelectNum, isSelected && { color: colors.primary }]}>
                                 {os.osNumber}
                               </Text>
-                              {isSelected && <Check size={14} color="#3b66ff" />}
+                              {isSelected && <Check size={14} color={colors.primary} />}
                             </View>
                             <Text style={styles.osCardSelectClient} numberOfLines={1}>
                               {client ? client.name : 'Cliente'}
@@ -522,7 +524,7 @@ export default function CreateBillingModal({
                   value={customClientName}
                   onChangeText={setCustomClientName}
                   placeholder="Ex: João Silva ou Cliente Balcão"
-                  placeholderTextColor="#64748b"
+                  placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
                   style={styles.textInput}
                 />
 
@@ -531,7 +533,7 @@ export default function CreateBillingModal({
                   value={customDescription}
                   onChangeText={setCustomDescription}
                   placeholder="Ex: 4L Óleo Motul + 1 Filtro de óleo"
-                  placeholderTextColor="#64748b"
+                  placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
                   style={styles.textInput}
                 />
 
@@ -540,7 +542,7 @@ export default function CreateBillingModal({
                   value={customAmountStr}
                   onChangeText={setCustomAmountStr}
                   placeholder="0,00"
-                  placeholderTextColor="#64748b"
+                  placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
                   keyboardType="numeric"
                   style={styles.textInput}
                 />
@@ -563,7 +565,7 @@ export default function CreateBillingModal({
                     value={discountStr}
                     onChangeText={setDiscountStr}
                     placeholder="0,00"
-                    placeholderTextColor="#64748b"
+                    placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
                     keyboardType="numeric"
                     style={styles.textInput}
                   />
@@ -575,7 +577,7 @@ export default function CreateBillingModal({
                     value={surchargeStr}
                     onChangeText={setSurchargeStr}
                     placeholder="0,00"
-                    placeholderTextColor="#64748b"
+                    placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
                     keyboardType="numeric"
                     style={styles.textInput}
                   />
@@ -614,7 +616,7 @@ export default function CreateBillingModal({
                 <View style={styles.boletoSection}>
                   <View style={styles.boletoSectionHeader}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Calendar size={16} color="#3b66ff" />
+                      <Calendar size={16} color={colors.primary} />
                       <Text style={styles.boletoSectionTitle}>Vencimentos dos Boletos</Text>
                     </View>
                     <Text style={styles.boletoSectionSubtitle}>Escolha um prazo comum ou personalize cada data abaixo</Text>
@@ -668,7 +670,7 @@ export default function CreateBillingModal({
                                 onPress={() => handleRemoveBoleto(index)}
                                 style={styles.removeBoletoBtn}
                               >
-                                <Trash2 size={16} color="#ef4444" />
+                                <Trash2 size={16} color={colors.error} />
                               </TouchableOpacity>
                             )}
                           </View>
@@ -680,7 +682,7 @@ export default function CreateBillingModal({
                               value={inst.dueDate}
                               onChangeText={(text) => handleUpdateInstallmentDueDate(index, text)}
                               placeholder="2026-10-15"
-                              placeholderTextColor="#64748b"
+                              placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
                               style={styles.boletoDateInput}
                             />
 
@@ -727,7 +729,7 @@ export default function CreateBillingModal({
                               onChangeText={(text) => handleUpdateInstallmentAmount(index, text)}
                               keyboardType="numeric"
                               placeholder="0.00"
-                              placeholderTextColor="#64748b"
+                              placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
                               style={styles.boletoAmountInput}
                             />
                           </View>
@@ -742,7 +744,7 @@ export default function CreateBillingModal({
                       style={styles.addBoletoBtn}
                       onPress={handleAddBoleto}
                     >
-                      <Plus size={16} color="#3b66ff" />
+                      <Plus size={16} color={colors.primary} />
                       <Text style={styles.addBoletoBtnText}>+ Adicionar Outro Boleto</Text>
                     </TouchableOpacity>
 
@@ -751,7 +753,7 @@ export default function CreateBillingModal({
                         style={styles.balanceBtn}
                         onPress={balanceInstallmentAmounts}
                       >
-                        <RefreshCw size={14} color="#f59e0b" />
+                        <RefreshCw size={14} color={colors.warning} />
                         <Text style={styles.balanceBtnText}>Equilibrar Valores</Text>
                       </TouchableOpacity>
                     )}
@@ -798,7 +800,7 @@ export default function CreateBillingModal({
                     value={firstDueDate}
                     onChangeText={setFirstDueDate}
                     placeholder="2026-07-25"
-                    placeholderTextColor="#64748b"
+                    placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
                     style={styles.textInput}
                   />
 
@@ -831,7 +833,7 @@ export default function CreateBillingModal({
                   <Switch
                     value={isPaidNow}
                     onValueChange={setIsPaidNow}
-                    trackColor={{ false: '#1e293b', true: '#22c55e' }}
+                    trackColor={{ false: colors.border, true: colors.success }}
                     thumbColor="#fff"
                   />
                 </View>
@@ -857,579 +859,584 @@ export default function CreateBillingModal({
   );
 }
 
-const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    backgroundColor: '#090b0f',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    borderWidth: 1,
-    borderColor: '#1e293b',
-    maxHeight: '92%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1e293b',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  modalSubtitle: {
-    fontSize: 12,
-    color: '#64748b',
-    marginTop: 2,
-  },
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#181c24',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalBody: {
-    padding: 20,
-  },
-  modeToggleContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#131720',
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#1e293b',
-  },
-  modeToggleBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  modeToggleBtnActive: {
-    backgroundColor: '#3b66ff',
-  },
-  modeToggleText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#64748b',
-  },
-  modeToggleTextActive: {
-    color: '#fff',
-  },
-  sectionCard: {
-    backgroundColor: '#0f131a',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#1e293b',
-    padding: 16,
-    marginBottom: 16,
-  },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: '900',
-    color: '#64748b',
-    letterSpacing: 1,
-    marginBottom: 12,
-  },
-  emptyWarning: {
-    padding: 16,
-    backgroundColor: 'rgba(239, 68, 68, 0.08)',
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  emptyWarningText: {
-    fontSize: 12,
-    color: '#ef4444',
-    textAlign: 'center',
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#181c24',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    height: 40,
-    borderWidth: 1,
-    borderColor: '#242d3d',
-    marginBottom: 12,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 13,
-    color: '#fff',
-  },
-  osScroll: {
-    flexDirection: 'row',
-    marginBottom: 4,
-  },
-  osCardSelect: {
-    width: 170,
-    backgroundColor: '#181c24',
-    borderRadius: 12,
-    padding: 12,
-    marginRight: 10,
-    borderWidth: 1.5,
-    borderColor: '#242d3d',
-  },
-  osCardSelectActive: {
-    borderColor: '#3b66ff',
-    backgroundColor: 'rgba(59, 102, 255, 0.08)',
-  },
-  osCardSelectHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  osCardSelectNum: {
-    fontSize: 13,
-    fontWeight: '900',
-    color: '#fff',
-  },
-  osCardSelectClient: {
-    fontSize: 12,
-    color: '#cbd5e1',
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  osCardSelectVehicle: {
-    fontSize: 10,
-    color: '#64748b',
-    marginBottom: 8,
-  },
-  osCardSelectTotal: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#22c55e',
-  },
-  fieldLabel: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    color: '#94a3b8',
-    marginBottom: 6,
-  },
-  textInput: {
-    backgroundColor: '#181c24',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#242d3d',
-    color: '#fff',
-    paddingHorizontal: 12,
-    height: 44,
-    fontSize: 14,
-    marginBottom: 12,
-  },
-  amountSummaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1e293b',
-    marginBottom: 12,
-  },
-  summaryLabel: {
-    fontSize: 13,
-    color: '#94a3b8',
-  },
-  summaryValue: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  adjustRow: {
-    flexDirection: 'row',
-  },
-  totalFinalBox: {
-    backgroundColor: 'rgba(34, 197, 94, 0.08)',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.25)',
-    padding: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  totalFinalLabel: {
-    fontSize: 11,
-    fontWeight: '900',
-    color: '#22c55e',
-  },
-  totalFinalVal: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#22c55e',
-  },
-  paymentMethodsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
-  },
-  pmBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: '#181c24',
-    borderWidth: 1,
-    borderColor: '#242d3d',
-  },
-  pmBtnActive: {
-    borderColor: '#3b66ff',
-    backgroundColor: 'rgba(59, 102, 255, 0.15)',
-  },
-  pmBtnText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#94a3b8',
-  },
-  pmBtnTextActive: {
-    color: '#3b66ff',
-  },
-  installmentsConfig: {
-    marginBottom: 12,
-  },
-  installmentsPicker: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 14,
-  },
-  instNumBtn: {
-    width: 44,
-    height: 38,
-    borderRadius: 8,
-    backgroundColor: '#181c24',
-    borderWidth: 1,
-    borderColor: '#242d3d',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  instNumBtnActive: {
-    backgroundColor: '#3b66ff',
-    borderColor: '#3b66ff',
-  },
-  instNumText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#94a3b8',
-  },
-  instNumTextActive: {
-    color: '#fff',
-  },
-  switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#181c24',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 14,
-  },
-  switchTitle: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  switchDesc: {
-    fontSize: 11,
-    color: '#64748b',
-    marginTop: 2,
-  },
-  installmentsPreview: {
-    marginTop: 10,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#1e293b',
-  },
-  previewTitle: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#cbd5e1',
-    marginBottom: 8,
-  },
-  previewRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  previewInstNum: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    color: '#94a3b8',
-    width: 80,
-  },
-  previewDueDate: {
-    fontSize: 11,
-    color: '#64748b',
-    flex: 1,
-    textAlign: 'center',
-  },
-  previewAmount: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginRight: 8,
-  },
-  previewStatus: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  statusPaid: {
-    backgroundColor: 'rgba(34, 197, 94, 0.15)',
-  },
-  statusPending: {
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-  },
-  previewStatusText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  // BOLETOS STYLES
-  boletoSection: {
-    backgroundColor: '#121620',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#242e42',
-    padding: 14,
-    marginBottom: 16,
-  },
-  boletoSectionHeader: {
-    marginBottom: 12,
-  },
-  boletoSectionTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  boletoSectionSubtitle: {
-    fontSize: 11,
-    color: '#64748b',
-    marginTop: 2,
-  },
-  presetsScroll: {
-    flexDirection: 'row',
-    marginBottom: 14,
-  },
-  presetChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
-    backgroundColor: '#181e2b',
-    borderWidth: 1,
-    borderColor: '#2a364d',
-    marginRight: 8,
-  },
-  presetChipActive: {
-    backgroundColor: 'rgba(59, 102, 255, 0.2)',
-    borderColor: '#3b66ff',
-  },
-  presetChipText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#94a3b8',
-  },
-  presetChipTextActive: {
-    color: '#3b66ff',
-  },
-  boletosList: {
-    gap: 12,
-  },
-  boletoCard: {
-    backgroundColor: '#171d2a',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#222d42',
-    padding: 12,
-  },
-  boletoCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  boletoIndexBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(59, 102, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  boletoIndexBadgeText: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    color: '#3b66ff',
-  },
-  boletoCardTitle: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  instPaidBadge: {
-    backgroundColor: 'rgba(34, 197, 94, 0.15)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  instPaidBadgeText: {
-    fontSize: 9,
-    fontWeight: 'bold',
-    color: '#22c55e',
-  },
-  removeBoletoBtn: {
-    padding: 6,
-    borderRadius: 6,
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
-  },
-  fieldSubLabel: {
-    fontSize: 11,
-    color: '#94a3b8',
-    marginBottom: 4,
-    fontWeight: '600',
-  },
-  boletoDateInput: {
-    backgroundColor: '#0f131c',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#26334a',
-    color: '#fff',
-    paddingHorizontal: 10,
-    height: 38,
-    fontSize: 13,
-    fontWeight: 'bold',
-  },
-  dateChipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 6,
-  },
-  dateQuickChip: {
-    backgroundColor: '#1e2638',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#2d3b55',
-  },
-  dateQuickChipText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#93c5fd',
-  },
-  boletoAmountInput: {
-    backgroundColor: '#0f131c',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#26334a',
-    color: '#22c55e',
-    paddingHorizontal: 10,
-    height: 38,
-    fontSize: 14,
-    fontWeight: '900',
-  },
-  boletoActionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 12,
-    gap: 8,
-  },
-  addBoletoBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(59, 102, 255, 0.12)',
-    borderWidth: 1,
-    borderColor: '#3b66ff',
-    borderRadius: 8,
-    paddingVertical: 10,
-  },
-  addBoletoBtnText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#3b66ff',
-  },
-  balanceBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(245, 158, 11, 0.12)',
-    borderWidth: 1,
-    borderColor: '#f59e0b',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  balanceBtnText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#f59e0b',
-  },
-  sumValidationBox: {
-    marginTop: 12,
-    borderRadius: 8,
-    padding: 10,
-    borderWidth: 1,
-  },
-  sumValidBox: {
-    backgroundColor: 'rgba(34, 197, 94, 0.08)',
-    borderColor: 'rgba(34, 197, 94, 0.25)',
-  },
-  sumInvalidBox: {
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-    borderColor: 'rgba(245, 158, 11, 0.3)',
-  },
-  sumValidationText: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  sumValidText: {
-    color: '#22c55e',
-  },
-  sumInvalidText: {
-    color: '#f59e0b',
-  },
-  modalFooter: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#1e293b',
-  },
-  submitBtn: {
-    backgroundColor: '#22c55e',
-    borderRadius: 12,
-    height: 52,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  submitBtnText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#fff',
-    letterSpacing: 0.5,
-  },
-});
+const getStyles = (colors: any, isDark: boolean) =>
+  StyleSheet.create({
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.75)',
+      justifyContent: 'flex-end',
+    },
+    modalSheet: {
+      backgroundColor: colors.card,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      borderWidth: 1,
+      borderColor: colors.border,
+      maxHeight: '92%',
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingVertical: 18,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: colors.text,
+    },
+    modalSubtitle: {
+      fontSize: 12,
+      color: colors.textMuted,
+      marginTop: 2,
+    },
+    closeBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.cardSecondary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalBody: {
+      padding: 20,
+    },
+    modeToggleContainer: {
+      flexDirection: 'row',
+      backgroundColor: colors.cardSecondary,
+      borderRadius: 12,
+      padding: 4,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    modeToggleBtn: {
+      flex: 1,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingVertical: 10,
+      borderRadius: 8,
+    },
+    modeToggleBtnActive: {
+      backgroundColor: colors.primary,
+    },
+    modeToggleText: {
+      fontSize: 12,
+      fontWeight: 'bold',
+      color: colors.textMuted,
+    },
+    modeToggleTextActive: {
+      color: '#fff',
+    },
+    sectionCard: {
+      backgroundColor: isDark ? '#0f131a' : colors.cardSecondary,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 16,
+      marginBottom: 16,
+    },
+    sectionLabel: {
+      fontSize: 11,
+      fontWeight: '900',
+      color: colors.textMuted,
+      letterSpacing: 1,
+      marginBottom: 12,
+    },
+    emptyWarning: {
+      padding: 16,
+      backgroundColor: isDark ? 'rgba(239, 68, 68, 0.08)' : '#fef2f2',
+      borderRadius: 10,
+      alignItems: 'center',
+      borderWidth: isDark ? 0 : 1,
+      borderColor: isDark ? 'transparent' : '#fecaca',
+    },
+    emptyWarningText: {
+      fontSize: 12,
+      color: colors.error,
+      textAlign: 'center',
+    },
+    searchBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      height: 40,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 12,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 13,
+      color: colors.text,
+    },
+    osScroll: {
+      flexDirection: 'row',
+      marginBottom: 4,
+    },
+    osCardSelect: {
+      width: 170,
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 12,
+      marginRight: 10,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+    },
+    osCardSelectActive: {
+      borderColor: colors.primary,
+      backgroundColor: isDark ? 'rgba(59, 102, 255, 0.08)' : '#eff6ff',
+    },
+    osCardSelectHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 4,
+    },
+    osCardSelectNum: {
+      fontSize: 13,
+      fontWeight: '900',
+      color: colors.text,
+    },
+    osCardSelectClient: {
+      fontSize: 12,
+      color: colors.text,
+      fontWeight: '600',
+      marginBottom: 2,
+    },
+    osCardSelectVehicle: {
+      fontSize: 10,
+      color: colors.textMuted,
+      marginBottom: 8,
+    },
+    osCardSelectTotal: {
+      fontSize: 14,
+      fontWeight: 'bold',
+      color: colors.success,
+    },
+    fieldLabel: {
+      fontSize: 11,
+      fontWeight: 'bold',
+      color: colors.textMuted,
+      marginBottom: 6,
+    },
+    textInput: {
+      backgroundColor: colors.surface,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+      color: colors.text,
+      paddingHorizontal: 12,
+      height: 44,
+      fontSize: 14,
+      marginBottom: 12,
+    },
+    amountSummaryRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingBottom: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      marginBottom: 12,
+    },
+    summaryLabel: {
+      fontSize: 13,
+      color: colors.textMuted,
+    },
+    summaryValue: {
+      fontSize: 15,
+      fontWeight: 'bold',
+      color: colors.text,
+    },
+    adjustRow: {
+      flexDirection: 'row',
+    },
+    totalFinalBox: {
+      backgroundColor: isDark ? 'rgba(34, 197, 94, 0.08)' : '#f0fdf4',
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(34, 197, 94, 0.25)' : '#bbf7d0',
+      padding: 12,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: 4,
+    },
+    totalFinalLabel: {
+      fontSize: 11,
+      fontWeight: '900',
+      color: colors.success,
+    },
+    totalFinalVal: {
+      fontSize: 18,
+      fontWeight: '900',
+      color: colors.success,
+    },
+    paymentMethodsGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginBottom: 16,
+    },
+    pmBtn: {
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 8,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    pmBtnActive: {
+      borderColor: colors.primary,
+      backgroundColor: isDark ? 'rgba(59, 102, 255, 0.15)' : '#eff6ff',
+    },
+    pmBtnText: {
+      fontSize: 12,
+      fontWeight: 'bold',
+      color: colors.textMuted,
+    },
+    pmBtnTextActive: {
+      color: colors.primary,
+    },
+    installmentsConfig: {
+      marginBottom: 12,
+    },
+    installmentsPicker: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginBottom: 14,
+    },
+    instNumBtn: {
+      width: 44,
+      height: 38,
+      borderRadius: 8,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    instNumBtnActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    instNumText: {
+      fontSize: 12,
+      fontWeight: 'bold',
+      color: colors.textMuted,
+    },
+    instNumTextActive: {
+      color: '#fff',
+    },
+    switchRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: colors.surface,
+      borderRadius: 10,
+      padding: 12,
+      marginBottom: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    switchTitle: {
+      fontSize: 13,
+      fontWeight: 'bold',
+      color: colors.text,
+    },
+    switchDesc: {
+      fontSize: 11,
+      color: colors.textMuted,
+      marginTop: 2,
+    },
+    installmentsPreview: {
+      marginTop: 10,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    previewTitle: {
+      fontSize: 12,
+      fontWeight: 'bold',
+      color: colors.text,
+      marginBottom: 8,
+    },
+    previewRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 6,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    previewInstNum: {
+      fontSize: 11,
+      fontWeight: 'bold',
+      color: colors.textMuted,
+      width: 80,
+    },
+    previewDueDate: {
+      fontSize: 11,
+      color: colors.textMuted,
+      flex: 1,
+      textAlign: 'center',
+    },
+    previewAmount: {
+      fontSize: 12,
+      fontWeight: 'bold',
+      color: colors.text,
+      marginRight: 8,
+    },
+    previewStatus: {
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+    },
+    statusPaid: {
+      backgroundColor: isDark ? 'rgba(34, 197, 94, 0.15)' : '#dcfce7',
+    },
+    statusPending: {
+      backgroundColor: isDark ? 'rgba(245, 158, 11, 0.15)' : '#fef3c7',
+    },
+    previewStatusText: {
+      fontSize: 10,
+      fontWeight: 'bold',
+      color: colors.text,
+    },
+    // BOLETOS STYLES
+    boletoSection: {
+      backgroundColor: isDark ? '#121620' : colors.cardSecondary,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 14,
+      marginBottom: 16,
+    },
+    boletoSectionHeader: {
+      marginBottom: 12,
+    },
+    boletoSectionTitle: {
+      fontSize: 14,
+      fontWeight: 'bold',
+      color: colors.text,
+    },
+    boletoSectionSubtitle: {
+      fontSize: 11,
+      color: colors.textMuted,
+      marginTop: 2,
+    },
+    presetsScroll: {
+      flexDirection: 'row',
+      marginBottom: 14,
+    },
+    presetChip: {
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      borderRadius: 8,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginRight: 8,
+    },
+    presetChipActive: {
+      backgroundColor: isDark ? 'rgba(59, 102, 255, 0.2)' : '#eff6ff',
+      borderColor: colors.primary,
+    },
+    presetChipText: {
+      fontSize: 12,
+      fontWeight: 'bold',
+      color: colors.textMuted,
+    },
+    presetChipTextActive: {
+      color: colors.primary,
+    },
+    boletosList: {
+      gap: 12,
+    },
+    boletoCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 12,
+    },
+    boletoCardHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 6,
+    },
+    boletoIndexBadge: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: isDark ? 'rgba(59, 102, 255, 0.2)' : '#eff6ff',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    boletoIndexBadgeText: {
+      fontSize: 11,
+      fontWeight: 'bold',
+      color: colors.primary,
+    },
+    boletoCardTitle: {
+      fontSize: 13,
+      fontWeight: 'bold',
+      color: colors.text,
+    },
+    instPaidBadge: {
+      backgroundColor: isDark ? 'rgba(34, 197, 94, 0.15)' : '#dcfce7',
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+    },
+    instPaidBadgeText: {
+      fontSize: 9,
+      fontWeight: 'bold',
+      color: colors.success,
+    },
+    removeBoletoBtn: {
+      padding: 6,
+      borderRadius: 6,
+      backgroundColor: isDark ? 'rgba(239, 68, 68, 0.12)' : '#fee2e2',
+    },
+    fieldSubLabel: {
+      fontSize: 11,
+      color: colors.textMuted,
+      marginBottom: 4,
+      fontWeight: '600',
+    },
+    boletoDateInput: {
+      backgroundColor: colors.cardSecondary,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+      color: colors.text,
+      paddingHorizontal: 10,
+      height: 38,
+      fontSize: 13,
+      fontWeight: 'bold',
+    },
+    dateChipsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+      marginTop: 6,
+    },
+    dateQuickChip: {
+      backgroundColor: isDark ? '#1e2638' : '#eff6ff',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: isDark ? '#2d3b55' : '#bfdbfe',
+    },
+    dateQuickChipText: {
+      fontSize: 10,
+      fontWeight: 'bold',
+      color: colors.primary,
+    },
+    boletoAmountInput: {
+      backgroundColor: colors.cardSecondary,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+      color: colors.success,
+      paddingHorizontal: 10,
+      height: 38,
+      fontSize: 14,
+      fontWeight: '900',
+    },
+    boletoActionsRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: 12,
+      gap: 8,
+    },
+    addBoletoBtn: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      backgroundColor: isDark ? 'rgba(59, 102, 255, 0.12)' : '#eff6ff',
+      borderWidth: 1,
+      borderColor: colors.primary,
+      borderRadius: 8,
+      paddingVertical: 10,
+    },
+    addBoletoBtnText: {
+      fontSize: 12,
+      fontWeight: 'bold',
+      color: colors.primary,
+    },
+    balanceBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: isDark ? 'rgba(245, 158, 11, 0.12)' : '#fffbeb',
+      borderWidth: 1,
+      borderColor: colors.warning,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+    },
+    balanceBtnText: {
+      fontSize: 12,
+      fontWeight: 'bold',
+      color: colors.warning,
+    },
+    sumValidationBox: {
+      marginTop: 12,
+      borderRadius: 8,
+      padding: 10,
+      borderWidth: 1,
+    },
+    sumValidBox: {
+      backgroundColor: isDark ? 'rgba(34, 197, 94, 0.08)' : '#f0fdf4',
+      borderColor: isDark ? 'rgba(34, 197, 94, 0.25)' : '#bbf7d0',
+    },
+    sumInvalidBox: {
+      backgroundColor: isDark ? 'rgba(245, 158, 11, 0.1)' : '#fffbeb',
+      borderColor: isDark ? 'rgba(245, 158, 11, 0.3)' : '#fde68a',
+    },
+    sumValidationText: {
+      fontSize: 11,
+      fontWeight: 'bold',
+      textAlign: 'center',
+    },
+    sumValidText: {
+      color: colors.success,
+    },
+    sumInvalidText: {
+      color: colors.warning,
+    },
+    modalFooter: {
+      paddingHorizontal: 20,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    submitBtn: {
+      backgroundColor: colors.success,
+      borderRadius: 12,
+      height: 52,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    submitBtnText: {
+      fontSize: 14,
+      fontWeight: 'bold',
+      color: '#fff',
+      letterSpacing: 0.5,
+    },
+  });

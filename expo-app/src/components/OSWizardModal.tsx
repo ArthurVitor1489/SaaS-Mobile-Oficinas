@@ -51,6 +51,7 @@ export default function OSWizardModal({
   onSubmit,
 }: OSWizardModalProps) {
   const { colors, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const insets = useSafeAreaInsets();
   const [wizardStep, setWizardStep] = useState(1);
   const [form, setForm] = useState<OSForm>(emptyForm());
@@ -216,10 +217,10 @@ export default function OSWizardModal({
               <Text style={styles.inputLabel}>1. Selecionar Cliente *</Text>
               
               <View style={styles.searchWrapper}>
-                <Search size={18} color="#64748b" style={styles.searchIcon} />
+                <Search size={18} color={colors.textMuted} style={styles.searchIcon} />
                 <TextInput
                   placeholder="Buscar por nome ou CPF..."
-                  placeholderTextColor="#475569"
+                  placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
                   value={clientSearch}
                   onChangeText={setClientSearch}
                   maxLength={50}
@@ -227,7 +228,7 @@ export default function OSWizardModal({
                 />
                 {clientSearch !== '' && (
                   <TouchableOpacity onPress={() => setClientSearch('')} style={styles.clearSearch}>
-                    <X size={18} color="#64748b" />
+                    <X size={18} color={colors.textMuted} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -328,10 +329,10 @@ export default function OSWizardModal({
               <Text style={styles.inputLabel}>Adicionar Serviços ao Orçamento</Text>
 
               <View style={styles.searchWrapper}>
-                <Search size={18} color="#64748b" style={styles.searchIcon} />
+                <Search size={18} color={colors.textMuted} style={styles.searchIcon} />
                 <TextInput
                   placeholder="Filtrar serviços do catálogo..."
-                  placeholderTextColor="#475569"
+                  placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
                   value={serviceSearch}
                   onChangeText={setServiceSearch}
                   maxLength={50}
@@ -339,7 +340,7 @@ export default function OSWizardModal({
                 />
                 {serviceSearch !== '' && (
                   <TouchableOpacity onPress={() => setServiceSearch('')} style={styles.clearSearch}>
-                    <X size={18} color="#64748b" />
+                    <X size={18} color={colors.textMuted} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -410,7 +411,7 @@ export default function OSWizardModal({
                   style={[styles.submitButton, styles.buttonBack]}
                   onPress={() => setWizardStep(1)}
                 >
-                  <Text style={styles.submitButtonText}>Voltar</Text>
+                  <Text style={[styles.submitButtonText, styles.buttonBackText]}>Voltar</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.submitButton, styles.buttonNext]}
@@ -428,10 +429,10 @@ export default function OSWizardModal({
               <Text style={styles.inputLabel}>Adicionar Peças ao Orçamento</Text>
 
               <View style={styles.searchWrapper}>
-                <Search size={18} color="#64748b" style={styles.searchIcon} />
+                <Search size={18} color={colors.textMuted} style={styles.searchIcon} />
                 <TextInput
                   placeholder="Filtrar peças do catálogo..."
-                  placeholderTextColor="#475569"
+                  placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
                   value={partSearch}
                   onChangeText={setPartSearch}
                   maxLength={50}
@@ -439,7 +440,7 @@ export default function OSWizardModal({
                 />
                 {partSearch !== '' && (
                   <TouchableOpacity onPress={() => setPartSearch('')} style={styles.clearSearch}>
-                    <X size={18} color="#64748b" />
+                    <X size={18} color={colors.textMuted} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -512,7 +513,7 @@ export default function OSWizardModal({
                   style={[styles.submitButton, styles.buttonBack]}
                   onPress={() => setWizardStep(2)}
                 >
-                  <Text style={styles.submitButtonText}>Voltar</Text>
+                  <Text style={[styles.submitButtonText, styles.buttonBackText]}>Voltar</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.submitButton, styles.buttonNext]}
@@ -530,7 +531,7 @@ export default function OSWizardModal({
               <Text style={styles.inputLabel}>Observações / Diagnóstico Técnico</Text>
               <TextInput
                 placeholder="Escreva problemas observados ou detalhes adicionais..."
-                placeholderTextColor="#475569"
+                placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
                 multiline
                 numberOfLines={4}
                 value={form.notes}
@@ -551,8 +552,8 @@ export default function OSWizardModal({
                 </View>
                 <View style={styles.divider} />
                 <View style={[styles.totalsRow, { marginTop: 4 }]}>
-                  <Text style={[styles.totalsLabel, { fontWeight: 'bold', color: theme.colors.primary }]}>TOTAL GERAL:</Text>
-                  <Text style={[styles.totalsVal, { fontSize: 16, color: theme.colors.success }]}>
+                  <Text style={[styles.totalsLabel, { fontWeight: 'bold', color: colors.primary }]}>TOTAL GERAL:</Text>
+                  <Text style={[styles.totalsVal, { fontSize: 16, color: colors.success }]}>
                     {formatCurrency(grandTotal)}
                   </Text>
                 </View>
@@ -563,7 +564,7 @@ export default function OSWizardModal({
                   style={[styles.submitButton, styles.buttonBack]}
                   onPress={() => setWizardStep(3)}
                 >
-                  <Text style={styles.submitButtonText}>Voltar</Text>
+                  <Text style={[styles.submitButtonText, styles.buttonBackText]}>Voltar</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.submitButton, styles.buttonSave, submitting && { opacity: 0.7 }]}
@@ -583,14 +584,14 @@ export default function OSWizardModal({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   modalBg: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.75)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.card,
     borderTopLeftRadius: theme.roundness.lg,
     borderTopRightRadius: theme.roundness.lg,
     padding: theme.spacing.xxl,
@@ -605,11 +606,11 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: theme.colors.text,
+    color: colors.text,
   },
   modalStepText: {
     fontSize: 11,
-    color: theme.colors.textMuted,
+    color: colors.textMuted,
     marginTop: 2,
     fontWeight: 'bold',
   },
@@ -621,7 +622,7 @@ const styles = StyleSheet.create({
     gap: 4,
     height: 3,
     width: '100%',
-    backgroundColor: theme.colors.border,
+    backgroundColor: colors.border,
     marginBottom: theme.spacing.md,
     borderRadius: 2,
   },
@@ -632,12 +633,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   stepperBarActive: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
   },
   inputLabel: {
     fontSize: 11,
     fontWeight: '900',
-    color: theme.colors.textMuted,
+    color: colors.textMuted,
     marginBottom: 6,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -645,9 +646,9 @@ const styles = StyleSheet.create({
   searchWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.inputBg,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     borderRadius: theme.roundness.md,
     height: 56,
     paddingHorizontal: 12,
@@ -658,16 +659,16 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: theme.colors.text,
+    color: colors.text,
     fontSize: 15,
   },
   clearSearch: {
     padding: 4,
   },
   pickerList: {
-    backgroundColor: theme.colors.inputBg,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     borderRadius: theme.roundness.md,
     overflow: 'hidden',
   },
@@ -677,15 +678,15 @@ const styles = StyleSheet.create({
   },
   emptySearchText: {
     fontSize: 13,
-    color: theme.colors.textMuted,
+    color: colors.textMuted,
   },
   pickerItem: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: colors.border,
   },
   pickerItemActive: {
-    backgroundColor: 'rgba(59, 102, 255, 0.1)',
+    backgroundColor: isDark ? 'rgba(59, 102, 255, 0.15)' : 'rgba(59, 102, 255, 0.1)',
   },
   pickerItemContent: {
     flexDirection: 'row',
@@ -694,15 +695,15 @@ const styles = StyleSheet.create({
   },
   pickerItemTitle: {
     fontSize: 16,
-    color: '#cbd5e1',
+    color: colors.text,
     fontWeight: 'bold',
   },
   pickerItemTitleActive: {
-    color: theme.colors.primary,
+    color: colors.primary,
   },
   pickerItemSubtitle: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: colors.textMuted,
     marginTop: 4,
   },
   noVehiclesWrapper: {
@@ -717,7 +718,7 @@ const styles = StyleSheet.create({
   },
   noVehiclesText: {
     fontSize: 11,
-    color: theme.colors.error,
+    color: colors.error,
     textAlign: 'center',
     fontWeight: 'bold',
   },
@@ -728,8 +729,8 @@ const styles = StyleSheet.create({
     marginVertical: 6,
   },
   vehicleCard: {
-    backgroundColor: '#0a0c10',
-    borderColor: theme.colors.border,
+    backgroundColor: isDark ? '#0a0c10' : colors.surface,
+    borderColor: colors.border,
     borderWidth: 1.5,
     borderRadius: 12,
     padding: 16,
@@ -737,16 +738,16 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   vehicleCardActive: {
-    backgroundColor: 'rgba(59, 102, 255, 0.1)',
-    borderColor: theme.colors.primary,
+    backgroundColor: isDark ? 'rgba(59, 102, 255, 0.15)' : 'rgba(59, 102, 255, 0.08)',
+    borderColor: colors.primary,
   },
   vehicleCardTitle: {
     fontSize: 14,
-    color: '#cbd5e1',
+    color: colors.text,
     fontWeight: 'bold',
   },
   vehicleCardTitleActive: {
-    color: theme.colors.primary,
+    color: colors.primary,
   },
   vehicleCardBottom: {
     flexDirection: 'row',
@@ -755,34 +756,34 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   plateBadge: {
-    backgroundColor: '#334155',
+    backgroundColor: isDark ? '#334155' : '#e2e8f0',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
   },
   plateBadgeActive: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
   },
   plateText: {
     fontSize: 11,
-    color: theme.colors.white,
+    color: isDark ? '#ffffff' : '#0f172a',
     fontWeight: 'bold',
   },
   submitButton: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
     borderRadius: theme.roundness.md,
     height: 56,
     justifyContent: 'center',
     alignItems: 'center',
   },
   submitButtonDisabled: {
-    backgroundColor: theme.colors.border,
+    backgroundColor: colors.border,
     opacity: 0.5,
   },
   submitButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: theme.colors.white,
+    color: '#ffffff',
   },
   catalogItemRow: {
     flexDirection: 'row',
@@ -792,10 +793,15 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: colors.border,
+    backgroundColor: isDark ? '#0a0c10' : colors.surface,
+    borderRadius: 10,
+    marginBottom: 8,
   },
   catalogItemRowActive: {
-    backgroundColor: 'rgba(59, 102, 255, 0.05)',
+    backgroundColor: isDark ? 'rgba(59, 102, 255, 0.15)' : 'rgba(59, 102, 255, 0.08)',
+    borderColor: colors.primary,
+    borderWidth: 1,
   },
   catalogItemInfo: {
     flex: 1,
@@ -803,20 +809,20 @@ const styles = StyleSheet.create({
   },
   catalogItemName: {
     fontSize: 14,
-    color: '#f8fafc',
+    color: colors.text,
     fontWeight: 'bold',
   },
   catalogItemNameActive: {
-    color: theme.colors.primary,
+    color: colors.primary,
   },
   catalogItemMeta: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: colors.textMuted,
     marginTop: 4,
     fontFamily: 'monospace',
   },
   catalogItemPrice: {
-    color: theme.colors.success,
+    color: colors.success,
     fontWeight: 'bold',
   },
   qtyController: {
@@ -827,7 +833,7 @@ const styles = StyleSheet.create({
   },
   qtyLabel: {
     fontSize: 12,
-    color: theme.colors.textMuted,
+    color: colors.textMuted,
     fontWeight: 'bold',
     marginRight: 4,
   },
@@ -837,32 +843,32 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   qtyButton: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#181c24',
+    backgroundColor: isDark ? '#181c24' : '#ffffff',
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: '#334155',
+    borderColor: colors.border,
   },
   qtyButtonText: {
-    color: theme.colors.white,
+    color: colors.text,
     fontSize: 20,
     fontWeight: 'bold',
   },
   qtyValue: {
     minWidth: 20,
     textAlign: 'center',
-    color: theme.colors.white,
+    color: colors.text,
     fontSize: 15,
     fontWeight: 'bold',
     fontFamily: 'monospace',
   },
   subtotalCard: {
-    backgroundColor: '#0a0c10',
+    backgroundColor: isDark ? '#0a0c10' : colors.surface,
     borderWidth: 1.5,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 16,
     flexDirection: 'row',
@@ -871,12 +877,12 @@ const styles = StyleSheet.create({
   },
   subtotalLabel: {
     fontSize: 13,
-    color: theme.colors.textMuted,
+    color: colors.textMuted,
     fontWeight: 'bold',
   },
   subtotalValue: {
     fontSize: 16,
-    color: theme.colors.white,
+    color: colors.text,
     fontWeight: 'bold',
   },
   navigationRow: {
@@ -885,23 +891,26 @@ const styles = StyleSheet.create({
   },
   buttonBack: {
     flex: 1,
-    backgroundColor: theme.colors.border,
+    backgroundColor: isDark ? colors.border : '#e2e8f0',
+  },
+  buttonBackText: {
+    color: isDark ? '#ffffff' : '#0f172a',
   },
   buttonNext: {
     flex: 1,
   },
   buttonSave: {
     flex: 1,
-    backgroundColor: '#10b981',
+    backgroundColor: colors.success,
   },
   modalInput: {
-    backgroundColor: theme.colors.inputBg,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     borderRadius: theme.roundness.md,
     padding: theme.spacing.lg,
     fontSize: 15,
-    color: theme.colors.text,
+    color: colors.text,
     marginBottom: theme.spacing.xl,
     minHeight: 56,
   },
@@ -912,9 +921,9 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.xl,
   },
   pickerTag: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
     borderRadius: theme.roundness.sm,
     paddingVertical: 10,
     paddingHorizontal: 14,
@@ -923,24 +932,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   pickerTagActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   pickerTagText: {
-    color: theme.colors.textMuted,
+    color: colors.textMuted,
     fontWeight: 'bold',
     fontSize: 13,
   },
   pickerTagActiveText: {
-    color: theme.colors.white,
+    color: '#ffffff',
   },
   totalsCard: {
     padding: 16,
-    backgroundColor: '#0a0c10',
+    backgroundColor: isDark ? '#0a0c10' : colors.surface,
     gap: 8,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: theme.colors.border,
+    borderColor: colors.border,
   },
   totalsRow: {
     flexDirection: 'row',
@@ -949,16 +958,16 @@ const styles = StyleSheet.create({
   },
   totalsLabel: {
     fontSize: 13,
-    color: theme.colors.textMuted,
+    color: colors.textMuted,
   },
   totalsVal: {
     fontSize: 13,
-    color: '#f1f5f9',
+    color: colors.text,
     fontWeight: 'bold',
   },
   divider: {
     height: 1,
-    backgroundColor: theme.colors.border,
+    backgroundColor: colors.border,
     marginVertical: 4,
   },
 });

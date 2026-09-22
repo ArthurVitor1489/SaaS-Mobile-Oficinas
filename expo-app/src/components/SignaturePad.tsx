@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, GestureResponderEvent, Alert } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { useTheme } from '../styles/theme';
 
 interface Point {
   x: number;
@@ -13,6 +14,9 @@ interface SignaturePadProps {
 }
 
 export default function SignaturePad({ onSave, onCancel }: SignaturePadProps) {
+  const { colors, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
+
   const [currentPath, setCurrentPath] = useState<Point[]>([]);
   const [paths, setPaths] = useState<Point[][]>([]);
 
@@ -83,7 +87,7 @@ export default function SignaturePad({ onSave, onCancel }: SignaturePadProps) {
               key={idx}
               d={getSvgPathString(path)}
               fill="none"
-              stroke="#fff"
+              stroke={isDark ? '#fff' : '#0f172a'}
               strokeWidth={3}
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -93,7 +97,7 @@ export default function SignaturePad({ onSave, onCancel }: SignaturePadProps) {
             <Path
               d={getSvgPathString(currentPath)}
               fill="none"
-              stroke="#3b66ff"
+              stroke={colors.primary}
               strokeWidth={3}
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -119,78 +123,79 @@ export default function SignaturePad({ onSave, onCancel }: SignaturePadProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#0f1115',
-    borderWidth: 1,
-    borderColor: '#1e293b',
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
-    marginVertical: 10,
-  },
-  title: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: '#94a3b8',
-    letterSpacing: 1,
-  },
-  subtitle: {
-    fontSize: 8,
-    color: '#475569',
-    marginTop: 2,
-    marginBottom: 12,
-  },
-  canvasContainer: {
-    width: '100%',
-    height: 150,
-    backgroundColor: '#0a0c10',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#1e293b',
-    overflow: 'hidden',
-  },
-  canvas: {
-    flex: 1,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    width: '100%',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginTop: 14,
-  },
-  button: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelBtn: {
-    backgroundColor: '#1e293b',
-  },
-  cancelBtnText: {
-    color: '#cbd5e1',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  clearBtn: {
-    backgroundColor: '#0a0c10',
-    borderWidth: 1,
-    borderColor: '#1e293b',
-  },
-  clearBtnText: {
-    color: '#94a3b8',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  saveBtn: {
-    backgroundColor: '#3b66ff',
-  },
-  saveBtnText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-});
+const getStyles = (colors: any, isDark: boolean) =>
+  StyleSheet.create({
+    container: {
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 16,
+      padding: 16,
+      alignItems: 'center',
+      marginVertical: 10,
+    },
+    title: {
+      fontSize: 10,
+      fontWeight: '900',
+      color: colors.textMuted,
+      letterSpacing: 1,
+    },
+    subtitle: {
+      fontSize: 8,
+      color: colors.textDim,
+      marginTop: 2,
+      marginBottom: 12,
+    },
+    canvasContainer: {
+      width: '100%',
+      height: 150,
+      backgroundColor: isDark ? '#0a0c10' : '#f1f5f9',
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: 'hidden',
+    },
+    canvas: {
+      flex: 1,
+    },
+    buttonRow: {
+      flexDirection: 'row',
+      width: '100%',
+      justifyContent: 'space-between',
+      gap: 8,
+      marginTop: 14,
+    },
+    button: {
+      flex: 1,
+      paddingVertical: 10,
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    cancelBtn: {
+      backgroundColor: isDark ? '#1e293b' : colors.border,
+    },
+    cancelBtnText: {
+      color: colors.text,
+      fontSize: 10,
+      fontWeight: 'bold',
+    },
+    clearBtn: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    clearBtnText: {
+      color: colors.textMuted,
+      fontSize: 10,
+      fontWeight: 'bold',
+    },
+    saveBtn: {
+      backgroundColor: colors.primary,
+    },
+    saveBtnText: {
+      color: '#fff',
+      fontSize: 10,
+      fontWeight: 'bold',
+    },
+  });

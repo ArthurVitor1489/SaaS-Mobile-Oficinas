@@ -28,10 +28,12 @@ export const checkConnection = async (): Promise<boolean> => {
 export const processOfflineQueue = async () => {
   if (isSyncing) return;
   
+  const store = useAppStore.getState();
+  if (!store.accessToken || store.accessToken.startsWith('local-')) return;
+
   const isOnline = await checkConnection();
   if (!isOnline) return;
 
-  const store = useAppStore.getState();
   const queue = [...store.offlineQueue];
   
   if (queue.length === 0) return;

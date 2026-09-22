@@ -1,6 +1,10 @@
 import { IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreateVehicleDto {
+  @IsString()
+  @IsOptional()
+  id?: string;
+
   @IsUUID()
   @IsNotEmpty()
   clientId: string;

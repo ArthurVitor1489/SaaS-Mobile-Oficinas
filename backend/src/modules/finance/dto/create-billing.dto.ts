@@ -25,8 +25,20 @@ export class InstallmentItemDto {
 
 export class CreateBillingDto {
   @IsString()
-  @IsNotEmpty()
-  osId: string;
+  @IsOptional()
+  id?: string;
+
+  @IsString()
+  @IsOptional()
+  osId?: string;
+
+  @IsString()
+  @IsOptional()
+  customClientName?: string;
+
+  @IsString()
+  @IsOptional()
+  customDescription?: string;
 
   @IsNumber()
   @IsNotEmpty()

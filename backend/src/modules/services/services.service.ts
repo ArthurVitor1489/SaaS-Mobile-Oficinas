@@ -27,6 +27,7 @@ export class ServicesService {
   async create(tenantId: string, dto: CreateServiceDto) {
     return this.prisma.serviceItem.create({
       data: {
+        id: dto.id || undefined,
         tenantId,
         ...dto,
       },

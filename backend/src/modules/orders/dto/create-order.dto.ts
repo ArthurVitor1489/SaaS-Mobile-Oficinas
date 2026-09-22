@@ -35,14 +35,18 @@ export class OrderPartDto {
 
 export class CreateOrderDto {
   @IsString()
+  @IsOptional()
+  id?: string;
+
+  @IsString()
   @IsNotEmpty()
   date: string;
 
-  @IsUUID()
+  @IsString()
   @IsNotEmpty()
   clientId: string;
 
-  @IsUUID()
+  @IsString()
   @IsNotEmpty()
   vehicleId: string;
 

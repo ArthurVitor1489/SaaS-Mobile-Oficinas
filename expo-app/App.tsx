@@ -472,21 +472,23 @@ const MyLightTheme = {
 function AppContent() {
   const user = useAppStore((state) => state.user);
   const accessToken = useAppStore((state) => state.accessToken);
+  const hasHydrated = useAppStore((state) => state._hasHydrated);
   const loading = useAppStore((state) => state.loading);
   const pullAll = useAppStore((state) => state.pullAll);
   const { isDark, colors } = useTheme();
 
   useEffect(() => {
+    if (!hasHydrated) return;
     startSyncEngine();
-    if (accessToken && user) {
+    if (accessToken && user && !accessToken.startsWith('local-')) {
       pullAll();
     }
     return () => {
       stopSyncEngine();
     };
-  }, [accessToken, user]);
+  }, [hasHydrated, accessToken, user]);
 
-  if (loading) {
+  if (!hasHydrated || loading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.primary} />

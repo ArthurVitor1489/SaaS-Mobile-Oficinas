@@ -1,6 +1,10 @@
 import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreateTransactionDto {
+  @IsString()
+  @IsOptional()
+  id?: string;
+
   @IsEnum(['ENTRADA', 'SAIDA'])
   type: 'ENTRADA' | 'SAIDA';
 

@@ -24,38 +24,73 @@ export class FinanceService {
   }
 
   async createBilling(tenantId: string, dto: CreateBillingDto) {
-    // Check if workOrder exists
-    const workOrder = await this.prisma.workOrder.findFirst({
-      where: { id: dto.osId, tenantId },
-    });
-
-    if (!workOrder) {
-      throw new NotFoundException('Ordem de serviço associada não encontrada.');
-    }
-
-    // Check if billing already exists for this OS
-    const existing = await this.prisma.billing.findFirst({
-      where: { osId: dto.osId, tenantId },
-      include: { installments: true, workOrder: true },
-    });
-
-    if (existing) {
-      return existing;
+    let validOsId: string | null = null;
+    if (dto.osId && !dto.osId.startsWith('AVULSO')) {
+      const workOrder = await this.prisma.workOrder.findFirst({
+        where: { id: dto.osId, tenantId },
+      });
+      if (workOrder) {
+        validOsId = workOrder.id;
+      }
     }
 
     // Compute status
-    const allPaid = dto.installments.every((i) => i.status === 'PAGO' || i.status === 'Pago');
-    const anyPaid = dto.installments.some((i) => i.status === 'PAGO' || i.status === 'Pago');
+    const allPaid = dto.installments && dto.installments.length > 0 && dto.installments.every((i) => i.status === 'PAGO' || i.status === 'Pago');
+    const anyPaid = dto.installments && dto.installments.some((i) => i.status === 'PAGO' || i.status === 'Pago');
     const billingStatus = allPaid ? 'PAGO' : anyPaid ? 'PARCIALMENTE_PAGO' : (dto.status || 'PENDENTE');
+
+    // Check if billing already exists for this OS
+    if (validOsId) {
+      const existing = await this.prisma.billing.findFirst({
+        where: { osId: validOsId, tenantId },
+        include: { installments: true, workOrder: true },
+      });
+
+      if (existing) {
+        // Update existing billing with new installments and payment method
+        await this.prisma.billingInstallment.deleteMany({ where: { billingId: existing.id } });
+        return this.prisma.billing.update({
+          where: { id: existing.id },
+          data: {
+            amount: dto.amount,
+            paymentMethod: dto.paymentMethod,
+            status: billingStatus,
+            dueDate: dto.dueDate,
+            customClientName: dto.customClientName || null,
+            customDescription: dto.customDescription || null,
+            installments: {
+              create: dto.installments.map((inst) => ({
+                number: inst.number,
+                amount: inst.amount,
+                dueDate: inst.dueDate,
+                status: (inst.status === 'Pago' || inst.status === 'PAGO') ? 'PAGO' : 'PENDENTE',
+                paidAt: (inst.status === 'Pago' || inst.status === 'PAGO') ? (inst.paidAt ? new Date(inst.paidAt) : new Date()) : null,
+              })),
+            },
+          },
+          include: {
+            workOrder: {
+              include: { client: true, vehicle: true },
+            },
+            installments: {
+              orderBy: { number: 'asc' },
+            },
+          },
+        });
+      }
+    }
 
     return this.prisma.billing.create({
       data: {
+        id: dto.id || undefined,
         tenantId,
-        osId: dto.osId,
+        osId: validOsId,
         amount: dto.amount,
         paymentMethod: dto.paymentMethod,
         status: billingStatus,
         dueDate: dto.dueDate,
+        customClientName: dto.customClientName || null,
+        customDescription: dto.customDescription || null,
         installments: {
           create: dto.installments.map((inst) => ({
             number: inst.number,
@@ -167,7 +202,8 @@ export class FinanceService {
         data: { status: newStatus },
       });
 
-      const description = `Parcela ${installmentNumber}/${updatedInstallments.length} da ${billing.workOrder.osNumber}`;
+      const osLabel = billing.workOrder?.osNumber || 'Cobrança';
+      const description = `Parcela ${installmentNumber}/${updatedInstallments.length} da ${osLabel}`;
       await tx.financialTransaction.create({
         data: {
           tenantId,
@@ -196,6 +232,7 @@ export class FinanceService {
   async createTransaction(tenantId: string, dto: CreateTransactionDto) {
     return this.prisma.financialTransaction.create({
       data: {
+        id: dto.id || undefined,
         tenantId,
         ...dto,
       },

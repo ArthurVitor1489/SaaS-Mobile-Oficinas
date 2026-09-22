@@ -27,6 +27,7 @@ export class PartsService {
   async create(tenantId: string, dto: CreatePartDto) {
     return this.prisma.partItem.create({
       data: {
+        id: dto.id || undefined,
         tenantId,
         ...dto,
       },

@@ -79,6 +79,7 @@ export class OrdersService {
 
       const workOrder = await tx.workOrder.create({
         data: {
+          id: dto.id || undefined,
           tenantId,
           osNumber,
           date: dto.date,

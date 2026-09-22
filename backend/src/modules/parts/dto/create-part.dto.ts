@@ -2,6 +2,10 @@ import { IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-va
 
 export class CreatePartDto {
   @IsString()
+  @IsOptional()
+  id?: string;
+
+  @IsString()
   @IsNotEmpty()
   name: string;
 

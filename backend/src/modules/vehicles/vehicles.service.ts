@@ -41,6 +41,7 @@ export class VehiclesService {
 
     return this.prisma.vehicle.create({
       data: {
+        id: dto.id || undefined,
         tenantId,
         clientId: dto.clientId,
         plate: dto.plate.toUpperCase(),

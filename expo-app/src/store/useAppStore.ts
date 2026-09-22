@@ -50,8 +50,10 @@ interface AppState {
   transactions: FinancialTransaction[];
   settings: CompanySettings;
   themeMode: 'dark' | 'light';
+  _hasHydrated: boolean;
 
   // Actions
+  setHasHydrated: (hasHydrated: boolean) => void;
   setThemeMode: (mode: 'dark' | 'light') => void;
   setAccessToken: (token: string | null) => void;
   setOnlineStatus: (status: boolean) => void;
@@ -185,6 +187,26 @@ const defaultSettings: CompanySettings = {
   pdfNotes: 'Garantia de 90 dias para serviços e peças aplicadas.'
 };
 
+const enqueueOfflineAction = (
+  set: (fn: (state: AppState) => Partial<AppState>) => void,
+  action: 'CREATE' | 'UPDATE' | 'DELETE',
+  entity: OfflineQueueItem['entity'],
+  payload: any
+) => {
+  set((state) => ({
+    offlineQueue: [
+      ...state.offlineQueue,
+      {
+        id: generateUUID(),
+        action,
+        entity,
+        payload,
+        timestamp: Date.now(),
+      },
+    ],
+  }));
+};
+
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
@@ -193,6 +215,7 @@ export const useAppStore = create<AppState>()(
       refreshToken: null,
       loading: false,
       isOnline: false,
+      _hasHydrated: false,
       offlineQueue: [],
 
       clients: [],
@@ -205,6 +228,7 @@ export const useAppStore = create<AppState>()(
       settings: defaultSettings,
       themeMode: 'dark',
 
+      setHasHydrated: (_hasHydrated) => set({ _hasHydrated }),
       setThemeMode: (themeMode) => set({ themeMode }),
       setAccessToken: (accessToken) => set({ accessToken }),
       setOnlineStatus: (isOnline) => set({ isOnline }),
@@ -351,32 +375,25 @@ export const useAppStore = create<AppState>()(
 
       logout: async () => {
         const { user } = get();
-        if (user) {
+        if (user && !user.id.startsWith('local-')) {
           try {
             await api.post('/auth/logout');
           } catch (e) {
             console.log('Logout API call failed', e);
           }
         }
+        // ONLY clear auth session tokens. Local database cache is NEVER wiped!
         set({
           user: null,
           accessToken: null,
           refreshToken: null,
-          clients: [],
-          vehicles: [],
-          services: [],
-          parts: [],
-          workOrders: [],
-          billings: [],
-          transactions: [],
-          offlineQueue: [],
-          settings: defaultSettings,
         });
       },
 
-      // DATA FETCHING
+      // DATA FETCHING WITH SMART MERGE
       pullAll: async () => {
-        if (!get().isOnline || !get().accessToken) return;
+        const state = get();
+        if (!state.isOnline || !state.accessToken || state.accessToken.startsWith('local-')) return;
         try {
           const [
             clientsRes, vehiclesRes, servicesRes, partsRes, 
@@ -405,14 +422,14 @@ export const useAppStore = create<AppState>()(
             servicesTotal: parseFloat(o.servicesTotal),
             partsTotal: parseFloat(o.partsTotal),
             grandTotal: parseFloat(o.grandTotal),
-            services: o.services.map((s: any) => ({ ...s, price: parseFloat(s.price) })),
-            parts: o.parts.map((p: any) => ({ ...p, salePrice: parseFloat(p.salePrice) })),
+            services: (o.services || []).map((s: any) => ({ ...s, price: parseFloat(s.price) })),
+            parts: (o.parts || []).map((p: any) => ({ ...p, salePrice: parseFloat(p.salePrice) })),
           }));
           const billings = billingsRes.data.map((b: any) => ({
             ...b,
             amount: parseFloat(b.amount),
             status: mapBillingStatusApiToLocal(b.status),
-            installments: b.installments.map((i: any) => ({ 
+            installments: (b.installments || []).map((i: any) => ({ 
               ...i, 
               amount: parseFloat(i.amount),
               status: i.status === 'PAGO' ? 'Pago' : 'Pendente'
@@ -424,15 +441,24 @@ export const useAppStore = create<AppState>()(
             amount: parseFloat(t.amount) 
           }));
 
+          const current = get();
+
+          // Intelligent merge: remote updates existing, local-only items are PRESERVED!
+          const mergeEntities = <T extends { id: string }>(remoteList: T[], localList: T[]): T[] => {
+            const remoteMap = new Map(remoteList.map((item) => [item.id, item]));
+            const preservedLocal = localList.filter((item) => !remoteMap.has(item.id));
+            return [...remoteList, ...preservedLocal];
+          };
+
           set({
-            clients: clientsRes.data,
-            vehicles: vehiclesRes.data,
-            services,
-            parts,
-            workOrders,
-            billings,
-            transactions,
-            settings: settingsRes.data || get().settings,
+            clients: mergeEntities(clientsRes.data, current.clients),
+            vehicles: mergeEntities(vehiclesRes.data, current.vehicles),
+            services: mergeEntities(services, current.services),
+            parts: mergeEntities(parts, current.parts),
+            workOrders: mergeEntities(workOrders, current.workOrders),
+            billings: mergeEntities(billings, current.billings),
+            transactions: mergeEntities(transactions, current.transactions),
+            settings: settingsRes.data || current.settings,
           });
         } catch (e) {
           console.error('Failed to pull remote database', e);
@@ -450,33 +476,14 @@ export const useAppStore = create<AppState>()(
 
         set((state) => ({ clients: [newClient, ...state.clients] }));
 
-        if (get().isOnline) {
+        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
           try {
             await api.post('/clients', { id: newId, ...dto });
           } catch (e: any) {
-            if (!e.response) {
-              get().offlineQueue.push({
-              id: generateUUID(),
-              action: 'CREATE',
-              entity: 'clients',
-              payload: { id: newId, ...dto },
-              timestamp: Date.now(),
-            });
-            }
+            enqueueOfflineAction(set, 'CREATE', 'clients', { id: newId, ...dto });
           }
         } else {
-          set((state) => ({
-            offlineQueue: [
-              ...state.offlineQueue,
-              {
-                id: generateUUID(),
-                action: 'CREATE',
-                entity: 'clients',
-                payload: { id: newId, ...dto },
-                timestamp: Date.now(),
-              },
-            ],
-          }));
+          enqueueOfflineAction(set, 'CREATE', 'clients', { id: newId, ...dto });
         }
         return newClient;
       },
@@ -486,33 +493,14 @@ export const useAppStore = create<AppState>()(
           clients: state.clients.map((c) => (c.id === id ? { ...c, ...dto } : c)),
         }));
 
-        if (get().isOnline) {
+        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
           try {
             await api.patch(`/clients/${id}`, dto);
           } catch (e: any) {
-            if (!e.response) {
-              get().offlineQueue.push({
-              id: generateUUID(),
-              action: 'UPDATE',
-              entity: 'clients',
-              payload: { id, dto },
-              timestamp: Date.now(),
-            });
-            }
+            enqueueOfflineAction(set, 'UPDATE', 'clients', { id, dto });
           }
         } else {
-          set((state) => ({
-            offlineQueue: [
-              ...state.offlineQueue,
-              {
-                id: generateUUID(),
-                action: 'UPDATE',
-                entity: 'clients',
-                payload: { id, dto },
-                timestamp: Date.now(),
-              },
-            ],
-          }));
+          enqueueOfflineAction(set, 'UPDATE', 'clients', { id, dto });
         }
         return true;
       },
@@ -523,33 +511,14 @@ export const useAppStore = create<AppState>()(
           vehicles: state.vehicles.filter((v) => v.clientId !== id),
         }));
 
-        if (get().isOnline) {
+        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
           try {
             await api.delete(`/clients/${id}`);
           } catch (e: any) {
-            if (!e.response) {
-              get().offlineQueue.push({
-              id: generateUUID(),
-              action: 'DELETE',
-              entity: 'clients',
-              payload: { id },
-              timestamp: Date.now(),
-            });
-            }
+            enqueueOfflineAction(set, 'DELETE', 'clients', { id });
           }
         } else {
-          set((state) => ({
-            offlineQueue: [
-              ...state.offlineQueue,
-              {
-                id: generateUUID(),
-                action: 'DELETE',
-                entity: 'clients',
-                payload: { id },
-                timestamp: Date.now(),
-              },
-            ],
-          }));
+          enqueueOfflineAction(set, 'DELETE', 'clients', { id });
         }
         return true;
       },
@@ -565,33 +534,14 @@ export const useAppStore = create<AppState>()(
 
         set((state) => ({ vehicles: [newVehicle, ...state.vehicles] }));
 
-        if (get().isOnline) {
+        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
           try {
             await api.post('/vehicles', { id: newId, ...dto });
           } catch (e: any) {
-            if (!e.response) {
-              get().offlineQueue.push({
-              id: generateUUID(),
-              action: 'CREATE',
-              entity: 'vehicles',
-              payload: { id: newId, ...dto },
-              timestamp: Date.now(),
-            });
-            }
+            enqueueOfflineAction(set, 'CREATE', 'vehicles', { id: newId, ...dto });
           }
         } else {
-          set((state) => ({
-            offlineQueue: [
-              ...state.offlineQueue,
-              {
-                id: generateUUID(),
-                action: 'CREATE',
-                entity: 'vehicles',
-                payload: { id: newId, ...dto },
-                timestamp: Date.now(),
-              },
-            ],
-          }));
+          enqueueOfflineAction(set, 'CREATE', 'vehicles', { id: newId, ...dto });
         }
         return newVehicle;
       },
@@ -601,33 +551,14 @@ export const useAppStore = create<AppState>()(
           vehicles: state.vehicles.map((v) => (v.id === id ? { ...v, ...dto } : v)),
         }));
 
-        if (get().isOnline) {
+        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
           try {
             await api.patch(`/vehicles/${id}`, dto);
           } catch (e: any) {
-            if (!e.response) {
-              get().offlineQueue.push({
-              id: generateUUID(),
-              action: 'UPDATE',
-              entity: 'vehicles',
-              payload: { id, dto },
-              timestamp: Date.now(),
-            });
-            }
+            enqueueOfflineAction(set, 'UPDATE', 'vehicles', { id, dto });
           }
         } else {
-          set((state) => ({
-            offlineQueue: [
-              ...state.offlineQueue,
-              {
-                id: generateUUID(),
-                action: 'UPDATE',
-                entity: 'vehicles',
-                payload: { id, dto },
-                timestamp: Date.now(),
-              },
-            ],
-          }));
+          enqueueOfflineAction(set, 'UPDATE', 'vehicles', { id, dto });
         }
         return true;
       },
@@ -637,33 +568,14 @@ export const useAppStore = create<AppState>()(
           vehicles: state.vehicles.filter((v) => v.id !== id),
         }));
 
-        if (get().isOnline) {
+        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
           try {
             await api.delete(`/vehicles/${id}`);
           } catch (e: any) {
-            if (!e.response) {
-              get().offlineQueue.push({
-              id: generateUUID(),
-              action: 'DELETE',
-              entity: 'vehicles',
-              payload: { id },
-              timestamp: Date.now(),
-            });
-            }
+            enqueueOfflineAction(set, 'DELETE', 'vehicles', { id });
           }
         } else {
-          set((state) => ({
-            offlineQueue: [
-              ...state.offlineQueue,
-              {
-                id: generateUUID(),
-                action: 'DELETE',
-                entity: 'vehicles',
-                payload: { id },
-                timestamp: Date.now(),
-              },
-            ],
-          }));
+          enqueueOfflineAction(set, 'DELETE', 'vehicles', { id });
         }
         return true;
       },
@@ -678,33 +590,14 @@ export const useAppStore = create<AppState>()(
 
         set((state) => ({ services: [newService, ...state.services] }));
 
-        if (get().isOnline) {
+        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
           try {
             await api.post('/services', { id: newId, ...dto });
           } catch (e: any) {
-            if (!e.response) {
-              get().offlineQueue.push({
-              id: generateUUID(),
-              action: 'CREATE',
-              entity: 'services',
-              payload: { id: newId, ...dto },
-              timestamp: Date.now(),
-            });
-            }
+            enqueueOfflineAction(set, 'CREATE', 'services', { id: newId, ...dto });
           }
         } else {
-          set((state) => ({
-            offlineQueue: [
-              ...state.offlineQueue,
-              {
-                id: generateUUID(),
-                action: 'CREATE',
-                entity: 'services',
-                payload: { id: newId, ...dto },
-                timestamp: Date.now(),
-              },
-            ],
-          }));
+          enqueueOfflineAction(set, 'CREATE', 'services', { id: newId, ...dto });
         }
         return newService;
       },
@@ -714,33 +607,14 @@ export const useAppStore = create<AppState>()(
           services: state.services.map((s) => (s.id === id ? { ...s, ...dto } : s)),
         }));
 
-        if (get().isOnline) {
+        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
           try {
             await api.patch(`/services/${id}`, dto);
           } catch (e: any) {
-            if (!e.response) {
-              get().offlineQueue.push({
-              id: generateUUID(),
-              action: 'UPDATE',
-              entity: 'services',
-              payload: { id, dto },
-              timestamp: Date.now(),
-            });
-            }
+            enqueueOfflineAction(set, 'UPDATE', 'services', { id, dto });
           }
         } else {
-          set((state) => ({
-            offlineQueue: [
-              ...state.offlineQueue,
-              {
-                id: generateUUID(),
-                action: 'UPDATE',
-                entity: 'services',
-                payload: { id, dto },
-                timestamp: Date.now(),
-              },
-            ],
-          }));
+          enqueueOfflineAction(set, 'UPDATE', 'services', { id, dto });
         }
         return true;
       },
@@ -750,33 +624,14 @@ export const useAppStore = create<AppState>()(
           services: state.services.filter((s) => s.id !== id),
         }));
 
-        if (get().isOnline) {
+        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
           try {
             await api.delete(`/services/${id}`);
           } catch (e: any) {
-            if (!e.response) {
-              get().offlineQueue.push({
-              id: generateUUID(),
-              action: 'DELETE',
-              entity: 'services',
-              payload: { id },
-              timestamp: Date.now(),
-            });
-            }
+            enqueueOfflineAction(set, 'DELETE', 'services', { id });
           }
         } else {
-          set((state) => ({
-            offlineQueue: [
-              ...state.offlineQueue,
-              {
-                id: generateUUID(),
-                action: 'DELETE',
-                entity: 'services',
-                payload: { id },
-                timestamp: Date.now(),
-              },
-            ],
-          }));
+          enqueueOfflineAction(set, 'DELETE', 'services', { id });
         }
         return true;
       },
@@ -791,33 +646,14 @@ export const useAppStore = create<AppState>()(
 
         set((state) => ({ parts: [newPart, ...state.parts] }));
 
-        if (get().isOnline) {
+        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
           try {
             await api.post('/parts', { id: newId, ...dto });
           } catch (e: any) {
-            if (!e.response) {
-              get().offlineQueue.push({
-              id: generateUUID(),
-              action: 'CREATE',
-              entity: 'parts',
-              payload: { id: newId, ...dto },
-              timestamp: Date.now(),
-            });
-            }
+            enqueueOfflineAction(set, 'CREATE', 'parts', { id: newId, ...dto });
           }
         } else {
-          set((state) => ({
-            offlineQueue: [
-              ...state.offlineQueue,
-              {
-                id: generateUUID(),
-                action: 'CREATE',
-                entity: 'parts',
-                payload: { id: newId, ...dto },
-                timestamp: Date.now(),
-              },
-            ],
-          }));
+          enqueueOfflineAction(set, 'CREATE', 'parts', { id: newId, ...dto });
         }
         return newPart;
       },
@@ -827,33 +663,14 @@ export const useAppStore = create<AppState>()(
           parts: state.parts.map((p) => (p.id === id ? { ...p, ...dto } : p)),
         }));
 
-        if (get().isOnline) {
+        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
           try {
             await api.patch(`/parts/${id}`, dto);
           } catch (e: any) {
-            if (!e.response) {
-              get().offlineQueue.push({
-              id: generateUUID(),
-              action: 'UPDATE',
-              entity: 'parts',
-              payload: { id, dto },
-              timestamp: Date.now(),
-            });
-            }
+            enqueueOfflineAction(set, 'UPDATE', 'parts', { id, dto });
           }
         } else {
-          set((state) => ({
-            offlineQueue: [
-              ...state.offlineQueue,
-              {
-                id: generateUUID(),
-                action: 'UPDATE',
-                entity: 'parts',
-                payload: { id, dto },
-                timestamp: Date.now(),
-              },
-            ],
-          }));
+          enqueueOfflineAction(set, 'UPDATE', 'parts', { id, dto });
         }
         return true;
       },
@@ -863,33 +680,14 @@ export const useAppStore = create<AppState>()(
           parts: state.parts.filter((p) => p.id !== id),
         }));
 
-        if (get().isOnline) {
+        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
           try {
             await api.delete(`/parts/${id}`);
           } catch (e: any) {
-            if (!e.response) {
-              get().offlineQueue.push({
-              id: generateUUID(),
-              action: 'DELETE',
-              entity: 'parts',
-              payload: { id },
-              timestamp: Date.now(),
-            });
-            }
+            enqueueOfflineAction(set, 'DELETE', 'parts', { id });
           }
         } else {
-          set((state) => ({
-            offlineQueue: [
-              ...state.offlineQueue,
-              {
-                id: generateUUID(),
-                action: 'DELETE',
-                entity: 'parts',
-                payload: { id },
-                timestamp: Date.now(),
-              },
-            ],
-          }));
+          enqueueOfflineAction(set, 'DELETE', 'parts', { id });
         }
         return true;
       },
@@ -959,33 +757,14 @@ export const useAppStore = create<AppState>()(
           status: mapOSStatusLocalToApi(dto.status),
         };
 
-        if (get().isOnline) {
+        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
           try {
             await api.post('/orders', mappedPayload);
           } catch (e: any) {
-            if (!e.response) {
-              get().offlineQueue.push({
-              id: generateUUID(),
-              action: 'CREATE',
-              entity: 'workOrders',
-              payload: mappedPayload,
-              timestamp: Date.now(),
-            });
-            }
+            enqueueOfflineAction(set, 'CREATE', 'workOrders', mappedPayload);
           }
         } else {
-          set((state) => ({
-            offlineQueue: [
-              ...state.offlineQueue,
-              {
-                id: generateUUID(),
-                action: 'CREATE',
-                entity: 'workOrders',
-                payload: mappedPayload,
-                timestamp: Date.now(),
-              },
-            ],
-          }));
+          enqueueOfflineAction(set, 'CREATE', 'workOrders', mappedPayload);
         }
         return newWO;
       },
@@ -1048,33 +827,14 @@ export const useAppStore = create<AppState>()(
           status: dto.status ? mapOSStatusLocalToApi(dto.status) : undefined,
         };
 
-        if (get().isOnline) {
+        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
           try {
             await api.patch(`/orders/${id}`, mappedDto);
           } catch (e: any) {
-            if (!e.response) {
-              get().offlineQueue.push({
-              id: generateUUID(),
-              action: 'UPDATE',
-              entity: 'workOrders',
-              payload: { id, dto: mappedDto },
-              timestamp: Date.now(),
-            });
-            }
+            enqueueOfflineAction(set, 'UPDATE', 'workOrders', { id, dto: mappedDto });
           }
         } else {
-          set((state) => ({
-            offlineQueue: [
-              ...state.offlineQueue,
-              {
-                id: generateUUID(),
-                action: 'UPDATE',
-                entity: 'workOrders',
-                payload: { id, dto: mappedDto },
-                timestamp: Date.now(),
-              },
-            ],
-          }));
+          enqueueOfflineAction(set, 'UPDATE', 'workOrders', { id, dto: mappedDto });
         }
         return true;
       },
@@ -1093,33 +853,14 @@ export const useAppStore = create<AppState>()(
           billings: state.billings.filter((b) => b.osId !== id),
         }));
 
-        if (get().isOnline) {
+        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
           try {
             await api.delete(`/orders/${id}`);
           } catch (e: any) {
-            if (!e.response) {
-              get().offlineQueue.push({
-              id: generateUUID(),
-              action: 'DELETE',
-              entity: 'workOrders',
-              payload: { id },
-              timestamp: Date.now(),
-            });
-            }
+            enqueueOfflineAction(set, 'DELETE', 'workOrders', { id });
           }
         } else {
-          set((state) => ({
-            offlineQueue: [
-              ...state.offlineQueue,
-              {
-                id: generateUUID(),
-                action: 'DELETE',
-                entity: 'workOrders',
-                payload: { id },
-                timestamp: Date.now(),
-              },
-            ],
-          }));
+          enqueueOfflineAction(set, 'DELETE', 'workOrders', { id });
         }
         return true;
       },
@@ -1135,33 +876,14 @@ export const useAppStore = create<AppState>()(
 
         set((state) => ({ billings: [newBilling, ...state.billings] }));
 
-        if (get().isOnline) {
+        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
           try {
             await api.post('/finance/billings', newBilling);
           } catch (e: any) {
-            if (!e.response) {
-              get().offlineQueue.push({
-                id: generateUUID(),
-                action: 'CREATE',
-                entity: 'billings',
-                payload: newBilling,
-                timestamp: Date.now(),
-              });
-            }
+            enqueueOfflineAction(set, 'CREATE', 'billings', newBilling);
           }
         } else {
-          set((state) => ({
-            offlineQueue: [
-              ...state.offlineQueue,
-              {
-                id: generateUUID(),
-                action: 'CREATE',
-                entity: 'billings',
-                payload: newBilling,
-                timestamp: Date.now(),
-              },
-            ],
-          }));
+          enqueueOfflineAction(set, 'CREATE', 'billings', newBilling);
         }
         return newBilling;
       },
@@ -1171,20 +893,14 @@ export const useAppStore = create<AppState>()(
           billings: state.billings.filter((b) => b.id !== id),
         }));
 
-        if (get().isOnline) {
+        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
           try {
             await api.delete(`/finance/billings/${id}`);
           } catch (e: any) {
-            if (!e.response) {
-              get().offlineQueue.push({
-                id: generateUUID(),
-                action: 'DELETE',
-                entity: 'billings',
-                payload: { id },
-                timestamp: Date.now(),
-              });
-            }
+            enqueueOfflineAction(set, 'DELETE', 'billings', { id });
           }
+        } else {
+          enqueueOfflineAction(set, 'DELETE', 'billings', { id });
         }
         return true;
       },
@@ -1231,33 +947,14 @@ export const useAppStore = create<AppState>()(
           transactions: [newTrans, ...state.transactions],
         }));
 
-        if (get().isOnline) {
+        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
           try {
             await api.post(`/finance/billings/${billingId}/pay`, { installmentNumber });
           } catch (e: any) {
-            if (!e.response) {
-              get().offlineQueue.push({
-              id: generateUUID(),
-              action: 'UPDATE',
-              entity: 'billings',
-              payload: { id: billingId, installmentNumber },
-              timestamp: Date.now(),
-            });
-            }
+            enqueueOfflineAction(set, 'UPDATE', 'billings', { id: billingId, installmentNumber });
           }
         } else {
-          set((state) => ({
-            offlineQueue: [
-              ...state.offlineQueue,
-              {
-                id: generateUUID(),
-                action: 'UPDATE',
-                entity: 'billings',
-                payload: { id: billingId, installmentNumber },
-                timestamp: Date.now(),
-              },
-            ],
-          }));
+          enqueueOfflineAction(set, 'UPDATE', 'billings', { id: billingId, installmentNumber });
         }
         return true;
       },
@@ -1281,35 +978,16 @@ export const useAppStore = create<AppState>()(
           ),
         }));
 
-        if (get().isOnline) {
+        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
           try {
             await api.patch(`/finance/billings/${billingId}/installments/${installmentNumber}`, {
               dueDate: newDueDate,
             });
           } catch (e: any) {
-            if (!e.response) {
-              get().offlineQueue.push({
-                id: generateUUID(),
-                action: 'UPDATE',
-                entity: 'billings',
-                payload: { billingId, installmentNumber, newDueDate, actionType: 'UPDATE_DUE_DATE' },
-                timestamp: Date.now(),
-              });
-            }
+            enqueueOfflineAction(set, 'UPDATE', 'billings', { billingId, installmentNumber, newDueDate, actionType: 'UPDATE_DUE_DATE' });
           }
         } else {
-          set((state) => ({
-            offlineQueue: [
-              ...state.offlineQueue,
-              {
-                id: generateUUID(),
-                action: 'UPDATE',
-                entity: 'billings',
-                payload: { billingId, installmentNumber, newDueDate, actionType: 'UPDATE_DUE_DATE' },
-                timestamp: Date.now(),
-              },
-            ],
-          }));
+          enqueueOfflineAction(set, 'UPDATE', 'billings', { billingId, installmentNumber, newDueDate, actionType: 'UPDATE_DUE_DATE' });
         }
         return true;
       },
@@ -1331,33 +1009,14 @@ export const useAppStore = create<AppState>()(
           type: mapTransactionTypeLocalToApi(dto.type),
         };
 
-        if (get().isOnline) {
+        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
           try {
             await api.post('/finance/transactions', mappedPayload);
           } catch (e: any) {
-            if (!e.response) {
-              get().offlineQueue.push({
-              id: generateUUID(),
-              action: 'CREATE',
-              entity: 'transactions',
-              payload: mappedPayload,
-              timestamp: Date.now(),
-            });
-            }
+            enqueueOfflineAction(set, 'CREATE', 'transactions', mappedPayload);
           }
         } else {
-          set((state) => ({
-            offlineQueue: [
-              ...state.offlineQueue,
-              {
-                id: generateUUID(),
-                action: 'CREATE',
-                entity: 'transactions',
-                payload: mappedPayload,
-                timestamp: Date.now(),
-              },
-            ],
-          }));
+          enqueueOfflineAction(set, 'CREATE', 'transactions', mappedPayload);
         }
         return newTrans;
       },
@@ -1367,33 +1026,14 @@ export const useAppStore = create<AppState>()(
           transactions: state.transactions.filter((t) => t.id !== id),
         }));
 
-        if (get().isOnline) {
+        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
           try {
             await api.delete(`/finance/transactions/${id}`);
           } catch (e: any) {
-            if (!e.response) {
-              get().offlineQueue.push({
-              id: generateUUID(),
-              action: 'DELETE',
-              entity: 'transactions',
-              payload: { id },
-              timestamp: Date.now(),
-            });
-            }
+            enqueueOfflineAction(set, 'DELETE', 'transactions', { id });
           }
         } else {
-          set((state) => ({
-            offlineQueue: [
-              ...state.offlineQueue,
-              {
-                id: generateUUID(),
-                action: 'DELETE',
-                entity: 'transactions',
-                payload: { id },
-                timestamp: Date.now(),
-              },
-            ],
-          }));
+          enqueueOfflineAction(set, 'DELETE', 'transactions', { id });
         }
         return true;
       },
@@ -1402,19 +1042,11 @@ export const useAppStore = create<AppState>()(
       updateSettings: async (dto) => {
         set((state) => ({ settings: { ...state.settings, ...dto } }));
 
-        if (get().isOnline) {
+        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
           try {
             await api.patch('/tenant/settings', dto);
           } catch (e: any) {
-            if (!e.response) {
-              get().offlineQueue.push({
-              id: generateUUID(),
-              action: 'UPDATE',
-              entity: 'parts', // Mock entity wrapper since settings belongs to tenant
-              payload: { settings: dto },
-              timestamp: Date.now(),
-            });
-            }
+            enqueueOfflineAction(set, 'UPDATE', 'parts', { settings: dto });
           }
         }
         return true;
@@ -1423,6 +1055,9 @@ export const useAppStore = create<AppState>()(
     {
       name: 'voltruck-app-store',
       storage: createJSONStorage(() => AsyncStorage),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
       partialize: (state) => ({
         user: state.user,
         accessToken: state.accessToken,
@@ -1436,6 +1071,7 @@ export const useAppStore = create<AppState>()(
         transactions: state.transactions,
         settings: state.settings,
         offlineQueue: state.offlineQueue,
+        themeMode: state.themeMode,
       }),
     }
   )

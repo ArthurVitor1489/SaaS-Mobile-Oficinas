@@ -2,6 +2,10 @@ import { IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator
 
 export class CreateServiceDto {
   @IsString()
+  @IsOptional()
+  id?: string;
+
+  @IsString()
   @IsNotEmpty()
   name: string;
 

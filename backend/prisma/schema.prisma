@@ -153,7 +153,9 @@ model WorkOrderPart {
 model Billing {
   id            String        @id @default(uuid())
   tenantId      String
-  osId          String        @unique
+  osId          String?       @unique
+  customClientName String?
+  customDescription String?
   amount        Float
   paymentMethod String
   status        String        @default("PENDENTE") // PENDENTE, PARCIALMENTE_PAGO, PAGO
@@ -161,7 +163,7 @@ model Billing {
   createdAt     DateTime      @default(now())
 
   workshop      Workshop      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  workOrder     WorkOrder     @relation(fields: [osId], references: [id], onDelete: Cascade)
+  workOrder     WorkOrder?    @relation(fields: [osId], references: [id], onDelete: Cascade)
   installments  BillingInstallment[]
 }
 

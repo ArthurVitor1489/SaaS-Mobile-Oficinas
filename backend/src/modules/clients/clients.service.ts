@@ -28,6 +28,7 @@ export class ClientsService {
   async create(tenantId: string, dto: CreateClientDto) {
     return this.prisma.client.create({
       data: {
+        id: dto.id || undefined,
         tenantId,
         ...dto,
       },

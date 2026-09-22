@@ -28,7 +28,7 @@ api.interceptors.request.use(
       const { useAppStore } = require('../store/useAppStore');
       const token = useAppStore.getState().accessToken;
       
-      if (token && config.headers) {
+      if (token && !token.startsWith('local-') && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
       }
     } catch (e) {
@@ -59,6 +59,14 @@ api.interceptors.response.use(
     const originalRequest = error.config;
     
     if (error.response?.status === 401 && !originalRequest._retry) {
+      const { useAppStore } = require('../store/useAppStore');
+      const { refreshToken, user } = useAppStore.getState();
+
+      // Local offline session: do not attempt remote refresh or logout
+      if (!refreshToken || !user || refreshToken.startsWith('local-') || user.id.startsWith('local-')) {
+        return Promise.reject(error);
+      }
+
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -72,15 +80,6 @@ api.interceptors.response.use(
 
       originalRequest._retry = true;
       isRefreshing = true;
-
-      const { useAppStore } = require('../store/useAppStore');
-      const { refreshToken, user, logout } = useAppStore.getState();
-
-      if (!refreshToken || !user) {
-        isRefreshing = false;
-        await logout();
-        return Promise.reject(error);
-      }
 
       try {
         const response = await axios.post(`${getBaseUrl()}/auth/refresh`, {
@@ -99,7 +98,8 @@ api.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null);
         isRefreshing = false;
-        await logout();
+        // NOTE: NEVER call logout() or wipe the database on network/refresh failures!
+        // Local data is safely preserved on the device.
         return Promise.reject(refreshError);
       }
     }

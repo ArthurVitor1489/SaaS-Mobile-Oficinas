@@ -34,7 +34,7 @@ const emptyForm = (): OSForm => ({
   clientId: '',
   vehicleId: '',
   notes: '',
-  status: 'Aberta',
+  status: 'Em andamento',
   selectedServices: [],
   selectedParts: [],
 });
@@ -537,21 +537,6 @@ export default function OSWizardModal({
                 maxLength={1000}
                 style={[styles.modalInput, { height: 100, textAlignVertical: 'top', padding: 16 }]}
               />
-
-              <Text style={styles.inputLabel}>Status da Ordem de Serviço</Text>
-              <View style={styles.pickerFakeRow}>
-                {(['Aberta', 'Em andamento', 'Concluída', 'Entregue'] as OSStatus[]).map(st => (
-                  <TouchableOpacity
-                    key={st}
-                    onPress={() => setForm(prev => ({ ...prev, status: st }))}
-                    style={[styles.pickerTag, form.status === st ? styles.pickerTagActive : null]}
-                  >
-                    <Text style={[styles.pickerTagText, form.status === st ? styles.pickerTagActiveText : null]}>
-                      {st === 'Em andamento' ? 'Andamento' : st}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
 
               <Text style={styles.inputLabel}>Revisão de Custos e Totais</Text>
               <View style={styles.totalsCard}>

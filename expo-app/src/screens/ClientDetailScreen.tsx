@@ -18,6 +18,7 @@ export default function ClientDetailScreen() {
     clients,
     vehicles,
     workOrders,
+    billings,
     updateClient,
     deleteClient,
     addVehicle,
@@ -36,6 +37,8 @@ export default function ClientDetailScreen() {
   const [vehicleInitialForm, setVehicleInitialForm] = useState<any>(null);
 
   const client = useMemo(() => clients.find(c => c.id === clientId), [clients, clientId]);
+
+  const billingMap = useMemo(() => new Map(billings.map(b => [b.osId, b])), [billings]);
 
   const clientCars = useMemo(() => {
     return vehicles.filter(v => v.clientId === clientId);
@@ -283,7 +286,24 @@ export default function ClientDetailScreen() {
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
                     <Text style={styles.osHistoryTotal}>{formatCurrency(os.grandTotal)}</Text>
-                    <Text style={styles.osHistoryStatus}>{os.status === 'Em andamento' ? 'Andamento' : os.status}</Text>
+                    {(() => {
+                      const b = billingMap.get(os.id);
+                      if (b) {
+                        return (
+                          <Text style={[
+                            styles.osHistoryStatus,
+                            { color: b.status === 'Pago' ? theme.colors.success : theme.colors.warning }
+                          ]}>
+                            {b.status === 'Pago' ? 'Faturada (Paga)' : 'Faturada'}
+                          </Text>
+                        );
+                      }
+                      return (
+                        <Text style={[styles.osHistoryStatus, { color: '#f59e0b' }]}>
+                          A Faturar
+                        </Text>
+                      );
+                    })()}
                   </View>
                 </TouchableOpacity>
               ))

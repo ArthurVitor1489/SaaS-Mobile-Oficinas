@@ -1,6 +1,6 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Modal, Alert, StyleSheet, Platform, Linking, ActivityIndicator } from 'react-native';
-import { ArrowLeft, Edit2, PenTool, FileText, DollarSign, X, Check, Trash2, ExternalLink, RefreshCw } from 'lucide-react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Modal, Alert, StyleSheet, Platform, Linking } from 'react-native';
+import { ArrowLeft, Edit2, PenTool, FileText, DollarSign, X, Check, Trash2, ChevronRight, MessageSquare } from 'lucide-react-native';
 import { SvgXml } from 'react-native-svg';
 import { useDatabase } from '../context/DatabaseContext';
 import { theme } from '../styles/theme';
@@ -10,8 +10,8 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import OSWizardModal from '../components/OSWizardModal';
 import SignaturePad from '../components/SignaturePad';
+import CreateBillingModal from '../components/CreateBillingModal';
 import { WorkOrder, OSStatus, PaymentMethod } from '../types';
-import api from '../services/api';
 
 export default function OSDetailScreen() {
   const navigation = useNavigation<any>();
@@ -36,15 +36,7 @@ export default function OSDetailScreen() {
   const [osWizardModalVisible, setOsWizardModalVisible] = useState(false);
   const [editingOSForm, setEditingOSForm] = useState<any>(null);
   const [signingOS, setSigningOS] = useState(false);
-  const [showBillingPanel, setShowBillingPanel] = useState(false);
-
-  const [fiscalInvoices, setFiscalInvoices] = useState<any[]>([]);
-  const [fiscalLoading, setFiscalLoading] = useState(false);
-
-  const [billingForm, setBillingForm] = useState<{ paymentMethod: PaymentMethod; installmentsCount: string }>({
-    paymentMethod: 'PIX',
-    installmentsCount: '1',
-  });
+  const [createBillingModalVisible, setCreateBillingModalVisible] = useState(false);
 
   const clientMap = useMemo(() => new Map(clients.map(c => [c.id, c])), [clients]);
   const vehicleMap = useMemo(() => new Map(vehicles.map(v => [v.id, v])), [vehicles]);
@@ -74,35 +66,6 @@ export default function OSDetailScreen() {
   const client = clientMap.get(os.clientId);
   const vehicle = vehicleMap.get(os.vehicleId);
   const billing = billingMap.get(os.id);
-
-  const fetchFiscalInvoices = async () => {
-    try {
-      const res = await api.get(`/fiscal/invoices/${os.id}`);
-      setFiscalInvoices(res.data || []);
-    } catch (e) {
-      console.warn('Erro ao carregar notas fiscais:', e);
-    }
-  };
-
-  useEffect(() => {
-    if (os.id) {
-      fetchFiscalInvoices();
-    }
-  }, [os.id]);
-
-  const handleEmitInvoice = async () => {
-    setFiscalLoading(true);
-    try {
-      await api.post(`/fiscal/invoice/emit/${os.id}`);
-      Alert.alert('Sucesso', 'Transmissão iniciada! A nota fiscal está sendo processada pela prefeitura/SEFAZ.');
-      await fetchFiscalInvoices();
-    } catch (err: any) {
-      Alert.alert('Erro na Emissão', err.response?.data?.message || 'Falha ao iniciar transmissão.');
-    } finally {
-      setFiscalLoading(false);
-    }
-  };
-
 
   const handleDeleteOS = () => {
     Alert.alert(
@@ -162,44 +125,6 @@ export default function OSDetailScreen() {
     }
     return success;
   };
-
-  const handleFaturarOS = async () => {
-    const amount = os.grandTotal;
-    const installmentsCount = parseInt(billingForm.installmentsCount);
-    const installments = [];
-    const baseVal = Math.floor((amount / installmentsCount) * 100) / 100;
-    let diff = Math.round((amount - (baseVal * installmentsCount)) * 100) / 100;
-
-    for (let i = 1; i <= installmentsCount; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() + (30 * (i - 1)));
-      const instAmount = i === installmentsCount ? (baseVal + diff) : baseVal;
-
-      installments.push({
-        number: i,
-        amount: instAmount,
-        dueDate: d.toISOString().split('T')[0],
-        status: 'Pendente' as const
-      });
-    }
-
-    const success = await addBilling({
-      osId: os.id,
-      amount,
-      paymentMethod: billingForm.paymentMethod,
-      status: 'Pendente',
-      installments,
-      dueDate: installments[0].dueDate
-    });
-
-    if (success) {
-      setShowBillingPanel(false);
-      Alert.alert('Sucesso', 'Ordem de serviço faturada com sucesso!');
-    } else {
-      Alert.alert('Erro', 'Não foi possível faturar esta ordem.');
-    }
-  };
-
 
   const handleShareOS = async () => {
 
@@ -474,7 +399,7 @@ export default function OSDetailScreen() {
           <div class="border-box center-box">
             <div class="os-tag">Ordem de Serviço</div>
             <div class="os-num">${os.osNumber}</div>
-            <div class="os-meta">Status: <b>${os.status === 'Em andamento' ? 'Andamento' : os.status}</b></div>
+            <div class="os-meta">Situação: <b>${billing ? (billing.status === 'Pago' ? 'Faturada (Paga)' : 'Faturada (Pendente)') : 'A Faturar'}</b></div>
             <div class="os-meta">${os.date.split('-').reverse().join('/')}</div>
           </div>
         </div>
@@ -591,6 +516,45 @@ export default function OSDetailScreen() {
     }
   };
 
+  const handleSendWhatsApp = () => {
+    const rawPhone = client?.whatsapp || client?.phone || '';
+    const cleanPhone = rawPhone.replace(/\D/g, '');
+    
+    const clientGreeting = client?.name ? `Olá *${client.name}*!` : 'Olá!';
+    const workshopName = settings.name || 'MecânicaPro';
+    const vehicleText = vehicle ? `\n🚗 *Veículo:* ${vehicle.brand} ${vehicle.model} (${vehicle.plate})` : '';
+    
+    let servicesSummary = '';
+    if (os.services.length > 0) {
+      servicesSummary = `\n🔧 *Serviços:* ` + os.services.map(s => s.name).join(', ');
+    }
+
+    let partsSummary = '';
+    if (os.parts.length > 0) {
+      partsSummary = `\n🔩 *Peças:* ` + os.parts.map(p => p.name).join(', ');
+    }
+
+    const billingStatusText = billing 
+      ? (billing.status === 'Pago' ? 'Faturada e Paga ✅' : `Faturada (${billing.paymentMethod.toUpperCase()}) ⏳`)
+      : 'Aguardando Faturamento';
+
+    const message = 
+      `*${workshopName.toUpperCase()}*\n` +
+      `${clientGreeting}\n\n` +
+      `Resumo da sua Ordem de Serviço *#${os.osNumber}*:${vehicleText}${servicesSummary}${partsSummary}\n` +
+      `💰 *Total Geral:* ${formatCurrency(os.grandTotal)}\n` +
+      `📋 *Situação:* ${billingStatusText}\n\n` +
+      `Estamos à disposição para qualquer dúvida! 👍`;
+
+    const encoded = encodeURIComponent(message);
+    if (cleanPhone) {
+      const fullPhone = cleanPhone.length <= 11 ? `55${cleanPhone}` : cleanPhone;
+      Linking.openURL(`https://wa.me/${fullPhone}?text=${encoded}`);
+    } else {
+      Linking.openURL(`https://wa.me/?text=${encoded}`);
+    }
+  };
+
   return (
     <View style={styles.screenContainer}>
       <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
@@ -626,36 +590,59 @@ export default function OSDetailScreen() {
         </View>
       </View>
 
-      <Text style={styles.sectionTitle}>Status da Ordem</Text>
-      <View style={styles.statusButtonsContainer}>
-        {(['Aberta', 'Em andamento', 'Concluída', 'Entregue'] as OSStatus[]).map(st => {
-          const isActive = os.status === st;
-          let activeColor = theme.colors.primary;
-          if (st === 'Em andamento') activeColor = theme.colors.warning;
-          else if (st === 'Concluída') activeColor = theme.colors.success;
-          else if (st === 'Entregue') activeColor = theme.colors.textMuted;
-
-          return (
+      {/* BANNER DE FATURAMENTO / SITUAÇÃO DA OS */}
+      {billing ? (
+        <View style={[
+          styles.billingStatusCard,
+          billing.status === 'Pago' ? styles.billingStatusCardPaid : styles.billingStatusCardPending
+        ]}>
+          <View style={styles.billingStatusHeader}>
+            <View style={styles.billingBadgeRow}>
+              <View style={[
+                styles.billingStatusDot,
+                { backgroundColor: billing.status === 'Pago' ? theme.colors.success : theme.colors.warning }
+              ]} />
+              <View>
+                <Text style={[
+                  styles.billingStatusTitle,
+                  { color: billing.status === 'Pago' ? theme.colors.success : theme.colors.warning }
+                ]}>
+                  {billing.status === 'Pago' ? 'FATURADA • PAGA' : 'FATURADA • AGUARDANDO PAGAMENTO'}
+                </Text>
+                <Text style={styles.billingStatusSubtitle}>
+                  {billing.paymentMethod.toUpperCase()} {billing.installments.length > 1 ? `• ${billing.installments.length}x` : '• À vista'} • Total: {formatCurrency(billing.amount)}
+                </Text>
+              </View>
+            </View>
             <TouchableOpacity
-              key={st}
-              onPress={async () => {
-                const success = await updateWorkOrderStatus(os.id, st);
-                if (success) {
-                  // No need to locally mutate since useDatabase triggers re-fetch
-                }
-              }}
-              style={[
-                styles.statusBadgeButton,
-                isActive ? { backgroundColor: activeColor, borderColor: activeColor } : null
-              ]}
+              onPress={() => navigation.navigate('FinanceTab', { screen: 'BillingDetail', params: { billingId: billing.id } })}
+              style={styles.billingViewLinkBtn}
             >
-              <Text style={[styles.statusBadgeButtonText, isActive ? { color: '#fff' } : null]}>
-                {st === 'Em andamento' ? 'Andamento' : st}
-              </Text>
+              <Text style={styles.billingViewLinkText}>Ver</Text>
+              <ChevronRight size={14} color={theme.colors.primary} />
             </TouchableOpacity>
-          );
-        })}
-      </View>
+          </View>
+        </View>
+      ) : (
+        <View style={styles.billingStatusCardUnbilled}>
+          <View style={styles.billingStatusHeader}>
+            <View style={styles.billingBadgeRow}>
+              <View style={[styles.billingStatusDot, { backgroundColor: '#f59e0b' }]} />
+              <View>
+                <Text style={styles.billingStatusTitleUnbilled}>AGUARDANDO FATURAMENTO</Text>
+                <Text style={styles.billingStatusSubtitleUnbilled}>Serviço em execução • Pronto para faturar</Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              onPress={() => setCreateBillingModalVisible(true)}
+              style={styles.billingQuickActionBtn}
+            >
+              <DollarSign size={14} color="#fff" />
+              <Text style={styles.billingQuickActionBtnText}>Faturar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       <View style={styles.osInfoCard}>
         <View style={styles.cardRowSpaceBetween}>
@@ -770,99 +757,35 @@ export default function OSDetailScreen() {
           onPress={handleShareOS}
           style={styles.shareOSButton}
         >
-          <FileText size={16} color="#fff" />
-          <Text style={styles.shareOSButtonText}>Imprimir / PDF</Text>
+          <FileText size={15} color="#fff" />
+          <Text style={styles.shareOSButtonText}>PDF</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={handleSendWhatsApp}
+          style={styles.whatsAppOSButton}
+        >
+          <MessageSquare size={15} color="#fff" />
+          <Text style={styles.whatsAppOSButtonText}>WhatsApp</Text>
         </TouchableOpacity>
 
         {billing ? (
-          <View style={styles.billedIndicatorBadge}>
-            <Text style={styles.billedIndicatorText}>💰 FATURADA ({billing.status.toUpperCase()})</Text>
-          </View>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('FinanceTab', { screen: 'BillingDetail', params: { billingId: billing.id } })}
+            style={styles.billedIndicatorBadge}
+          >
+            <Text style={styles.billedIndicatorText}>💰 Cobrança</Text>
+          </TouchableOpacity>
         ) : (
           <TouchableOpacity
-            onPress={() => setShowBillingPanel(true)}
+            onPress={() => setCreateBillingModalVisible(true)}
             style={styles.billOSButton}
           >
-            <DollarSign size={16} color="#fff" />
-            <Text style={styles.billOSButtonText}>Faturar OS</Text>
+            <DollarSign size={15} color="#fff" />
+            <Text style={styles.billOSButtonText}>Faturar</Text>
           </TouchableOpacity>
         )}
       </View>
-
-      {/* MÓDULO FISCAL */}
-      {(os.status === 'Concluída' || os.status === 'Entregue') && (
-        <View style={styles.fiscalCard}>
-          <View style={styles.fiscalCardHeader}>
-            <Text style={styles.fiscalCardTitle}>NOTAS FISCAIS ELETRÔNICAS</Text>
-            <TouchableOpacity onPress={fetchFiscalInvoices} style={styles.fiscalRefreshBtn}>
-              <RefreshCw size={14} color={theme.colors.primary} />
-            </TouchableOpacity>
-          </View>
-
-          {fiscalInvoices.length > 0 ? (
-            <View style={styles.invoiceList}>
-              {fiscalInvoices.map((inv) => {
-                const isAuthorized = inv.status === 'AUTORIZADA';
-                const isRejected = inv.status === 'REJEITADA';
-                const isProcessing = inv.status === 'PROCESSANDO';
-
-                return (
-                  <View key={inv.id} style={styles.invoiceRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.invoiceTypeName}>
-                        {inv.type === 'NFSE' ? 'NFS-e (Nota de Serviço)' : 'NF-e (Nota de Peças)'}
-                      </Text>
-                      <Text style={[
-                        styles.invoiceStatusBadge,
-                        isAuthorized && styles.statusAuth,
-                        isRejected && styles.statusRejected,
-                        isProcessing && styles.statusProcessing
-                      ]}>
-                        {inv.status}
-                      </Text>
-                      {isAuthorized && inv.invoiceNumber && (
-                        <Text style={styles.invoiceNumberText}>Número: {inv.invoiceNumber}</Text>
-                      )}
-                      {isRejected && inv.errorMessage && (
-                        <Text style={styles.invoiceErrorText}>{inv.errorMessage}</Text>
-                      )}
-                    </View>
-
-                    {isAuthorized && inv.pdfUrl && (
-                      <TouchableOpacity 
-                        onPress={() => Linking.openURL(inv.pdfUrl)}
-                        style={styles.openInvoiceBtn}
-                      >
-                        <ExternalLink size={16} color="#fff" />
-                        <Text style={styles.openInvoiceBtnText}>Ver PDF</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                );
-              })}
-            </View>
-          ) : (
-            <View style={{ alignItems: 'center', paddingVertical: 10 }}>
-              <Text style={styles.noInvoicesText}>Nenhuma nota fiscal emitida para esta OS.</Text>
-            </View>
-          )}
-
-          {/* Botão de emissão se não houver notas processando/autorizadas */}
-          {!fiscalInvoices.some(i => i.status === 'AUTORIZADA' || i.status === 'PROCESSANDO') && (
-            <TouchableOpacity 
-              onPress={handleEmitInvoice}
-              disabled={fiscalLoading}
-              style={styles.emitInvoiceBtn}
-            >
-              {fiscalLoading ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={styles.emitInvoiceBtnText}>Emitir Nota Fiscal (NFS-e / NF-e)</Text>
-              )}
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
 
       <OSWizardModal 
 
@@ -894,89 +817,20 @@ export default function OSDetailScreen() {
         </View>
       </Modal>
 
-      <Modal visible={showBillingPanel} animationType="slide" transparent>
-        <View style={styles.modalBg}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Faturamento da OS</Text>
-              <TouchableOpacity onPress={() => setShowBillingPanel(false)}>
-                <X size={20} color="#94a3b8" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalBillingScrollViewContent}>
-              <View style={styles.modalBillingValueWrapper}>
-                <Text style={styles.modalBillingValueLabel}>VALOR TOTAL A FATURAR</Text>
-                <Text style={styles.modalBillingValueText}>
-                  {formatCurrency(os.grandTotal)}
-                </Text>
-              </View>
-
-              <Text style={styles.inputLabel}>Forma de Pagamento</Text>
-              <View style={styles.pickerFakeRow}>
-                {(['PIX', 'Dinheiro', 'Débito', 'Crédito', 'Boleto'] as PaymentMethod[]).map(method => (
-                  <TouchableOpacity
-                    key={method}
-                    onPress={() => setBillingForm({ ...billingForm, paymentMethod: method })}
-                    style={[styles.pickerTag, billingForm.paymentMethod === method ? styles.pickerTagActive : null]}
-                  >
-                    <Text style={[styles.pickerTagText, billingForm.paymentMethod === method ? styles.pickerTagActiveText : null]}>
-                      {method}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <Text style={styles.inputLabel}>Número de Parcelas</Text>
-              <View style={styles.installmentsPickerList}>
-                {['1', '2', '3', '4', '6', '12'].map(count => {
-                  const label = count === '1' ? 'À vista (1x)' : `${count} parcelas`;
-                  return (
-                    <TouchableOpacity
-                      key={count}
-                      onPress={() => setBillingForm({ ...billingForm, installmentsCount: count })}
-                      style={[styles.installmentsPickerItem, billingForm.installmentsCount === count ? styles.installmentsPickerItemActive : null]}
-                    >
-                      <Text style={[styles.installmentsPickerText, billingForm.installmentsCount === count ? styles.installmentsPickerTextActive : null]}>
-                        {label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              <Text style={styles.inputLabel}>Prévia das Parcelas</Text>
-              <View style={styles.installmentsPreviewCard}>
-                {(() => {
-                  const arr = [];
-                  const count = parseInt(billingForm.installmentsCount);
-                  const baseVal = Math.floor((os.grandTotal / count) * 100) / 100;
-                  const lastDiff = Math.round((os.grandTotal - (baseVal * count)) * 100) / 100;
-                  
-                  for (let i = 1; i <= count; i++) {
-                    const d = new Date();
-                    d.setDate(d.getDate() + (30 * (i - 1)));
-                    const instAmt = i === count ? (baseVal + lastDiff) : baseVal;
-                    arr.push(
-                      <View key={i} style={styles.installmentPreviewRow}>
-                        <Text style={styles.installmentPreviewNum}>Parcela {i}:</Text>
-                        <Text style={styles.installmentPreviewDetails}>
-                          {formatCurrency(instAmt)} • Venc: {d.toLocaleDateString('pt-BR')}
-                        </Text>
-                      </View>
-                    );
-                  }
-                  return arr;
-                })()}
-              </View>
-
-              <TouchableOpacity style={styles.confirmBillingButton} onPress={handleFaturarOS}>
-                <Text style={styles.confirmBillingText}>Confirmar e Faturar OS</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+      <CreateBillingModal
+        visible={createBillingModalVisible}
+        preselectedOsId={os.id}
+        onClose={() => setCreateBillingModalVisible(false)}
+        onSuccess={(newBillingId?: string) => {
+          setCreateBillingModalVisible(false);
+          if (newBillingId) {
+            navigation.navigate('FinanceTab', {
+              screen: 'BillingDetail',
+              params: { billingId: newBillingId }
+            });
+          }
+        }}
+      />
     </ScrollView>
     </View>
   );
@@ -1033,6 +887,93 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginTop: 14,
     marginBottom: 8,
+  },
+  billingStatusCard: {
+    borderRadius: theme.roundness.md,
+    borderWidth: 1.5,
+    padding: 14,
+    marginBottom: 16,
+  },
+  billingStatusCardPaid: {
+    backgroundColor: 'rgba(34, 197, 94, 0.08)',
+    borderColor: 'rgba(34, 197, 94, 0.3)',
+  },
+  billingStatusCardPending: {
+    backgroundColor: 'rgba(234, 179, 8, 0.08)',
+    borderColor: 'rgba(234, 179, 8, 0.3)',
+  },
+  billingStatusCardUnbilled: {
+    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+    borderRadius: theme.roundness.md,
+    borderWidth: 1.5,
+    padding: 14,
+    marginBottom: 16,
+  },
+  billingStatusHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  billingBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  billingStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  billingStatusTitle: {
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  billingStatusSubtitle: {
+    fontSize: 11,
+    color: theme.colors.textMuted,
+    marginTop: 2,
+  },
+  billingStatusTitleUnbilled: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#f59e0b',
+    letterSpacing: 0.5,
+  },
+  billingStatusSubtitleUnbilled: {
+    fontSize: 11,
+    color: theme.colors.textMuted,
+    marginTop: 2,
+  },
+  billingViewLinkBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: 'rgba(59, 102, 255, 0.12)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  billingViewLinkText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: theme.colors.primary,
+  },
+  billingQuickActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  billingQuickActionBtnText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#fff',
   },
   statusButtonsContainer: {
     flexDirection: 'row',
@@ -1218,7 +1159,23 @@ const styles = StyleSheet.create({
     minHeight: 52,
   },
   shareOSButtonText: {
-    fontSize: 14,
+    fontSize: 13,
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  whatsAppOSButton: {
+    flex: 1.1,
+    backgroundColor: '#16a34a',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 14,
+    borderRadius: theme.roundness.md,
+    minHeight: 52,
+  },
+  whatsAppOSButtonText: {
+    fontSize: 13,
     color: '#fff',
     fontWeight: 'bold',
   },
@@ -1475,115 +1432,6 @@ const styles = StyleSheet.create({
   },
   deleteButtonIcon: {
     marginRight: 6,
-  },
-  fiscalCard: {
-    backgroundColor: theme.colors.card,
-    borderRadius: theme.roundness.md,
-    borderWidth: 1.5,
-    borderColor: theme.colors.border,
-    padding: 16,
-    marginTop: 16,
-    marginBottom: 16,
-  },
-  fiscalCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  fiscalCardTitle: {
-    fontSize: 11,
-    fontWeight: '900',
-    color: theme.colors.textMuted,
-    letterSpacing: 0.5,
-  },
-  fiscalRefreshBtn: {
-    padding: 4,
-  },
-  invoiceList: {
-    gap: 12,
-    marginBottom: 8,
-  },
-  invoiceRow: {
-    backgroundColor: '#0f1115',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 8,
-    padding: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  invoiceTypeName: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 4,
-  },
-  invoiceStatusBadge: {
-    alignSelf: 'flex-start',
-    fontSize: 10,
-    fontWeight: 'bold',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    color: '#94a3b8',
-    backgroundColor: 'rgba(148, 163, 184, 0.1)',
-  },
-  statusAuth: {
-    color: '#22c55e',
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-  },
-  statusRejected: {
-    color: '#ef4444',
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-     overflow: 'hidden',
-  },
-  statusProcessing: {
-    color: '#eab308',
-    backgroundColor: 'rgba(234, 179, 8, 0.1)',
-  },
-  invoiceNumberText: {
-    fontSize: 11,
-    color: theme.colors.textMuted,
-    marginTop: 4,
-  },
-  invoiceErrorText: {
-    fontSize: 11,
-    color: '#ef4444',
-    marginTop: 4,
-    lineHeight: 14,
-  },
-  openInvoiceBtn: {
-    backgroundColor: theme.colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  openInvoiceBtnText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  noInvoicesText: {
-    fontSize: 12,
-    color: theme.colors.textMuted,
-  },
-  emitInvoiceBtn: {
-    backgroundColor: '#eab308',
-    height: 44,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  emitInvoiceBtnText: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: '#000',
   },
 });
 

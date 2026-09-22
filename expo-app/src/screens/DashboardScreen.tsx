@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { ClipboardList, Play, CheckCircle, Wallet, ArrowUpRight, ArrowDownRight } from 'lucide-react-native';
+import { ClipboardList, Play, CheckCircle, Wallet, ArrowUpRight, ArrowDownRight, Clock, Sparkles, ChevronRight } from 'lucide-react-native';
 import { useDatabase } from '../context/DatabaseContext';
 import { theme } from '../styles/theme';
 import { formatCurrency, formatDate } from '../utils/formatters';
@@ -16,9 +16,9 @@ export default function DashboardScreen() {
 
   // Metrics using useMemo to optimize re-renders
   const metrics = useMemo(() => {
-    const osAbertas = workOrders.filter(o => o.status === 'Aberta').length;
-    const osAndamento = workOrders.filter(o => o.status === 'Em andamento').length;
-    const osConcluidas = workOrders.filter(o => o.status === 'Concluída' || o.status === 'Entregue').length;
+    const totalOrdens = workOrders.length;
+    const aFaturar = workOrders.filter(o => !billings.some(b => b.osId === o.id)).length;
+    const faturadas = workOrders.filter(o => billings.some(b => b.osId === o.id)).length;
 
     const totalAReceber = billings.reduce((acc, b) => {
       if (b.status === 'Cancelado') return acc;
@@ -37,9 +37,9 @@ export default function DashboardScreen() {
     return {
       faturamentoMes,
       entradasMes,
-      osAbertas,
-      osAndamento,
-      osConcluidas,
+      totalOrdens,
+      aFaturar,
+      faturadas,
       totalAReceber,
     };
   }, [workOrders, billings, transactions]);
@@ -65,28 +65,28 @@ export default function DashboardScreen() {
       <View style={styles.grid}>
         <View style={[styles.gridCol, styles.card]}>
           <View style={styles.metricHeader}>
-            <Text style={styles.metricTitle}>ABERTAS</Text>
+            <Text style={styles.metricTitle}>TOTAL ORDENS</Text>
             <ClipboardList size={14} color={theme.colors.primary} />
           </View>
-          <Text style={styles.metricValue}>{metrics.osAbertas}</Text>
+          <Text style={styles.metricValue}>{metrics.totalOrdens}</Text>
         </View>
 
         <View style={[styles.gridCol, styles.card]}>
           <View style={styles.metricHeader}>
-            <Text style={styles.metricTitle}>EM CURSO</Text>
-            <Play size={14} color={theme.colors.warning} />
+            <Text style={styles.metricTitle}>A FATURAR</Text>
+            <Clock size={14} color="#f59e0b" />
           </View>
-          <Text style={styles.metricValue}>{metrics.osAndamento}</Text>
+          <Text style={[styles.metricValue, { color: '#f59e0b' }]}>{metrics.aFaturar}</Text>
         </View>
       </View>
 
       <View style={styles.grid}>
         <View style={[styles.gridCol, styles.card]}>
           <View style={styles.metricHeader}>
-            <Text style={styles.metricTitle}>CONCLUÍDAS</Text>
+            <Text style={styles.metricTitle}>FATURADAS</Text>
             <CheckCircle size={14} color={theme.colors.success} />
           </View>
-          <Text style={styles.metricValue}>{metrics.osConcluidas}</Text>
+          <Text style={[styles.metricValue, { color: theme.colors.success }]}>{metrics.faturadas}</Text>
         </View>
 
         <View style={[styles.gridCol, styles.card]}>
@@ -102,6 +102,68 @@ export default function DashboardScreen() {
 
 
 
+      {/* Onboarding Checklist for New Workshops */}
+      {workOrders.length === 0 && clients.length === 0 && (
+        <View style={styles.onboardingCard}>
+          <View style={styles.onboardingHeader}>
+            <View style={styles.onboardingIconBadge}>
+              <Sparkles size={18} color="#3b82f6" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.onboardingTitle}>Primeiros Passos</Text>
+              <Text style={styles.onboardingSubtitle}>Configure sua oficina para começar a operar:</Text>
+            </View>
+          </View>
+
+          <View style={styles.onboardingStepsList}>
+            <TouchableOpacity 
+              style={styles.onboardingStepItem}
+              onPress={() => navigation.navigate('MoreTab', { screen: 'Settings' })}
+              activeOpacity={0.7}
+            >
+              <View style={styles.onboardingStepNumBadge}>
+                <Text style={styles.onboardingStepNumText}>1</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.onboardingStepTitle}>Dados da Oficina</Text>
+                <Text style={styles.onboardingStepDesc}>Defina nome, CNPJ, telefone e logo para os comprovantes.</Text>
+              </View>
+              <ChevronRight size={18} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.onboardingStepItem}
+              onPress={() => navigation.navigate('ClientsTab', { screen: 'ClientsList' })}
+              activeOpacity={0.7}
+            >
+              <View style={styles.onboardingStepNumBadge}>
+                <Text style={styles.onboardingStepNumText}>2</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.onboardingStepTitle}>Cadastrar Cliente & Veículo</Text>
+                <Text style={styles.onboardingStepDesc}>Adicione o primeiro cliente e veículo da oficina.</Text>
+              </View>
+              <ChevronRight size={18} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.onboardingStepItem, { borderBottomWidth: 0 }]}
+              onPress={() => navigation.navigate('OSTab', { screen: 'OSList' })}
+              activeOpacity={0.7}
+            >
+              <View style={styles.onboardingStepNumBadge}>
+                <Text style={styles.onboardingStepNumText}>3</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.onboardingStepTitle}>Abrir Ordem de Serviço</Text>
+                <Text style={styles.onboardingStepDesc}>Lance serviços, peças e compartilhe o comprovante via WhatsApp.</Text>
+              </View>
+              <ChevronRight size={18} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       {/* Recent OS List */}
       <Text style={styles.sectionTitle}>ORDENS DE SERVIÇO RECENTES</Text>
       {workOrders.length === 0 ? (
@@ -114,31 +176,17 @@ export default function DashboardScreen() {
           const vehicle = vehicleMap.get(os.vehicleId);
           const billing = billingMap.get(os.id);
           
-          let osStatusStyle = styles.cardOpen;
-          let badgeColor = 'rgba(59, 102, 255, 0.1)';
-          let badgeTextColor = theme.colors.primary;
-          let badgeBorderColor = 'rgba(59, 102, 255, 0.3)';
-          if (os.status === 'Em andamento') {
-            osStatusStyle = styles.cardProgress;
-            badgeColor = 'rgba(234, 179, 8, 0.1)';
-            badgeTextColor = theme.colors.warning;
-            badgeBorderColor = 'rgba(234, 179, 8, 0.3)';
-          } else if (os.status === 'Concluída') {
-            osStatusStyle = styles.cardDone;
-            badgeColor = 'rgba(34, 197, 94, 0.1)';
-            badgeTextColor = theme.colors.success;
-            badgeBorderColor = 'rgba(34, 197, 94, 0.3)';
-          } else if (os.status === 'Entregue') {
-            osStatusStyle = styles.cardDelivered;
-            badgeColor = '#272e3f';
-            badgeTextColor = '#cbd5e1';
-            badgeBorderColor = '#272e3f';
+          let cardStyle = styles.cardProgress;
+          if (billing?.status === 'Pago') {
+            cardStyle = styles.cardDone;
+          } else if (!billing) {
+            cardStyle = styles.cardOpen;
           }
 
           return (
             <TouchableOpacity 
               key={os.id} 
-              style={[styles.listItem, osStatusStyle, styles.listItemCol]}
+              style={[styles.listItem, cardStyle, styles.listItemCol]}
               onPress={() => {
                 navigation.navigate('OSTab', {
                   screen: 'OSDetail',
@@ -149,11 +197,34 @@ export default function DashboardScreen() {
               <View style={styles.cardHeaderRow}>
                 <View style={styles.cardHeaderLeft}>
                   <Text style={styles.osNum}>{os.osNumber}</Text>
-                  <View style={[styles.statusBadge, { backgroundColor: badgeColor, borderColor: badgeBorderColor }]}>
-                    <Text style={[styles.statusBadgeText, { color: badgeTextColor }]}>
-                      {os.status === 'Em andamento' ? 'Andamento' : os.status}
-                    </Text>
-                  </View>
+                  {billing ? (
+                    <View style={[
+                      styles.statusBadge,
+                      {
+                        backgroundColor: billing.status === 'Pago' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(234, 179, 8, 0.1)',
+                        borderColor: billing.status === 'Pago' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(234, 179, 8, 0.3)'
+                      }
+                    ]}>
+                      <Text style={[
+                        styles.statusBadgeText,
+                        { color: billing.status === 'Pago' ? theme.colors.success : theme.colors.warning }
+                      ]}>
+                        {billing.status === 'Pago' ? 'PAGO' : 'FATURADA'}
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={[
+                      styles.statusBadge,
+                      {
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        borderColor: 'rgba(245, 158, 11, 0.3)'
+                      }
+                    ]}>
+                      <Text style={[styles.statusBadgeText, { color: '#f59e0b' }]}>
+                        A FATURAR
+                      </Text>
+                    </View>
+                  )}
                 </View>
                 <Text style={styles.osDate}>{formatDate(os.date)}</Text>
               </View>
@@ -175,23 +246,13 @@ export default function DashboardScreen() {
               <View style={styles.cardFooterRow}>
                 <View style={styles.footerBadgeRow}>
                   {billing ? (
-                    <View style={[
-                      styles.billingStatusBadge,
-                      billing.status === 'Pago' ? styles.badgeSuccessBg : styles.badgeWarningBg
-                    ]}>
-                      <Text style={[
-                        styles.billingStatusBadgeText,
-                        billing.status === 'Pago' ? styles.textGreen : styles.textYellow
-                      ]}>
-                        💰 {billing.status.toUpperCase()}
-                      </Text>
-                    </View>
+                    <Text style={{ fontSize: 11, color: theme.colors.textMuted, fontWeight: 'bold' }}>
+                      💳 {billing.paymentMethod.toUpperCase()} {billing.installments.length > 1 ? `(${billing.installments.length}x)` : ''}
+                    </Text>
                   ) : (
-                    <View style={[styles.billingStatusBadge, styles.badgeErrorBg]}>
-                      <Text style={[styles.billingStatusBadgeText, styles.textRed]}>
-                        💸 NÃO FATURADA
-                      </Text>
-                    </View>
+                    <Text style={{ fontSize: 11, color: '#f59e0b', fontWeight: 'bold' }}>
+                      ⚙️ EM EXECUÇÃO
+                    </Text>
                   )}
                 </View>
                 <Text style={styles.osTotal}>
@@ -611,5 +672,76 @@ const styles = StyleSheet.create({
   transTextWrapper: {
     flex: 1,
     paddingRight: 6,
+  },
+  onboardingCard: {
+    backgroundColor: '#111827',
+    borderRadius: theme.roundness.md,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.35)',
+    marginBottom: theme.spacing.lg,
+  },
+  onboardingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  onboardingIconBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  onboardingTitle: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: theme.colors.white,
+  },
+  onboardingSubtitle: {
+    fontSize: 12,
+    color: theme.colors.textDim,
+    marginTop: 2,
+  },
+  onboardingStepsList: {
+    gap: 4,
+  },
+  onboardingStepItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    gap: 12,
+  },
+  onboardingStepNumBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  onboardingStepNumText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#60a5fa',
+  },
+  onboardingStepTitle: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: theme.colors.text,
+  },
+  onboardingStepDesc: {
+    fontSize: 11,
+    color: theme.colors.textMuted,
+    marginTop: 2,
   },
 });

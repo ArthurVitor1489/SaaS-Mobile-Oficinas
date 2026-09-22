@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, StyleSheet, Switch } from 'react-native';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, Shield, Trash2 } from 'lucide-react-native';
 import { useDatabase } from '../context/DatabaseContext';
 import { theme } from '../styles/theme';
 import { useNavigation } from '@react-navigation/native';
@@ -9,6 +9,7 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as DocumentPicker from 'expo-document-picker';
 import { formatCurrency, formatDate } from '../utils/formatters';
+import TermsPrivacyModal from '../components/TermsPrivacyModal';
 
 export default function SettingsScreen() {
   const navigation = useNavigation<any>();
@@ -18,9 +19,13 @@ export default function SettingsScreen() {
     exportDatabaseJson,
     restoreBackup,
     resetDatabase,
+    deleteAccount,
     workOrders,
-    clients
+    clients,
+    billings
   } = useDatabase();
+
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   const [name, setName] = useState(settings.name || '');
   const [cnpj, setCnpj] = useState(settings.cnpj || '');
@@ -104,11 +109,14 @@ export default function SettingsScreen() {
   const handleExportCsv = async () => {
     try {
       const clientMap = new Map(clients.map(c => [c.id, c]));
-      let csvContent = '\uFEFFID OS;Número OS;Data;Cliente;Mão de Obra;Peças;Total Geral;Status\n';
+      const billingMap = new Map(billings.map(b => [b.osId, b]));
+      let csvContent = '\uFEFFID OS;Número OS;Data;Cliente;Mão de Obra;Peças;Total Geral;Situação\n';
       
       workOrders.forEach(os => {
         const clientName = clientMap.get(os.clientId)?.name || '-';
-        csvContent += `"${os.id}";"${os.osNumber}";"${formatDate(os.date)}";"${clientName}";"${formatCurrency(os.servicesTotal)}";"${formatCurrency(os.partsTotal)}";"${formatCurrency(os.grandTotal)}";"${os.status}"\n`;
+        const billing = billingMap.get(os.id);
+        const statusLabel = billing ? (billing.status === 'Pago' ? 'Faturada (Paga)' : 'Faturada (Pendente)') : 'A Faturar';
+        csvContent += `"${os.id}";"${os.osNumber}";"${formatDate(os.date)}";"${clientName}";"${formatCurrency(os.servicesTotal)}";"${formatCurrency(os.partsTotal)}";"${formatCurrency(os.grandTotal)}";"${statusLabel}"\n`;
       });
 
       const filename = `ordens-servico-${new Date().toISOString().split('T')[0]}.csv`;
@@ -125,18 +133,20 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleResetDatabase = () => {
+  const handleDeleteAccount = () => {
     Alert.alert(
-      'Limpar Base de Dados',
-      'Isso irá apagar todos os dados locais e redefinir para a semente de teste padrão. Deseja continuar?',
+      '⚠️ Excluir Minha Conta e Dados',
+      'ATENÇÃO: Esta ação é definitiva e irreversível! Todos os clientes, veículos, ordens de serviço, faturamentos e configurações da sua oficina serão apagados permanentemente de nossos servidores e do seu dispositivo, em conformidade com a LGPD.\n\nDeseja realmente excluir sua conta?',
       [
         { text: 'Cancelar', style: 'cancel' },
         { 
-          text: 'Resetar Tudo', 
+          text: 'Sim, Excluir Definitivamente', 
           style: 'destructive',
           onPress: async () => {
-            await resetDatabase();
-            Alert.alert('Sucesso', 'Base de dados resetada com sucesso.');
+            const success = await deleteAccount();
+            if (success) {
+              Alert.alert('Conta Excluída', 'Sua conta e todos os dados foram apagados com sucesso.');
+            }
           }
         }
       ]
@@ -262,11 +272,38 @@ export default function SettingsScreen() {
           <Text style={styles.actionGridBtnDesc}>Exportar lista completa de ordens</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.actionGridBtn, { borderColor: theme.colors.error }]} onPress={handleResetDatabase}>
-          <Text style={[styles.actionGridBtnTitle, { color: theme.colors.error }]}>Resetar Banco</Text>
-          <Text style={styles.actionGridBtnDesc}>Limpar todos os dados locais e reiniciar</Text>
+      </View>
+
+      <Text style={styles.sectionTitle}>SEGURANÇA & PRIVACIDADE</Text>
+      <View style={styles.privacyCard}>
+        <TouchableOpacity 
+          style={styles.privacyRowBtn}
+          onPress={() => setShowTermsModal(true)}
+        >
+          <View style={styles.privacyRowLeft}>
+            <Shield size={18} color={theme.colors.primary} />
+            <View>
+              <Text style={styles.privacyBtnTitle}>Termos de Uso e Política de Privacidade</Text>
+              <Text style={styles.privacyBtnDesc}>Conformidade LGPD e diretrizes de dados</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        <View style={styles.privacyDivider} />
+
+        <TouchableOpacity 
+          style={styles.deleteAccountBtn}
+          onPress={handleDeleteAccount}
+        >
+          <Trash2 size={16} color={theme.colors.error} />
+          <Text style={styles.deleteAccountBtnText}>Excluir Minha Conta e Todos os Dados</Text>
         </TouchableOpacity>
       </View>
+
+      <TermsPrivacyModal
+        visible={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+      />
     </ScrollView>
     </View>
   );
@@ -394,5 +431,48 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: theme.colors.textMuted,
     marginTop: 4,
+  },
+  privacyCard: {
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.roundness.md,
+    borderWidth: 1.5,
+    borderColor: theme.colors.border,
+    overflow: 'hidden',
+    marginTop: 4,
+  },
+  privacyRowBtn: {
+    padding: 16,
+  },
+  privacyRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  privacyBtnTitle: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  privacyBtnDesc: {
+    fontSize: 11,
+    color: theme.colors.textMuted,
+    marginTop: 2,
+  },
+  privacyDivider: {
+    height: 1,
+    backgroundColor: '#1e293b',
+  },
+  deleteAccountBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+  },
+  deleteAccountBtnText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: theme.colors.error,
   },
 });

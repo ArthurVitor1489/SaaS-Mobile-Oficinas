@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
+import { CreateBillingDto } from './dto/create-billing.dto';
+import { UpdateInstallmentDueDateDto } from './dto/update-installment.dto';
 
 @Injectable()
 export class FinanceService {
@@ -13,9 +15,107 @@ export class FinanceService {
         workOrder: {
           include: { client: true, vehicle: true },
         },
-        installments: true,
+        installments: {
+          orderBy: { number: 'asc' },
+        },
       },
       orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async createBilling(tenantId: string, dto: CreateBillingDto) {
+    // Check if workOrder exists
+    const workOrder = await this.prisma.workOrder.findFirst({
+      where: { id: dto.osId, tenantId },
+    });
+
+    if (!workOrder) {
+      throw new NotFoundException('Ordem de serviço associada não encontrada.');
+    }
+
+    // Check if billing already exists for this OS
+    const existing = await this.prisma.billing.findFirst({
+      where: { osId: dto.osId, tenantId },
+      include: { installments: true, workOrder: true },
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    // Compute status
+    const allPaid = dto.installments.every((i) => i.status === 'PAGO' || i.status === 'Pago');
+    const anyPaid = dto.installments.some((i) => i.status === 'PAGO' || i.status === 'Pago');
+    const billingStatus = allPaid ? 'PAGO' : anyPaid ? 'PARCIALMENTE_PAGO' : (dto.status || 'PENDENTE');
+
+    return this.prisma.billing.create({
+      data: {
+        tenantId,
+        osId: dto.osId,
+        amount: dto.amount,
+        paymentMethod: dto.paymentMethod,
+        status: billingStatus,
+        dueDate: dto.dueDate,
+        installments: {
+          create: dto.installments.map((inst) => ({
+            number: inst.number,
+            amount: inst.amount,
+            dueDate: inst.dueDate,
+            status: (inst.status === 'Pago' || inst.status === 'PAGO') ? 'PAGO' : 'PENDENTE',
+            paidAt: (inst.status === 'Pago' || inst.status === 'PAGO') ? (inst.paidAt ? new Date(inst.paidAt) : new Date()) : null,
+          })),
+        },
+      },
+      include: {
+        workOrder: {
+          include: { client: true, vehicle: true },
+        },
+        installments: {
+          orderBy: { number: 'asc' },
+        },
+      },
+    });
+  }
+
+  async updateInstallmentDueDate(tenantId: string, billingId: string, installmentNumber: number, dto: UpdateInstallmentDueDateDto) {
+    const billing = await this.prisma.billing.findFirst({
+      where: { id: billingId, tenantId },
+      include: { installments: true },
+    });
+
+    if (!billing) {
+      throw new NotFoundException('Cobrança não encontrada.');
+    }
+
+    const installment = billing.installments.find((i) => i.number === installmentNumber);
+    if (!installment) {
+      throw new NotFoundException(`Parcela/Boleto número ${installmentNumber} não encontrado.`);
+    }
+
+    // Update the installment due date
+    await this.prisma.billingInstallment.update({
+      where: { id: installment.id },
+      data: { dueDate: dto.dueDate },
+    });
+
+    // If it's the first installment, also update the main billing dueDate
+    if (installmentNumber === 1) {
+      await this.prisma.billing.update({
+        where: { id: billingId },
+        data: { dueDate: dto.dueDate },
+      });
+    }
+
+    return this.prisma.billing.findUnique({
+      where: { id: billingId },
+      include: {
+        workOrder: {
+          include: { client: true, vehicle: true },
+        },
+        installments: {
+          orderBy: { number: 'asc' },
+        },
+      },
     });
   }
 

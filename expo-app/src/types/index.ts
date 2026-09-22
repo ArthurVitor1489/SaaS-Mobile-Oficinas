@@ -95,6 +95,8 @@ export interface Billing {
   installments: Installment[];
   dueDate: string;
   createdAt: string;
+  customClientName?: string;
+  customDescription?: string;
 }
 
 export type TransactionType = 'Entrada' | 'Saída';

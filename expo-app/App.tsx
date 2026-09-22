@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { 
-  Menu, Users, ClipboardList, Wallet, MoreHorizontal, Wifi, WifiOff, AlertTriangle, Lock
+  Menu, Users, ClipboardList, Wallet, MoreHorizontal, Wifi, WifiOff 
 } from 'lucide-react-native';
 import { NavigationContainer, DefaultTheme, useNavigation, CommonActions } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -18,9 +18,6 @@ import { useAppStore } from './src/store/useAppStore';
 import { startSyncEngine, stopSyncEngine, processOfflineQueue } from './src/services/syncEngine';
 import { theme } from './src/styles/theme';
 import { DatabaseProvider } from './src/context/DatabaseContext';
-import Purchases from 'react-native-purchases';
-import Constants from 'expo-constants';
-
 
 // Screen Stacks
 import DashboardScreen from './src/screens/DashboardScreen';
@@ -29,12 +26,12 @@ import ClientDetailScreen from './src/screens/ClientDetailScreen';
 import OSListScreen from './src/screens/OSListScreen';
 import OSDetailScreen from './src/screens/OSDetailScreen';
 import FinanceFlowScreen from './src/screens/FinanceFlowScreen';
+import BillingListScreen from './src/screens/BillingListScreen';
 import BillingDetailScreen from './src/screens/BillingDetailScreen';
 import MoreMenuScreen from './src/screens/MoreMenuScreen';
 import CatalogScreen from './src/screens/CatalogScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
-import SubscriptionDetailsScreen from './src/screens/SubscriptionDetailsScreen';
-import FiscalSettingsScreen from './src/screens/FiscalSettingsScreen';
+import TermsPrivacyModal from './src/components/TermsPrivacyModal';
 
 import { 
   RootStackParamList, MainTabParamList, DashboardStackParamList, 
@@ -76,7 +73,7 @@ const FinanceStack = createStackNavigator<FinanceStackParamList>();
 function FinanceStackNavigator() {
   return (
     <FinanceStack.Navigator screenOptions={{ headerShown: false }}>
-      <FinanceStack.Screen name="FinanceFlow" component={FinanceFlowScreen} />
+      <FinanceStack.Screen name="BillingList" component={BillingListScreen} />
       <FinanceStack.Screen name="BillingDetail" component={BillingDetailScreen} />
     </FinanceStack.Navigator>
   );
@@ -87,10 +84,9 @@ function MoreStackNavigator() {
   return (
     <MoreStack.Navigator screenOptions={{ headerShown: false }}>
       <MoreStack.Screen name="MoreMenu" component={MoreMenuScreen} />
+      <MoreStack.Screen name="CashFlow" component={FinanceFlowScreen} />
       <MoreStack.Screen name="Catalog" component={CatalogScreen} />
       <MoreStack.Screen name="Settings" component={SettingsScreen} />
-      <MoreStack.Screen name="SubscriptionDetails" component={SubscriptionDetailsScreen} />
-      <MoreStack.Screen name="FiscalSettings" component={FiscalSettingsScreen} />
     </MoreStack.Navigator>
   );
 }
@@ -103,58 +99,7 @@ function MainTabNavigator() {
   const settings = useAppStore((state) => state.settings);
   const online = useAppStore((state) => state.isOnline);
   const queueLength = useAppStore((state) => state.offlineQueue.length);
-  const subscription = useAppStore((state) => state.subscription);
   const navigation = useNavigation<any>();
-
-  const getSubscriptionStatus = () => {
-    if (!subscription) return { showWarning: false, isBlocked: false, message: '' };
-    
-    const { status, dueDate } = subscription;
-    const now = new Date();
-    const dueDateObj = new Date(dueDate);
-    
-    if (status === 'TRIAL') {
-      if (now > dueDateObj) {
-        return { 
-          showWarning: false, 
-          isBlocked: true, 
-          message: 'Período de avaliação de 30 dias expirado. Faça o pagamento para liberar.' 
-        };
-      }
-      const diffTime = dueDateObj.getTime() - now.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      if (diffDays <= 5 && diffDays >= 0) {
-        return { 
-          showWarning: true, 
-          isBlocked: false, 
-          message: `Faltam apenas ${diffDays} dias de teste gratuito. Regularize sua assinatura.` 
-        };
-      }
-    }
-    
-    if (status === 'OVERDUE' || status === 'PENDING') {
-      const diffTime = now.getTime() - dueDateObj.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
-      if (diffDays > 7) {
-        return { 
-          showWarning: false, 
-          isBlocked: true, 
-          message: 'Assinatura vencida há mais de 7 dias. Funções de cadastro bloqueadas.' 
-        };
-      } else if (diffDays >= 0) {
-        return { 
-          showWarning: true, 
-          isBlocked: false, 
-          message: `Assinatura pendente. Bloqueio em ${7 - diffDays} dias. Regularize o pagamento.` 
-        };
-      }
-    }
-    
-    return { showWarning: false, isBlocked: false, message: '' };
-  };
-
-  const subInfo = getSubscriptionStatus();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -167,7 +112,7 @@ function MainTabNavigator() {
              {settings.name ? settings.name.toUpperCase() : 'MECÂNICAPRO'}
           </Text>
           <View style={styles.headerSubRow}>
-            <Text style={styles.headerSubtitle}>PAINEL SAAS</Text>
+            <Text style={styles.headerSubtitle}>PAINEL OFICINA</Text>
             <View style={online ? styles.statusBadgeOnline : styles.statusBadgeOffline}>
               {online ? (
                 <>
@@ -184,43 +129,6 @@ function MainTabNavigator() {
           </View>
         </View>
       </View>
-
-      {/* BANNER DE AVISO DE COBRANÇA */}
-      {subInfo.showWarning && (
-        <View style={styles.warningBanner}>
-          <View style={styles.bannerLeft}>
-            <AlertTriangle size={12} color="#fff" style={{ marginRight: 6 }} />
-            <Text style={styles.warningText} numberOfLines={1}>
-              {subInfo.message}
-            </Text>
-          </View>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('MoreTab', { screen: 'SubscriptionDetails' })}
-            style={styles.payButton}
-          >
-            <Text style={styles.payButtonText}>VER STATUS</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* BANNER DE BLOQUEIO MODO LEITURA */}
-      {subInfo.isBlocked && (
-        <View style={styles.blockedBanner}>
-          <View style={styles.bannerLeft}>
-            <Lock size={12} color="#fff" style={{ marginRight: 6 }} />
-            <Text style={styles.blockedText} numberOfLines={1}>
-              {subInfo.message}
-            </Text>
-          </View>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('MoreTab', { screen: 'SubscriptionDetails' })}
-            style={styles.payButtonBlocked}
-          >
-            <Text style={styles.payButtonTextBlocked}>ASSINAR</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
 
       <Tab.Navigator
         screenOptions={({ route }) => ({
@@ -301,7 +209,7 @@ function MainTabNavigator() {
         <Tab.Screen
           name="FinanceTab"
           component={FinanceStackNavigator}
-          options={{ tabBarLabel: 'Financeiro' }}
+          options={{ tabBarLabel: 'Cobranças' }}
           listeners={({ navigation }) => ({
             tabPress: (e) => {
               e.preventDefault();
@@ -312,7 +220,7 @@ function MainTabNavigator() {
                     {
                       name: 'FinanceTab',
                       state: {
-                        routes: [{ name: 'FinanceFlow' }],
+                        routes: [{ name: 'BillingList' }],
                       },
                     },
                   ],
@@ -358,8 +266,9 @@ interface AuthScreenProps {
 function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
   const [isRegister, setIsRegister] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
-  // Form fields
+  // Form fields start clean and empty for end-consumers
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -394,8 +303,8 @@ function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
         phone: phone.trim(),
       });
       if (success) {
-        Alert.alert('Sucesso', 'Oficina cadastrada! Faça login para entrar.');
-        setIsRegister(false);
+        Alert.alert('Sucesso', 'Oficina cadastrada! Entrando no painel...');
+        onLoginSuccess();
       } else {
         Alert.alert('Erro', 'Erro no cadastro. Verifique as informações.');
       }
@@ -416,9 +325,9 @@ function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
       style={styles.authContainer}
     >
       <View style={styles.authCard}>
-         <Text style={styles.authTitle}>MECÂNICAPRO</Text>
+        <Text style={styles.authTitle}>MECÂNICAPRO</Text>
         <Text style={styles.authSubtitle}>
-          {isRegister ? 'Crie sua conta SaaS' : 'Acesse seu painel SaaS'}
+          {isRegister ? 'Crie a conta da sua oficina' : 'Acesse o painel da sua oficina'}
         </Text>
 
         {isRegister && (
@@ -451,7 +360,7 @@ function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
               keyboardType="numeric"
             />
 
-            <Text style={styles.inputLabel}>Telefone (Opcional)</Text>
+            <Text style={styles.inputLabel}>Telefone / WhatsApp</Text>
             <TextInput 
               style={styles.modalInput} 
               value={phone} 
@@ -468,7 +377,7 @@ function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
           style={styles.modalInput} 
           value={email} 
           onChangeText={setEmail} 
-          placeholder="seuemail@exemplo.com"
+          placeholder="seu@email.com"
           placeholderTextColor="#64748b"
           keyboardType="email-address"
           autoCapitalize="none"
@@ -494,7 +403,7 @@ function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
             <ActivityIndicator size="small" color="#fff" />
           ) : (
             <Text style={styles.submitButtonText}>
-              {isRegister ? 'CADASTRAR' : 'ENTRAR'}
+              {isRegister ? 'CADASTRAR E ENTRAR' : 'ENTRAR'}
             </Text>
           )}
         </TouchableOpacity>
@@ -504,9 +413,23 @@ function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
           onPress={() => setIsRegister(!isRegister)}
         >
           <Text style={styles.switchAuthText}>
-            {isRegister ? 'Já tenho uma conta. Entrar' : 'Não tem conta? Cadastre-se'}
+            {isRegister ? 'Já tem uma conta? Entrar' : 'Não tem conta? Cadastre-se'}
           </Text>
         </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.termsLinkBtn}
+          onPress={() => setShowTermsModal(true)}
+        >
+          <Text style={styles.termsLinkBtnText}>
+            Termos de Uso e Política de Privacidade (LGPD)
+          </Text>
+        </TouchableOpacity>
+
+        <TermsPrivacyModal
+          visible={showTermsModal}
+          onClose={() => setShowTermsModal(false)}
+        />
       </View>
     </KeyboardAvoidingView>
   );
@@ -540,29 +463,6 @@ function AppContent() {
     startSyncEngine();
     if (accessToken && user) {
       pullAll();
-      const isExpoGo = Constants.appOwnership === 'expo';
-      if (isExpoGo) {
-        console.log('Skipping RevenueCat initialization: running inside Expo Go');
-      } else {
-        try {
-          // Initialize RevenueCat SDK
-          const REVENUECAT_API_KEY = Platform.select({
-            android: 'goog_placeholder_api_key_mecanicapro',
-            ios: 'appl_placeholder_api_key_mecanicapro',
-            default: '',
-          });
-
-          if (REVENUECAT_API_KEY) {
-            Purchases.configure({ 
-              apiKey: REVENUECAT_API_KEY, 
-              appUserID: user.tenantId 
-            });
-            console.log('RevenueCat initialized for tenantId:', user.tenantId);
-          }
-        } catch (err) {
-          console.error('Failed to initialize RevenueCat Purchases SDK', err);
-        }
-      }
     }
     return () => {
       stopSyncEngine();
@@ -606,62 +506,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#090b0f',
-  },
-  warningBanner: {
-    backgroundColor: '#f97316',
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  warningText: {
-    fontSize: 11,
-    color: '#fff',
-    fontWeight: 'bold',
-    flex: 1,
-  },
-  blockedBanner: {
-    backgroundColor: '#ef4444',
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  blockedText: {
-    fontSize: 11,
-    color: '#fff',
-    fontWeight: 'bold',
-    flex: 1,
-  },
-  bannerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginRight: 8,
-  },
-  payButton: {
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  payButtonText: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: '#f97316',
-  },
-  payButtonBlocked: {
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  payButtonTextBlocked: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: '#ef4444',
   },
   header: {
     paddingHorizontal: 22,
@@ -777,6 +621,40 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#3b66ff',
     fontWeight: 'bold',
+  },
+  credentialsHint: {
+    backgroundColor: 'rgba(59, 102, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(59, 102, 255, 0.25)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+  },
+  credentialsHintTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#3b66ff',
+    marginBottom: 4,
+  },
+  credentialsHintText: {
+    fontSize: 12,
+    color: '#94a3b8',
+    marginBottom: 2,
+  },
+  boldText: {
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  termsLinkBtn: {
+    marginTop: 18,
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  termsLinkBtnText: {
+    fontSize: 11,
+    color: '#64748b',
+    textDecorationLine: 'underline',
+    textAlign: 'center',
   },
   headerLeft: {
     flex: 1,

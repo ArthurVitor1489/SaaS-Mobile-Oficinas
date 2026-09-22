@@ -22,16 +22,6 @@ export class AuthService {
       throw new BadRequestException('E-mail já cadastrado.');
     }
 
-    // Call Asaas API outside database transaction to prevent pool blocking
-    const asaasCustomerId = await this.asaasService.createCustomer(
-      dto.workshopName,
-      dto.email,
-      dto.phone,
-      dto.cnpj,
-    );
-
-    const asaasSub = await this.asaasService.createSubscription(asaasCustomerId);
-
     const passwordHash = await bcrypt.hash(dto.password, 10);
 
     return this.prisma.$transaction(async (tx) => {
@@ -53,26 +43,11 @@ export class AuthService {
         },
       });
 
-      const trialEndDate = new Date();
-      trialEndDate.setDate(trialEndDate.getDate() + 30);
-      await tx.subscription.create({
-        data: {
-          tenantId: workshop.id,
-          plan: 'BASIC',
-          status: 'TRIAL',
-          dueDate: trialEndDate,
-          paymentProvider: 'ASAAS',
-          paymentId: asaasSub.id,
-          invoiceUrl: asaasSub.invoiceUrl || null,
-        },
-      });
-
       return {
         success: true,
         message: 'Oficina cadastrada com sucesso!',
         userId: user.id,
         tenantId: workshop.id,
-        invoiceUrl: asaasSub.invoiceUrl,
       };
     });
   }

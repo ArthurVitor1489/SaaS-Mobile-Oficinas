@@ -123,10 +123,20 @@ const processQueueItem = async (item: OfflineQueueItem) => {
       break;
 
     case 'billings':
-      if (action === 'UPDATE') {
-        await api.post(`/finance/billings/${payload.id}/pay`, { 
-          installmentNumber: payload.installmentNumber 
-        });
+      if (action === 'CREATE') {
+        await api.post('/finance/billings', payload);
+      } else if (action === 'UPDATE') {
+        if (payload.actionType === 'UPDATE_DUE_DATE') {
+          await api.patch(`/finance/billings/${payload.billingId}/installments/${payload.installmentNumber}`, {
+            dueDate: payload.newDueDate,
+          });
+        } else {
+          await api.post(`/finance/billings/${payload.id}/pay`, { 
+            installmentNumber: payload.installmentNumber 
+          });
+        }
+      } else if (action === 'DELETE') {
+        await api.delete(`/finance/billings/${payload.id}`);
       }
       break;
 

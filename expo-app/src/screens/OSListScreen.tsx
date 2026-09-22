@@ -13,7 +13,7 @@ export default function OSListScreen() {
   const { workOrders, clients, vehicles, billings, addWorkOrder, services, parts } = useDatabase();
 
   const [osSearch, setOsSearch] = useState('');
-  const [osStatusFilter, setOsStatusFilter] = useState<OSStatus | 'Todos'>('Todos');
+  const [osBillingFilter, setOsBillingFilter] = useState<'Todas' | 'A Faturar' | 'Faturadas' | 'Pagas'>('Todas');
   const [osWizardModalVisible, setOsWizardModalVisible] = useState(false);
 
   const clientMap = useMemo(() => new Map(clients.map(c => [c.id, c])), [clients]);
@@ -24,17 +24,25 @@ export default function OSListScreen() {
     return workOrders.filter(os => {
       const client = clientMap.get(os.clientId);
       const vehicle = vehicleMap.get(os.vehicleId);
+      const billing = billingMap.get(os.id);
       
       const matchesSearch =
         os.osNumber.toLowerCase().includes(osSearch.toLowerCase()) ||
         (client?.name || '').toLowerCase().includes(osSearch.toLowerCase()) ||
         (vehicle?.plate || '').toLowerCase().includes(osSearch.toLowerCase());
 
-      const matchesStatus = osStatusFilter === 'Todos' || os.status === osStatusFilter;
+      let matchesBilling = true;
+      if (osBillingFilter === 'A Faturar') {
+        matchesBilling = !billing;
+      } else if (osBillingFilter === 'Faturadas') {
+        matchesBilling = !!billing;
+      } else if (osBillingFilter === 'Pagas') {
+        matchesBilling = billing?.status === 'Pago';
+      }
 
-      return matchesSearch && matchesStatus;
+      return matchesSearch && matchesBilling;
     });
-  }, [workOrders, osSearch, osStatusFilter, clientMap, vehicleMap]);
+  }, [workOrders, osSearch, osBillingFilter, clientMap, vehicleMap, billingMap]);
 
   const handleOpenOSWizardForCreate = () => {
     setOsWizardModalVisible(true);
@@ -93,16 +101,16 @@ export default function OSListScreen() {
 
         <View style={{ height: 38, marginBottom: 12 }}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.statusFiltersWrapper}>
-            {(['Todos', 'Aberta', 'Em andamento', 'Concluída', 'Entregue'] as const).map(st => {
-              const isActive = osStatusFilter === st;
+            {(['Todas', 'A Faturar', 'Faturadas', 'Pagas'] as const).map(tab => {
+              const isActive = osBillingFilter === tab;
               return (
                 <TouchableOpacity
-                  key={st}
-                  onPress={() => setOsStatusFilter(st)}
+                  key={tab}
+                  onPress={() => setOsBillingFilter(tab)}
                   style={[styles.statusFilterTab, isActive ? styles.statusFilterTabActive : null]}
                 >
                   <Text style={[styles.statusFilterTabText, isActive ? styles.statusFilterTabTextActive : null]}>
-                    {st === 'Em andamento' ? 'Andamento' : st}
+                    {tab}
                   </Text>
                 </TouchableOpacity>
               );
@@ -121,25 +129,11 @@ export default function OSListScreen() {
               const vehicle = vehicleMap.get(os.vehicleId);
               const billing = billingMap.get(os.id);
               
-              let osStatusStyle = styles.cardOpen;
-              let badgeColor = 'rgba(59, 102, 255, 0.1)';
-              let badgeTextColor = theme.colors.primary;
-              let badgeBorderColor = 'rgba(59, 102, 255, 0.3)';
-              if (os.status === 'Em andamento') {
-                osStatusStyle = styles.cardProgress;
-                badgeColor = 'rgba(234, 179, 8, 0.1)';
-                badgeTextColor = theme.colors.warning;
-                badgeBorderColor = 'rgba(234, 179, 8, 0.3)';
-              } else if (os.status === 'Concluída') {
-                osStatusStyle = styles.cardDone;
-                badgeColor = 'rgba(34, 197, 94, 0.1)';
-                badgeTextColor = theme.colors.success;
-                badgeBorderColor = 'rgba(34, 197, 94, 0.3)';
-              } else if (os.status === 'Entregue') {
-                osStatusStyle = styles.cardDelivered;
-                badgeColor = '#272e3f';
-                badgeTextColor = '#cbd5e1';
-                badgeBorderColor = '#272e3f';
+              let cardStyle = styles.cardProgress;
+              if (billing?.status === 'Pago') {
+                cardStyle = styles.cardDone;
+              } else if (!billing) {
+                cardStyle = styles.cardOpen;
               }
 
               return (
@@ -148,16 +142,39 @@ export default function OSListScreen() {
                   onPress={() => {
                     navigation.navigate('OSDetail', { osId: os.id });
                   }}
-                  style={[styles.card, osStatusStyle, { padding: 18, marginBottom: 12 }]}
+                  style={[styles.card, cardStyle, { padding: 18, marginBottom: 12 }]}
                 >
                   <View style={styles.cardHeaderRow}>
                     <View style={styles.cardHeaderLeft}>
                       <Text style={styles.osNum}>{os.osNumber}</Text>
-                      <View style={[styles.statusBadge, { backgroundColor: badgeColor, borderColor: badgeBorderColor }]}>
-                        <Text style={[styles.statusBadgeText, { color: badgeTextColor }]}>
-                          {os.status === 'Em andamento' ? 'Andamento' : os.status}
-                        </Text>
-                      </View>
+                      {billing ? (
+                        <View style={[
+                          styles.statusBadge,
+                          {
+                            backgroundColor: billing.status === 'Pago' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(234, 179, 8, 0.1)',
+                            borderColor: billing.status === 'Pago' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(234, 179, 8, 0.3)'
+                          }
+                        ]}>
+                          <Text style={[
+                            styles.statusBadgeText,
+                            { color: billing.status === 'Pago' ? theme.colors.success : theme.colors.warning }
+                          ]}>
+                            {billing.status === 'Pago' ? 'PAGO' : 'FATURADA'}
+                          </Text>
+                        </View>
+                      ) : (
+                        <View style={[
+                          styles.statusBadge,
+                          {
+                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            borderColor: 'rgba(245, 158, 11, 0.3)'
+                          }
+                        ]}>
+                          <Text style={[styles.statusBadgeText, { color: '#f59e0b' }]}>
+                            A FATURAR
+                          </Text>
+                        </View>
+                      )}
                     </View>
                     <Text style={styles.osDate}>{formatDate(os.date)}</Text>
                   </View>
@@ -187,13 +204,13 @@ export default function OSListScreen() {
                             styles.billingStatusBadgeText,
                             { color: billing.status === 'Pago' ? theme.colors.success : theme.colors.warning }
                           ]}>
-                            💰 {billing.status.toUpperCase()}
+                            💳 {billing.paymentMethod.toUpperCase()} {billing.installments.length > 1 ? `(${billing.installments.length}x)` : '• À VISTA'}
                           </Text>
                         </View>
                       ) : (
-                        <View style={[styles.billingStatusBadge, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
-                          <Text style={[styles.billingStatusBadgeText, { color: theme.colors.error }]}>
-                            💸 NÃO FATURADA
+                        <View style={[styles.billingStatusBadge, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
+                          <Text style={[styles.billingStatusBadgeText, { color: '#f59e0b' }]}>
+                            ⚙️ EM EXECUÇÃO
                           </Text>
                         </View>
                       )}

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { SubscriptionStatus } from '@prisma/client';
+
+export type SubscriptionStatus = 'ACTIVE' | 'OVERDUE' | 'EXPIRED' | 'TRIAL' | 'CANCELED';
 
 @Injectable()
 export class SubscriptionService {

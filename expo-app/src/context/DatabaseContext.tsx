@@ -50,7 +50,9 @@ interface DatabaseContextProps {
   
   // Billing Operations
   addBilling: (billing: Omit<Billing, 'id' | 'createdAt'>) => Promise<Billing | null>;
+  deleteBilling: (id: string) => Promise<boolean>;
   payInstallment: (billingId: string, installmentNumber: number) => Promise<boolean>;
+  updateInstallmentDueDate: (billingId: string, installmentNumber: number, newDueDate: string) => Promise<boolean>;
   
   // Financial Operations
   addTransaction: (transaction: Omit<FinancialTransaction, 'id' | 'createdAt'>) => Promise<FinancialTransaction | null>;
@@ -63,6 +65,7 @@ interface DatabaseContextProps {
   exportDatabaseJson: () => string;
   resetDatabase: () => Promise<void>;
   restoreBackup: (jsonStr: string) => Promise<boolean>;
+  deleteAccount: () => Promise<boolean>;
 }
 
 const DatabaseContext = createContext<DatabaseContextProps | undefined>(undefined);
@@ -72,43 +75,6 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const signOut = async () => {
     await store.logout();
-  };
-
-  const isSubscriptionBlocked = () => {
-    const subscription = useAppStore.getState().subscription;
-    if (!subscription) return false;
-
-    const { status, dueDate } = subscription;
-    const now = new Date();
-    const dueDateObj = new Date(dueDate);
-
-    if (status === 'TRIAL') {
-      return now > dueDateObj;
-    }
-
-    if (status === 'OVERDUE' || status === 'PENDING') {
-      const diffTime = now.getTime() - dueDateObj.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays > 7;
-    }
-
-    return false;
-  };
-
-  const showBlockedAlert = () => {
-    Alert.alert(
-      'Acesso Bloqueado',
-      'Sua oficina está em Modo Leitura devido ao atraso no pagamento da assinatura (carência de 7 dias expirada). Por favor, regularize seu pagamento para liberar cadastros e edições.',
-      [{ text: 'OK' }]
-    );
-  };
-
-  const addBilling = async (billingData: any) => {
-    return {
-      id: 'mock-bill-' + Math.random().toString(36).substr(2, 9),
-      ...billingData,
-      createdAt: new Date().toISOString()
-    };
   };
 
   const exportDatabaseJson = () => {
@@ -126,7 +92,7 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const resetDatabase = async () => {
-    await store.logout();
+    store.clearLocalData();
   };
 
   const restoreBackup = async (jsonStr: string) => {
@@ -163,163 +129,43 @@ export const DatabaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     signOut,
     
-    // CRUD wraps with subscription locks
-    addClient: async (dto) => {
-      if (isSubscriptionBlocked()) {
-        showBlockedAlert();
-        return null;
-      }
-      return store.addClient(dto);
-    },
-    updateClient: async (id, dto) => {
-      if (isSubscriptionBlocked()) {
-        showBlockedAlert();
-        return false;
-      }
-      return store.updateClient(id, dto);
-    },
-    deleteClient: async (id) => {
-      if (isSubscriptionBlocked()) {
-        showBlockedAlert();
-        return false;
-      }
-      return store.deleteClient(id);
-    },
+    // CRUD methods
+    addClient: store.addClient,
+    updateClient: store.updateClient,
+    deleteClient: store.deleteClient,
 
-    addVehicle: async (dto) => {
-      if (isSubscriptionBlocked()) {
-        showBlockedAlert();
-        return null;
-      }
-      return store.addVehicle(dto);
-    },
-    updateVehicle: async (id, dto) => {
-      if (isSubscriptionBlocked()) {
-        showBlockedAlert();
-        return false;
-      }
-      return store.updateVehicle(id, dto);
-    },
-    deleteVehicle: async (id) => {
-      if (isSubscriptionBlocked()) {
-        showBlockedAlert();
-        return false;
-      }
-      return store.deleteVehicle(id);
-    },
+    addVehicle: store.addVehicle,
+    updateVehicle: store.updateVehicle,
+    deleteVehicle: store.deleteVehicle,
 
-    addService: async (dto) => {
-      if (isSubscriptionBlocked()) {
-        showBlockedAlert();
-        return null;
-      }
-      return store.addService(dto);
-    },
-    updateService: async (id, dto) => {
-      if (isSubscriptionBlocked()) {
-        showBlockedAlert();
-        return false;
-      }
-      return store.updateService(id, dto);
-    },
-    deleteService: async (id) => {
-      if (isSubscriptionBlocked()) {
-        showBlockedAlert();
-        return false;
-      }
-      return store.deleteService(id);
-    },
+    addService: store.addService,
+    updateService: store.updateService,
+    deleteService: store.deleteService,
 
-    addPart: async (dto) => {
-      if (isSubscriptionBlocked()) {
-        showBlockedAlert();
-        return null;
-      }
-      return store.addPart(dto);
-    },
-    updatePart: async (id, dto) => {
-      if (isSubscriptionBlocked()) {
-        showBlockedAlert();
-        return false;
-      }
-      return store.updatePart(id, dto);
-    },
-    deletePart: async (id) => {
-      if (isSubscriptionBlocked()) {
-        showBlockedAlert();
-        return false;
-      }
-      return store.deletePart(id);
-    },
+    addPart: store.addPart,
+    updatePart: store.updatePart,
+    deletePart: store.deletePart,
 
-    addWorkOrder: async (dto) => {
-      if (isSubscriptionBlocked()) {
-        showBlockedAlert();
-        return null;
-      }
-      return store.addWorkOrder(dto);
-    },
-    updateWorkOrder: async (id, dto) => {
-      if (isSubscriptionBlocked()) {
-        showBlockedAlert();
-        return false;
-      }
-      return store.updateWorkOrder(id, dto);
-    },
-    updateWorkOrderStatus: async (id, status) => {
-      if (isSubscriptionBlocked()) {
-        showBlockedAlert();
-        return false;
-      }
-      return store.updateWorkOrderStatus(id, status);
-    },
-    saveWorkOrderSignature: async (id, sig) => {
-      if (isSubscriptionBlocked()) {
-        showBlockedAlert();
-        return false;
-      }
-      return store.saveWorkOrderSignature(id, sig);
-    },
-    deleteWorkOrder: async (id) => {
-      if (isSubscriptionBlocked()) {
-        showBlockedAlert();
-        return false;
-      }
-      return store.deleteWorkOrder(id);
-    },
+    addWorkOrder: store.addWorkOrder,
+    updateWorkOrder: store.updateWorkOrder,
+    updateWorkOrderStatus: store.updateWorkOrderStatus,
+    saveWorkOrderSignature: store.saveWorkOrderSignature,
+    deleteWorkOrder: store.deleteWorkOrder,
 
-    addBilling,
-    payInstallment: async (billingId, installmentNumber) => {
-      // Payment of OS bills remains unlocked so they can register money inflows
-      return store.payInstallment(billingId, installmentNumber);
-    },
+    addBilling: store.addBilling,
+    deleteBilling: store.deleteBilling,
+    payInstallment: store.payInstallment,
+    updateInstallmentDueDate: store.updateInstallmentDueDate,
 
-    addTransaction: async (dto) => {
-      if (isSubscriptionBlocked()) {
-        showBlockedAlert();
-        return null;
-      }
-      return store.addTransaction(dto);
-    },
-    deleteTransaction: async (id) => {
-      if (isSubscriptionBlocked()) {
-        showBlockedAlert();
-        return false;
-      }
-      return store.deleteTransaction(id);
-    },
+    addTransaction: store.addTransaction,
+    deleteTransaction: store.deleteTransaction,
 
-    updateSettings: async (dto) => {
-      if (isSubscriptionBlocked()) {
-        showBlockedAlert();
-        return false;
-      }
-      return store.updateSettings(dto);
-    },
+    updateSettings: store.updateSettings,
 
     exportDatabaseJson,
     resetDatabase,
-    restoreBackup
+    restoreBackup,
+    deleteAccount: store.deleteAccount
   };
 
   return (

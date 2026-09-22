@@ -85,7 +85,7 @@ export class OrdersService {
           clientId: dto.clientId,
           vehicleId: dto.vehicleId,
           notes: dto.notes || null,
-          status: dto.status,
+          status: dto.status || 'EM_ANDAMENTO',
           servicesTotal,
           partsTotal,
           grandTotal,

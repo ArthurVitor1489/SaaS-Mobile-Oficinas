@@ -51,8 +51,8 @@ export class CreateOrderDto {
   notes?: string;
 
   @IsString()
-  @IsNotEmpty()
-  status: 'ABERTA' | 'EM_ANDAMENTO' | 'CONCLUIDA' | 'ENTREGUE' | 'CANCELADA';
+  @IsOptional()
+  status?: string;
 
   @IsArray()
   @ValidateNested({ each: true })

@@ -1,18 +1,37 @@
-import { Controller, Get, Post, Delete, Body, Param, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, HttpCode, HttpStatus, ParseIntPipe } from '@nestjs/common';
 import { FinanceService } from './finance.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
+import { CreateBillingDto } from './dto/create-billing.dto';
+import { UpdateInstallmentDueDateDto } from './dto/update-installment.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { SubscriptionGuard } from '../auth/subscription.guard';
 import { Tenant } from '../../common/decorators/tenant.decorator';
 
 @Controller('finance')
-@UseGuards(JwtAuthGuard, SubscriptionGuard)
+@UseGuards(JwtAuthGuard)
 export class FinanceController {
   constructor(private readonly financeService: FinanceService) {}
 
   @Get('billings')
   findAllBillings(@Tenant() tenantId: string) {
     return this.financeService.findAllBillings(tenantId);
+  }
+
+  @Post('billings')
+  createBilling(
+    @Tenant() tenantId: string,
+    @Body() dto: CreateBillingDto,
+  ) {
+    return this.financeService.createBilling(tenantId, dto);
+  }
+
+  @Patch('billings/:id/installments/:number')
+  updateInstallmentDueDate(
+    @Tenant() tenantId: string,
+    @Param('id') billingId: string,
+    @Param('number', ParseIntPipe) installmentNumber: number,
+    @Body() dto: UpdateInstallmentDueDateDto,
+  ) {
+    return this.financeService.updateInstallmentDueDate(tenantId, billingId, installmentNumber, dto);
   }
 
   @Post('billings/:id/pay')

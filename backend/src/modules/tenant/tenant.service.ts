@@ -23,4 +23,17 @@ export class TenantService {
       data: dto,
     });
   }
+
+  async deleteAccount(tenantId: string) {
+    const workshop = await this.prisma.workshop.findUnique({
+      where: { id: tenantId },
+    });
+    if (!workshop) {
+      throw new NotFoundException('Oficina não encontrada.');
+    }
+    await this.prisma.workshop.delete({
+      where: { id: tenantId },
+    });
+    return { success: true, message: 'Conta e todos os dados associados foram excluídos com sucesso.' };
+  }
 }

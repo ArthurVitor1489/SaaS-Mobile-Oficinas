@@ -1,57 +1,25 @@
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 generator client {
-  provider = "prisma-client-js"
-}
-
-enum Role {
-  ADMIN
-  MECHANIC
-}
-
-enum OSStatus {
-  ABERTA
-  EM_ANDAMENTO
-  CONCLUIDA
-  ENTREGUE
-  CANCELADA
-}
-
-enum BillingStatus {
-  PAGO
-  PENDENTE
-  PARCIALMENTE_PAGO
-}
-
-enum TransactionType {
-  ENTRADA
-  SAIDA
-}
-
-enum SubscriptionStatus {
-  ACTIVE
-  TRIAL
-  PENDING
-  OVERDUE
-  CANCELED
-  EXPIRED
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 model Workshop {
-  id           String    @id @default(uuid()) @db.Uuid
-  name         String    @db.VarChar(255)
-  cnpj         String?   @db.VarChar(20)
-  address      String?   @db.Text
-  phone        String?   @db.VarChar(20)
-  whatsapp     String?   @db.VarChar(20)
-  email        String?   @db.VarChar(255)
-  logoUrl      String?   @db.Text
+  id           String    @id @default(uuid())
+  name         String
+  cnpj         String?
+  address      String?
+  phone        String?
+  whatsapp     String?
+  email        String?
+  logoUrl      String?
   autoSequence Boolean   @default(true)
   nextOSNumber Int       @default(1)
-  pdfNotes     String?   @db.Text
+  pdfNotes     String?
   createdAt    DateTime  @default(now())
 
   users        User[]
@@ -66,28 +34,28 @@ model Workshop {
 }
 
 model User {
-  id               String   @id @default(uuid()) @db.Uuid
-  tenantId         String   @db.Uuid
-  name             String   @db.VarChar(255)
-  email            String   @unique @db.VarChar(255)
-  passwordHash     String   @db.Text
-  role             Role     @default(ADMIN)
-  refreshTokenHash String?  @db.Text
+  id               String   @id @default(uuid())
+  tenantId         String
+  name             String
+  email            String   @unique
+  passwordHash     String
+  role             String   @default("ADMIN") // ADMIN, MECHANIC
+  refreshTokenHash String?
   createdAt        DateTime @default(now())
 
   workshop         Workshop @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model Client {
-  id        String   @id @default(uuid()) @db.Uuid
-  tenantId  String   @db.Uuid
-  name      String   @db.VarChar(255)
-  cpfCnpj   String?  @db.VarChar(20)
-  phone     String   @db.VarChar(20)
-  whatsapp  String?  @db.VarChar(20)
-  email     String?  @db.VarChar(255)
-  address   String?  @db.Text
-  notes     String?  @db.Text
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String
+  cpfCnpj   String?
+  phone     String
+  whatsapp  String?
+  email     String?
+  address   String?
+  notes     String?
   createdAt DateTime @default(now())
 
   workshop  Workshop  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -96,15 +64,15 @@ model Client {
 }
 
 model Vehicle {
-  id        String   @id @default(uuid()) @db.Uuid
-  tenantId  String   @db.Uuid
-  clientId  String   @db.Uuid
-  plate     String   @db.VarChar(10)
-  brand     String   @db.VarChar(100)
-  model     String   @db.VarChar(150)
-  year      String   @db.VarChar(4)
-  chassis   String?  @db.VarChar(50)
-  odometer  String   @default("0") @db.VarChar(50)
+  id        String   @id @default(uuid())
+  tenantId  String
+  clientId  String
+  plate     String
+  brand     String
+  model     String
+  year      String
+  chassis   String?
+  odometer  String   @default("0")
   createdAt DateTime @default(now())
 
   client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
@@ -112,25 +80,25 @@ model Vehicle {
 }
 
 model ServiceItem {
-  id          String   @id @default(uuid()) @db.Uuid
-  tenantId    String   @db.Uuid
-  name        String   @db.VarChar(255)
-  code        String?  @db.VarChar(50)
-  description String?  @db.Text
-  price       Decimal  @db.Decimal(10, 2)
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  code        String?
+  description String?
+  price       Float
   createdAt   DateTime @default(now())
 
   workshop    Workshop @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model PartItem {
-  id            String   @id @default(uuid()) @db.Uuid
-  tenantId      String   @db.Uuid
-  name          String   @db.VarChar(255)
-  code          String?  @db.VarChar(50)
-  supplier      String?  @db.VarChar(255)
-  purchasePrice Decimal  @db.Decimal(10, 2)
-  salePrice     Decimal  @db.Decimal(10, 2)
+  id            String   @id @default(uuid())
+  tenantId      String
+  name          String
+  code          String?
+  supplier      String?
+  purchasePrice Float
+  salePrice     Float
   stock         Int      @default(0)
   createdAt     DateTime @default(now())
 
@@ -138,18 +106,18 @@ model PartItem {
 }
 
 model WorkOrder {
-  id            String    @id @default(uuid()) @db.Uuid
-  tenantId      String    @db.Uuid
-  osNumber      String    @db.VarChar(50)
-  date          String    @db.VarChar(10) // YYYY-MM-DD
-  clientId      String    @db.Uuid
-  vehicleId     String    @db.Uuid
-  notes         String?   @db.Text
-  status        OSStatus  @default(ABERTA)
-  servicesTotal Decimal   @db.Decimal(10, 2)
-  partsTotal    Decimal   @db.Decimal(10, 2)
-  grandTotal    Decimal   @db.Decimal(10, 2)
-  signature     String?   @db.Text
+  id            String    @id @default(uuid())
+  tenantId      String
+  osNumber      String
+  date          String    // YYYY-MM-DD
+  clientId      String
+  vehicleId     String
+  notes         String?
+  status        String    @default("ABERTA") // ABERTA, EM_ANDAMENTO, CONCLUIDA, ENTREGUE, CANCELADA
+  servicesTotal Float
+  partsTotal    Float
+  grandTotal    Float
+  signature     String?
   createdAt     DateTime  @default(now())
 
   workshop      Workshop  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -162,34 +130,34 @@ model WorkOrder {
 }
 
 model WorkOrderService {
-  id        String    @id @default(uuid()) @db.Uuid
-  osId      String    @db.Uuid
-  name      String    @db.VarChar(255)
-  price     Decimal   @db.Decimal(10, 2)
+  id        String    @id @default(uuid())
+  osId      String
+  name      String
+  price     Float
   quantity  Int
 
   workOrder WorkOrder @relation(fields: [osId], references: [id], onDelete: Cascade)
 }
 
 model WorkOrderPart {
-  id        String    @id @default(uuid()) @db.Uuid
-  osId      String    @db.Uuid
-  name      String    @db.VarChar(255)
-  code      String?   @db.VarChar(50)
-  salePrice Decimal   @db.Decimal(10, 2)
+  id        String    @id @default(uuid())
+  osId      String
+  name      String
+  code      String?
+  salePrice Float
   quantity  Int
 
   workOrder WorkOrder @relation(fields: [osId], references: [id], onDelete: Cascade)
 }
 
 model Billing {
-  id            String        @id @default(uuid()) @db.Uuid
-  tenantId      String        @db.Uuid
-  osId          String        @unique @db.Uuid
-  amount        Decimal       @db.Decimal(10, 2)
-  paymentMethod String        @db.VarChar(50)
-  status        BillingStatus @default(PENDENTE)
-  dueDate       String        @db.VarChar(10) // YYYY-MM-DD
+  id            String        @id @default(uuid())
+  tenantId      String
+  osId          String        @unique
+  amount        Float
+  paymentMethod String
+  status        String        @default("PENDENTE") // PENDENTE, PARCIALMENTE_PAGO, PAGO
+  dueDate       String        // YYYY-MM-DD
   createdAt     DateTime      @default(now())
 
   workshop      Workshop      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -198,70 +166,57 @@ model Billing {
 }
 
 model BillingInstallment {
-  id        String   @id @default(uuid()) @db.Uuid
-  billingId String   @db.Uuid
+  id        String   @id @default(uuid())
+  billingId String
   number    Int
-  amount    Decimal  @db.Decimal(10, 2)
-  dueDate   String   @db.VarChar(10) // YYYY-MM-DD
-  status    String   @db.VarChar(20) // PAGO, PENDENTE
+  amount    Float
+  dueDate   String   // YYYY-MM-DD
+  status    String   @default("PENDENTE") // PAGO, PENDENTE
   paidAt    DateTime?
 
   billing   Billing  @relation(fields: [billingId], references: [id], onDelete: Cascade)
 }
 
 model FinancialTransaction {
-  id          String          @id @default(uuid()) @db.Uuid
-  tenantId    String          @db.Uuid
-  type        TransactionType
-  category    String          @db.VarChar(100)
-  amount      Decimal         @db.Decimal(10, 2)
-  date        String          @db.VarChar(10) // YYYY-MM-DD
-  description String?         @db.VarChar(255)
+  id          String          @id @default(uuid())
+  tenantId    String
+  type        String          @default("ENTRADA") // ENTRADA, SAIDA
+  category    String
+  amount      Float
+  date        String          // YYYY-MM-DD
+  description String?
   createdAt   DateTime        @default(now())
 
   workshop    Workshop        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model Subscription {
-  id              String             @id @default(uuid()) @db.Uuid
-  tenantId        String             @unique @db.Uuid
-  plan            String             @db.VarChar(50) // BASIC, PRO
-  status          SubscriptionStatus @default(TRIAL)
+  id              String             @id @default(uuid())
+  tenantId        String             @unique
+  plan            String             @default("PRO")
+  status          String             @default("TRIAL") // ACTIVE, TRIAL, PENDING, OVERDUE, CANCELED, EXPIRED
   dueDate         DateTime
-  paymentProvider String?            @db.VarChar(50)
-  paymentId       String?            @db.VarChar(255)
-  invoiceUrl      String?            @db.Text
+  paymentProvider String?
+  paymentId       String?
+  invoiceUrl      String?
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
 
   workshop        Workshop           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
-enum InvoiceType {
-  NFSE
-  NFE
-}
-
-enum InvoiceStatus {
-  PENDENTE
-  PROCESSANDO
-  AUTORIZADA
-  REJEITADA
-  CANCELADA
-}
-
 model FiscalConfig {
-  id                String   @id @default(uuid()) @db.Uuid
-  tenantId          String   @unique @db.Uuid
-  cnpj              String   @db.VarChar(20)
-  inscricaoMunicipal String? @db.VarChar(50)
-  inscricaoEstadual  String? @db.VarChar(50)
+  id                String   @id @default(uuid())
+  tenantId          String   @unique
+  cnpj              String
+  inscricaoMunicipal String?
+  inscricaoEstadual  String?
   regimeTributario  Int      @default(1)
   optanteSimples    Boolean  @default(true)
-  aliquotaISS       Decimal  @default(0) @db.Decimal(5, 2)
-  focusTokenSandbox String?  @db.Text
-  focusTokenProd    String?  @db.Text
-  focusCompanyId    String?  @db.VarChar(100)
+  aliquotaISS       Float    @default(0)
+  focusTokenSandbox String?
+  focusTokenProd    String?
+  focusCompanyId    String?
   hasCertificate    Boolean  @default(false)
   updatedAt         DateTime @updatedAt
 
@@ -269,17 +224,17 @@ model FiscalConfig {
 }
 
 model FiscalInvoice {
-  id            String        @id @default(uuid()) @db.Uuid
-  tenantId      String        @db.Uuid
-  osId          String        @db.Uuid
-  type          InvoiceType
-  status        InvoiceStatus @default(PENDENTE)
-  focusReference String       @unique @db.VarChar(100)
-  invoiceNumber String?       @db.VarChar(50)
-  accessKey     String?       @db.VarChar(100)
-  pdfUrl        String?       @db.Text
-  xmlUrl        String?       @db.Text
-  errorMessage  String?       @db.Text
+  id            String        @id @default(uuid())
+  tenantId      String
+  osId          String
+  type          String        // NFSE, NFE
+  status        String        @default("PENDENTE") // PENDENTE, PROCESSANDO, AUTORIZADA, REJEITADA, CANCELADA
+  focusReference String       @unique
+  invoiceNumber String?
+  accessKey     String?
+  pdfUrl        String?
+  xmlUrl        String?
+  errorMessage  String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 

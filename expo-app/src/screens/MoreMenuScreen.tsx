@@ -1,13 +1,20 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { ChevronRight, Tag, Settings, Wifi, LogOut, CreditCard, FileText } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Linking } from 'react-native';
+import { ChevronRight, Tag, Settings, Wifi, LogOut, TrendingUp, MessageCircle, Shield } from 'lucide-react-native';
 import { useDatabase } from '../context/DatabaseContext';
 import { theme } from '../styles/theme';
 import { useNavigation } from '@react-navigation/native';
+import TermsPrivacyModal from '../components/TermsPrivacyModal';
 
 export default function MoreMenuScreen() {
   const navigation = useNavigation<any>();
-  const { settings, signOut } = useDatabase();
+  const { settings, signOut, online } = useDatabase();
+  const [showTermsModal, setShowTermsModal] = useState(false);
+
+  const handleOpenSupport = () => {
+    const text = encodeURIComponent('Olá! Preciso de ajuda com o aplicativo MecânicaPro.');
+    Linking.openURL(`https://wa.me/5583999999999?text=${text}`);
+  };
 
   return (
     <View style={styles.screenContainer}>
@@ -15,14 +22,32 @@ export default function MoreMenuScreen() {
         <Text style={styles.tabTitle}>Mais Opções</Text>
         <View style={[
           styles.networkBadge,
-          { backgroundColor: 'rgba(34, 197, 94, 0.1)' }
+          { backgroundColor: online ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)' }
         ]}>
-          <Wifi size={12} color="#22c55e" />
-          <Text style={[styles.networkText, { color: '#22c55e' }]}>Modo Local</Text>
+          <Wifi size={12} color={online ? '#22c55e' : '#ef4444'} />
+          <Text style={[styles.networkText, { color: online ? '#22c55e' : '#ef4444' }]}>
+            {online ? 'Online' : 'Offline'}
+          </Text>
         </View>
       </View>
 
       <View style={styles.menuContainer}>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('CashFlow')}
+          style={styles.menuItem}
+        >
+          <View style={styles.menuItemLeft}>
+            <View style={[styles.iconBg, { backgroundColor: 'rgba(34, 197, 94, 0.12)' }]}>
+              <TrendingUp size={18} color="#22c55e" />
+            </View>
+            <View>
+              <Text style={styles.menuItemTitle}>Fluxo de Caixa & Despesas</Text>
+              <Text style={styles.menuItemSubtitle}>Entradas, saídas e lançamentos</Text>
+            </View>
+          </View>
+          <ChevronRight size={18} color="#64748b" />
+        </TouchableOpacity>
+
         <TouchableOpacity
           onPress={() => navigation.navigate('Catalog')}
           style={styles.menuItem}
@@ -56,32 +81,32 @@ export default function MoreMenuScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => navigation.navigate('SubscriptionDetails')}
+          onPress={handleOpenSupport}
           style={styles.menuItem}
         >
           <View style={styles.menuItemLeft}>
-            <View style={[styles.iconBg, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
-              <CreditCard size={18} color="#3b82f6" />
+            <View style={[styles.iconBg, { backgroundColor: 'rgba(34, 197, 94, 0.12)' }]}>
+              <MessageCircle size={18} color="#22c55e" />
             </View>
             <View>
-              <Text style={styles.menuItemTitle}>Minha Assinatura</Text>
-              <Text style={styles.menuItemSubtitle}>Status do plano e faturamento</Text>
+              <Text style={[styles.menuItemTitle, { color: '#22c55e' }]}>Suporte via WhatsApp</Text>
+              <Text style={styles.menuItemSubtitle}>Atendimento direto e suporte técnico</Text>
             </View>
           </View>
-          <ChevronRight size={18} color="#64748b" />
+          <ChevronRight size={18} color="#22c55e" />
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => navigation.navigate('FiscalSettings')}
+          onPress={() => setShowTermsModal(true)}
           style={styles.menuItem}
         >
           <View style={styles.menuItemLeft}>
-            <View style={[styles.iconBg, { backgroundColor: 'rgba(234, 179, 8, 0.1)' }]}>
-              <FileText size={18} color="#eab308" />
+            <View style={[styles.iconBg, { backgroundColor: 'rgba(59, 102, 255, 0.1)' }]}>
+              <Shield size={18} color={theme.colors.primary} />
             </View>
             <View>
-              <Text style={styles.menuItemTitle}>Configurações Fiscais</Text>
-              <Text style={styles.menuItemSubtitle}>Certificado A1 e dados fiscais</Text>
+              <Text style={styles.menuItemTitle}>Termos & Privacidade</Text>
+              <Text style={styles.menuItemSubtitle}>Políticas de uso e proteção de dados</Text>
             </View>
           </View>
           <ChevronRight size={18} color="#64748b" />
@@ -97,14 +122,19 @@ export default function MoreMenuScreen() {
             </View>
             <View>
               <Text style={[styles.menuItemTitle, { color: '#ef4444' }]}>Sair da Conta</Text>
-              <Text style={styles.menuItemSubtitle}>Desconectar do painel SaaS</Text>
+              <Text style={styles.menuItemSubtitle}>Desconectar do painel da oficina</Text>
             </View>
           </View>
           <ChevronRight size={18} color="#ef4444" />
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.versionText}>OficinaPro v1.0.0 • SaaS Mobile</Text>
+      <Text style={styles.versionText}>MecânicaPro v1.0.0 • Gestão de Oficinas</Text>
+
+      <TermsPrivacyModal
+        visible={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+      />
     </View>
   );
 }

@@ -28,7 +28,7 @@ export type OSStackParamList = {
 };
 
 export type FinanceStackParamList = {
-  FinanceFlow: undefined;
+  BillingList: { preselectedOsId?: string } | undefined;
   BillingDetail: { billingId: string };
 };
 
@@ -36,6 +36,5 @@ export type MoreStackParamList = {
   MoreMenu: undefined;
   Catalog: undefined;
   Settings: undefined;
-  SubscriptionDetails: undefined;
-  FiscalSettings: undefined;
+  CashFlow: undefined;
 };

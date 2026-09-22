@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Modal, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { X, Shield, FileText } from 'lucide-react-native';
-import { theme } from '../styles/theme';
+import { theme, useTheme } from '../styles/theme';
 
 interface TermsPrivacyModalProps {
   visible: boolean;
@@ -10,40 +10,41 @@ interface TermsPrivacyModalProps {
 }
 
 export default function TermsPrivacyModal({ visible, onClose, initialTab = 'terms' }: TermsPrivacyModalProps) {
+  const { colors, isDark } = useTheme();
   const [activeTab, setActiveTab] = useState<'terms' | 'privacy'>(initialTab);
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.modalBg}>
-        <View style={styles.modalCard}>
+        <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.header}>
             <View style={styles.headerTitleRow}>
-              <Shield size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
-              <Text style={styles.modalTitle}>Informações Legais & Segurança</Text>
+              <Shield size={20} color={colors.primary} style={{ marginRight: 8 }} />
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Informações Legais & Segurança</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <X size={20} color="#94a3b8" />
+              <X size={20} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
 
           {/* TAB SELECTOR */}
-          <View style={styles.tabBar}>
+          <View style={[styles.tabBar, { backgroundColor: colors.surface }]}>
             <TouchableOpacity
               onPress={() => setActiveTab('terms')}
-              style={[styles.tabItem, activeTab === 'terms' && styles.tabItemActive]}
+              style={[styles.tabItem, activeTab === 'terms' && { backgroundColor: isDark ? 'rgba(59, 102, 255, 0.15)' : 'rgba(59, 102, 255, 0.1)' }]}
             >
-              <FileText size={15} color={activeTab === 'terms' ? theme.colors.primary : '#64748b'} style={{ marginRight: 6 }} />
-              <Text style={[styles.tabText, activeTab === 'terms' && styles.tabTextActive]}>
+              <FileText size={15} color={activeTab === 'terms' ? colors.primary : colors.textMuted} style={{ marginRight: 6 }} />
+              <Text style={[styles.tabText, { color: colors.textMuted }, activeTab === 'terms' && { color: colors.primary }]}>
                 Termos de Uso
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={() => setActiveTab('privacy')}
-              style={[styles.tabItem, activeTab === 'privacy' && styles.tabItemActive]}
+              style={[styles.tabItem, activeTab === 'privacy' && { backgroundColor: isDark ? 'rgba(59, 102, 255, 0.15)' : 'rgba(59, 102, 255, 0.1)' }]}
             >
-              <Shield size={15} color={activeTab === 'privacy' ? theme.colors.primary : '#64748b'} style={{ marginRight: 6 }} />
-              <Text style={[styles.tabText, activeTab === 'privacy' && styles.tabTextActive]}>
+              <Shield size={15} color={activeTab === 'privacy' ? colors.primary : colors.textMuted} style={{ marginRight: 6 }} />
+              <Text style={[styles.tabText, { color: colors.textMuted }, activeTab === 'privacy' && { color: colors.primary }]}>
                 Privacidade (LGPD)
               </Text>
             </TouchableOpacity>

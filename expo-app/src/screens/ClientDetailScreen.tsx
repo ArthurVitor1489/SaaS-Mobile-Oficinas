@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 import { ArrowLeft, Edit2, Trash2, Car } from 'lucide-react-native';
 import { useDatabase } from '../context/DatabaseContext';
-import { theme } from '../styles/theme';
+import { theme, useTheme } from '../styles/theme';
 import { formatDate, formatCurrency } from '../utils/formatters';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import ClientModal from '../components/ClientModal';
@@ -12,6 +12,7 @@ import { Client, Vehicle, WorkOrder } from '../types';
 export default function ClientDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
+  const { colors, isDark } = useTheme();
   const { clientId } = route.params;
 
   const {
@@ -164,153 +165,153 @@ export default function ClientDetailScreen() {
   };
 
   return (
-    <View style={styles.screenContainer}>
+    <View style={[styles.screenContainer, { backgroundColor: colors.background }]}>
       <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 30 }}>
-        <View style={styles.profileCard}>
-        <View style={styles.profileHeaderRow}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-          >
-            <ArrowLeft size={16} color={theme.colors.primary} />
-            <Text style={styles.backButtonText}>Voltar à Lista</Text>
-          </TouchableOpacity>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
+        <View style={[styles.profileCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.profileHeaderRow}>
             <TouchableOpacity
-              style={styles.editBtn}
-              onPress={handleOpenClientModalForEdit}
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
             >
-              <Edit2 size={12} color="#fff" />
+              <ArrowLeft size={16} color={colors.primary} />
+              <Text style={[styles.backButtonText, { color: colors.primary }]}>Voltar à Lista</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.deleteBtn}
-              onPress={handleDeleteClientClick}
-            >
-              <Trash2 size={12} color="#fff" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <Text style={styles.profileClientName}>{client.name}</Text>
-        <Text style={styles.profileDetailText}>Tel: {client.phone} | WhatsApp: {client.whatsapp || 'Não cadastrado'}</Text>
-        <Text style={styles.profileDetailText}>E-mail: {client.email || 'Não informado'}</Text>
-        <Text style={styles.profileDetailText}>Endereço: {client.address || 'Não informado'}</Text>
-
-        {client.notes ? (
-          <View style={styles.notesBox}>
-            <Text style={styles.notesLabel}>OBSERVAÇÕES DO CLIENTE</Text>
-            <Text style={styles.notesText}>{client.notes}</Text>
-          </View>
-        ) : null}
-
-        <View style={styles.segmentContainer}>
-          <TouchableOpacity
-            onPress={() => setActiveClientTab('vehicles')}
-            style={[styles.segmentTab, activeClientTab === 'vehicles' ? styles.segmentTabActive : null]}
-          >
-            <Text style={[styles.segmentTabText, activeClientTab === 'vehicles' ? styles.segmentTabTextActive : null]}>
-              Veículos
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setActiveClientTab('history')}
-            style={[styles.segmentTab, activeClientTab === 'history' ? styles.segmentTabActive : null]}
-          >
-            <Text style={[styles.segmentTabText, activeClientTab === 'history' ? styles.segmentTabTextActive : null]}>
-              Histórico OS
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {activeClientTab === 'vehicles' ? (
-          <View>
-            <View style={styles.tabSectionHeader}>
-              <Text style={styles.sectionTitle}>FROTA VINCULADA</Text>
-              <TouchableOpacity style={styles.actionButtonSmall} onPress={handleOpenVehicleModalForCreate}>
-                <Car size={12} color="#fff" />
-                <Text style={styles.actionButtonTextSmall}>+ Carro</Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TouchableOpacity
+                style={[styles.editBtn, { backgroundColor: colors.primary }]}
+                onPress={handleOpenClientModalForEdit}
+              >
+                <Edit2 size={12} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.deleteBtn, { backgroundColor: colors.error }]}
+                onPress={handleDeleteClientClick}
+              >
+                <Trash2 size={12} color="#fff" />
               </TouchableOpacity>
             </View>
+          </View>
 
-            {clientCars.length === 0 ? (
-              <Text style={styles.emptyTabMessage}>Nenhum veículo associado.</Text>
-            ) : (
-              clientCars.map(car => (
-                <View key={car.id} style={styles.carRow}>
-                  <View style={styles.carRowLeft}>
-                    <Car size={14} color={theme.colors.primary} />
-                    <View style={{ marginLeft: 8, flex: 1 }}>
-                      <Text style={styles.carTextName}>{car.brand} {car.model} ({car.year})</Text>
-                      <Text style={styles.carTextMeta}>Placa: {car.plate} | Km: {car.odometer}</Text>
+          <Text style={[styles.profileClientName, { color: colors.text }]}>{client.name}</Text>
+          <Text style={[styles.profileDetailText, { color: colors.textDim }]}>Tel: {client.phone} | WhatsApp: {client.whatsapp || 'Não cadastrado'}</Text>
+          <Text style={[styles.profileDetailText, { color: colors.textDim }]}>E-mail: {client.email || 'Não informado'}</Text>
+          <Text style={[styles.profileDetailText, { color: colors.textDim }]}>Endereço: {client.address || 'Não informado'}</Text>
+
+          {client.notes ? (
+            <View style={[styles.notesBox, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.notesLabel, { color: colors.textMuted }]}>OBSERVAÇÕES DO CLIENTE</Text>
+              <Text style={[styles.notesText, { color: colors.text }]}>{client.notes}</Text>
+            </View>
+          ) : null}
+
+          <View style={[styles.segmentContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <TouchableOpacity
+              onPress={() => setActiveClientTab('vehicles')}
+              style={[styles.segmentTab, activeClientTab === 'vehicles' ? [styles.segmentTabActive, { backgroundColor: colors.card }] : null]}
+            >
+              <Text style={[styles.segmentTabText, { color: activeClientTab === 'vehicles' ? colors.primary : colors.textMuted }]}>
+                Veículos
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setActiveClientTab('history')}
+              style={[styles.segmentTab, activeClientTab === 'history' ? [styles.segmentTabActive, { backgroundColor: colors.card }] : null]}
+            >
+              <Text style={[styles.segmentTabText, { color: activeClientTab === 'history' ? colors.primary : colors.textMuted }]}>
+                Histórico OS
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {activeClientTab === 'vehicles' ? (
+            <View>
+              <View style={styles.tabSectionHeader}>
+                <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>FROTA VINCULADA</Text>
+                <TouchableOpacity style={[styles.actionButtonSmall, { backgroundColor: colors.primary }]} onPress={handleOpenVehicleModalForCreate}>
+                  <Car size={12} color="#fff" />
+                  <Text style={styles.actionButtonTextSmall}>+ Carro</Text>
+                </TouchableOpacity>
+              </View>
+
+              {clientCars.length === 0 ? (
+                <Text style={[styles.emptyTabMessage, { color: colors.textMuted }]}>Nenhum veículo associado.</Text>
+              ) : (
+                clientCars.map(car => (
+                  <View key={car.id} style={[styles.carRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                    <View style={styles.carRowLeft}>
+                      <Car size={14} color={colors.primary} />
+                      <View style={{ marginLeft: 8, flex: 1 }}>
+                        <Text style={[styles.carTextName, { color: colors.text }]}>{car.brand} {car.model} ({car.year})</Text>
+                        <Text style={[styles.carTextMeta, { color: colors.textMuted }]}>Placa: {car.plate} | Km: {car.odometer}</Text>
+                      </View>
+                    </View>
+                    
+                    <View style={{ flexDirection: 'row', gap: 6 }}>
+                      <TouchableOpacity
+                        style={styles.carActionEdit}
+                        onPress={() => handleOpenVehicleModalForEdit(car)}
+                      >
+                        <Edit2 size={10} color={colors.primary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.carActionDelete}
+                        onPress={() => handleDeleteVehicleClick(car.id)}
+                      >
+                        <Trash2 size={10} color={colors.error} />
+                      </TouchableOpacity>
                     </View>
                   </View>
-                  
-                  <View style={{ flexDirection: 'row', gap: 6 }}>
-                    <TouchableOpacity
-                      style={styles.carActionEdit}
-                      onPress={() => handleOpenVehicleModalForEdit(car)}
-                    >
-                      <Edit2 size={10} color={theme.colors.primary} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.carActionDelete}
-                      onPress={() => handleDeleteVehicleClick(car.id)}
-                    >
-                      <Trash2 size={10} color={theme.colors.error} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))
-            )}
-          </View>
-        ) : (
-          <View>
-            <Text style={styles.sectionTitle}>HISTÓRICO COMPLETO</Text>
-            {clientOSHistory.length === 0 ? (
-              <Text style={styles.emptyTabMessage}>Nenhuma OS encontrada para este cliente.</Text>
-            ) : (
-              clientOSHistory.map(os => (
-                <TouchableOpacity
-                  key={os.id}
-                  style={styles.osHistoryListItem}
-                  onPress={() => {
-                    navigation.navigate('OSTab', {
-                      screen: 'OSDetail',
-                      params: { osId: os.id }
-                    });
-                  }}
-                >
-                  <View>
-                    <Text style={styles.osHistoryNum}>{os.osNumber}</Text>
-                    <Text style={styles.osHistoryDate}>{formatDate(os.date)}</Text>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={styles.osHistoryTotal}>{formatCurrency(os.grandTotal)}</Text>
-                    {(() => {
-                      const b = billingMap.get(os.id);
-                      if (b) {
+                ))
+              )}
+            </View>
+          ) : (
+            <View>
+              <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>HISTÓRICO COMPLETO</Text>
+              {clientOSHistory.length === 0 ? (
+                <Text style={[styles.emptyTabMessage, { color: colors.textMuted }]}>Nenhuma OS encontrada para este cliente.</Text>
+              ) : (
+                clientOSHistory.map(os => (
+                  <TouchableOpacity
+                    key={os.id}
+                    style={[styles.osHistoryListItem, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                    onPress={() => {
+                      navigation.navigate('OSTab', {
+                        screen: 'OSDetail',
+                        params: { osId: os.id }
+                      });
+                    }}
+                  >
+                    <View>
+                      <Text style={[styles.osHistoryNum, { color: colors.primary }]}>{os.osNumber}</Text>
+                      <Text style={[styles.osHistoryDate, { color: colors.textMuted }]}>{formatDate(os.date)}</Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={[styles.osHistoryTotal, { color: colors.text }]}>{formatCurrency(os.grandTotal)}</Text>
+                      {(() => {
+                        const b = billingMap.get(os.id);
+                        if (b) {
+                          return (
+                            <Text style={[
+                              styles.osHistoryStatus,
+                              { color: b.status === 'Pago' ? colors.success : colors.warning }
+                            ]}>
+                              {b.status === 'Pago' ? 'Faturada (Paga)' : 'Faturada'}
+                            </Text>
+                          );
+                        }
                         return (
-                          <Text style={[
-                            styles.osHistoryStatus,
-                            { color: b.status === 'Pago' ? theme.colors.success : theme.colors.warning }
-                          ]}>
-                            {b.status === 'Pago' ? 'Faturada (Paga)' : 'Faturada'}
+                          <Text style={[styles.osHistoryStatus, { color: '#f59e0b' }]}>
+                            A Faturar
                           </Text>
                         );
-                      }
-                      return (
-                        <Text style={[styles.osHistoryStatus, { color: '#f59e0b' }]}>
-                          A Faturar
-                        </Text>
-                      );
-                    })()}
-                  </View>
-                </TouchableOpacity>
-              ))
-            )}
-          </View>
-        )}
-      </View>
+                      })()}
+                    </View>
+                  </TouchableOpacity>
+                ))
+              )}
+            </View>
+          )}
+        </View>
 
       <ClientModal 
         visible={clientModalVisible}

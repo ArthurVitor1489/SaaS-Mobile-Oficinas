@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { theme } from '../styles/theme';
+import { theme, useTheme } from '../styles/theme';
 import { validateEmail, validateCpfCnpj, validatePhone, containsInjection } from '../utils/formatters';
 
 interface ClientForm {
@@ -43,6 +43,7 @@ export default function ClientModal({
   onClose,
   onSubmit,
 }: ClientModalProps) {
+  const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const [form, setForm] = useState<ClientForm>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
@@ -74,36 +75,33 @@ export default function ClientModal({
       return;
     }
 
-    if (!validatePhone(form.phone.trim())) {
-      Alert.alert('Erro', 'Por favor, informe um número de telefone válido com DDD (mínimo 10 dígitos).');
+    if (form.phone.trim() && !validatePhone(form.phone.trim())) {
+      Alert.alert('Erro', 'Por favor, informe um número de telefone com DDD válido.');
       return;
     }
 
     if (form.whatsapp.trim() && !validatePhone(form.whatsapp.trim())) {
-      Alert.alert('Erro', 'Por favor, informe um número de WhatsApp válido com DDD (mínimo 10 dígitos).');
+      Alert.alert('Erro', 'Por favor, informe um número de WhatsApp com DDD válido.');
       return;
     }
 
-    if (
-      containsInjection(form.name) ||
-      containsInjection(form.cpfCnpj) ||
-      containsInjection(form.phone) ||
-      containsInjection(form.whatsapp) ||
-      containsInjection(form.email) ||
-      containsInjection(form.address) ||
-      containsInjection(form.notes)
-    ) {
-      Alert.alert('Erro', 'Caracteres ou comandos não permitidos detectados nos campos.');
+    if (containsInjection(form.name) || containsInjection(form.notes) || containsInjection(form.address)) {
+      Alert.alert('Aviso de Segurança', 'Caracteres inválidos detectados nos campos de texto.');
       return;
     }
 
     setSubmitting(true);
     try {
-      const whatsappVal = form.whatsapp.trim() || form.phone.trim();
       const success = await onSubmit({
-        ...form,
-        whatsapp: whatsappVal,
+        name: form.name.trim(),
+        cpfCnpj: form.cpfCnpj.trim(),
+        phone: form.phone.trim(),
+        whatsapp: form.whatsapp.trim() || form.phone.trim(),
+        email: form.email.trim(),
+        address: form.address.trim(),
+        notes: form.notes.trim(),
       });
+
       if (success) {
         handleClose();
       }
@@ -114,95 +112,99 @@ export default function ClientModal({
     }
   };
 
+  const inputStyle = [styles.modalInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }];
+  const labelStyle = [styles.inputLabel, { color: colors.textMuted }];
+  const placeholderColor = isDark ? '#475569' : '#94a3b8';
+
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.modalBg}
       >
-        <View style={[styles.modalContent, { paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : theme.spacing.xxl }]}>
+        <View style={[styles.modalContent, { backgroundColor: colors.card, paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : theme.spacing.xxl }]}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
               {editingClientId ? 'Editar Cliente' : 'Cadastrar Novo Cliente'}
             </Text>
             <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-              <X size={20} color="#94a3b8" />
+              <X size={20} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
-            <Text style={styles.inputLabel}>Nome Completo / Razão Social *</Text>
+            <Text style={labelStyle}>Nome Completo / Razão Social *</Text>
             <TextInput
               placeholder="Ex: João da Silva"
-              placeholderTextColor="#475569"
+              placeholderTextColor={placeholderColor}
               value={form.name}
               onChangeText={t => setForm(prev => ({ ...prev, name: t }))}
               maxLength={100}
-              style={styles.modalInput}
+              style={inputStyle}
             />
 
-            <Text style={styles.inputLabel}>CPF / CNPJ</Text>
+            <Text style={labelStyle}>CPF / CNPJ</Text>
             <TextInput
               placeholder="Ex: 123.456.789-00"
-              placeholderTextColor="#475569"
+              placeholderTextColor={placeholderColor}
               value={form.cpfCnpj}
               onChangeText={t => setForm(prev => ({ ...prev, cpfCnpj: t }))}
               maxLength={20}
-              style={styles.modalInput}
+              style={inputStyle}
             />
 
-            <Text style={styles.inputLabel}>Telefone *</Text>
+            <Text style={labelStyle}>Telefone *</Text>
             <TextInput
               placeholder="Ex: (11) 4500-0000"
-              placeholderTextColor="#475569"
+              placeholderTextColor={placeholderColor}
               keyboardType="phone-pad"
               value={form.phone}
               onChangeText={t => setForm(prev => ({ ...prev, phone: t }))}
               maxLength={20}
-              style={styles.modalInput}
+              style={inputStyle}
             />
 
-            <Text style={styles.inputLabel}>WhatsApp / Celular</Text>
+            <Text style={labelStyle}>WhatsApp / Celular</Text>
             <TextInput
               placeholder="Ex: (11) 99999-9999"
-              placeholderTextColor="#475569"
+              placeholderTextColor={placeholderColor}
               keyboardType="phone-pad"
               value={form.whatsapp}
               onChangeText={t => setForm(prev => ({ ...prev, whatsapp: t }))}
               maxLength={20}
-              style={styles.modalInput}
+              style={inputStyle}
             />
 
-            <Text style={styles.inputLabel}>E-mail</Text>
+            <Text style={labelStyle}>E-mail</Text>
             <TextInput
               placeholder="Ex: joao@email.com"
-              placeholderTextColor="#475569"
+              placeholderTextColor={placeholderColor}
               keyboardType="email-address"
               autoCapitalize="none"
               value={form.email}
               onChangeText={t => setForm(prev => ({ ...prev, email: t }))}
               maxLength={100}
-              style={styles.modalInput}
+              style={inputStyle}
             />
 
-            <Text style={styles.inputLabel}>Endereço Completo</Text>
+            <Text style={labelStyle}>Endereço Completo</Text>
             <TextInput
               placeholder="Ex: Av. Paulista, 1000 - Bela Vista"
-              placeholderTextColor="#475569"
+              placeholderTextColor={placeholderColor}
               value={form.address}
               onChangeText={t => setForm(prev => ({ ...prev, address: t }))}
               maxLength={255}
-              style={styles.modalInput}
+              style={inputStyle}
             />
 
-            <Text style={styles.inputLabel}>Observações Adicionais</Text>
+            <Text style={labelStyle}>Observações Adicionais</Text>
             <TextInput
               placeholder="Algum detalhe particular deste cliente..."
-              placeholderTextColor="#475569"
+              placeholderTextColor={placeholderColor}
               value={form.notes}
               onChangeText={t => setForm(prev => ({ ...prev, notes: t }))}
               maxLength={500}
-              style={styles.modalInput}
+              style={inputStyle}
             />
 
             <TouchableOpacity 

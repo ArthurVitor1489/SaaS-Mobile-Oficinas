@@ -49,8 +49,10 @@ interface AppState {
   billings: Billing[];
   transactions: FinancialTransaction[];
   settings: CompanySettings;
+  themeMode: 'dark' | 'light';
 
   // Actions
+  setThemeMode: (mode: 'dark' | 'light') => void;
   setAccessToken: (token: string | null) => void;
   setOnlineStatus: (status: boolean) => void;
   clearQueue: () => void;
@@ -201,7 +203,9 @@ export const useAppStore = create<AppState>()(
       billings: [],
       transactions: [],
       settings: defaultSettings,
+      themeMode: 'dark',
 
+      setThemeMode: (themeMode) => set({ themeMode }),
       setAccessToken: (accessToken) => set({ accessToken }),
       setOnlineStatus: (isOnline) => set({ isOnline }),
       clearQueue: () => set({ offlineQueue: [] }),

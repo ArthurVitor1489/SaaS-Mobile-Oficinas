@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, StyleSheet, Switch } from 'react-native';
-import { ArrowLeft, Shield, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, Shield, Trash2, Moon, Sun } from 'lucide-react-native';
 import { useDatabase } from '../context/DatabaseContext';
-import { theme } from '../styles/theme';
+import { theme, useTheme } from '../styles/theme';
 import { useNavigation } from '@react-navigation/native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -13,6 +13,7 @@ import TermsPrivacyModal from '../components/TermsPrivacyModal';
 
 export default function SettingsScreen() {
   const navigation = useNavigation<any>();
+  const { themeMode, setThemeMode, isDark, colors } = useTheme();
   const {
     settings,
     updateSettings,
@@ -154,157 +155,206 @@ export default function SettingsScreen() {
   };
 
   return (
-    <View style={styles.screenContainer}>
+    <View style={[styles.screenContainer, { backgroundColor: colors.background }]}>
       <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
         <View style={styles.screenHeader}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <ArrowLeft size={20} color={theme.colors.primary} />
-          <Text style={styles.backButtonText}>Voltar</Text>
-        </TouchableOpacity>
-        <Text style={styles.tabTitle}>Configurações</Text>
-      </View>
-
-      <View style={styles.formCard}>
-        <Text style={styles.sectionHeading}>DADOS DA OFICINA</Text>
-
-        <Text style={styles.inputLabel}>Nome Fantasia / Razão Social *</Text>
-        <TextInput
-          value={name}
-          onChangeText={setName}
-          placeholder="Ex: Oficina Mecânica Central"
-          placeholderTextColor="#475569"
-          maxLength={100}
-          style={styles.formInput}
-        />
-
-        <Text style={styles.inputLabel}>CNPJ da Empresa</Text>
-        <TextInput
-          value={cnpj}
-          onChangeText={setCnpj}
-          placeholder="Ex: 00.000.000/0001-00"
-          placeholderTextColor="#475569"
-          maxLength={20}
-          style={styles.formInput}
-        />
-
-        <Text style={styles.inputLabel}>Telefone Comercial</Text>
-        <TextInput
-          value={phone}
-          onChangeText={setPhone}
-          placeholder="Ex: (11) 5555-5555"
-          placeholderTextColor="#475569"
-          maxLength={20}
-          style={styles.formInput}
-        />
-
-        <Text style={styles.inputLabel}>WhatsApp Comercial</Text>
-        <TextInput
-          value={whatsapp}
-          onChangeText={setWhatsapp}
-          placeholder="Ex: (11) 99999-9999"
-          placeholderTextColor="#475569"
-          maxLength={20}
-          style={styles.formInput}
-        />
-
-        <Text style={styles.inputLabel}>E-mail Comercial</Text>
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
-          placeholder="Ex: contato@oficina.com"
-          placeholderTextColor="#475569"
-          maxLength={80}
-          style={styles.formInput}
-        />
-
-        <Text style={styles.inputLabel}>Endereço Comercial</Text>
-        <TextInput
-          value={address}
-          onChangeText={setAddress}
-          placeholder="Ex: Av. Principal, 123 - Centro"
-          placeholderTextColor="#475569"
-          maxLength={200}
-          style={styles.formInput}
-        />
-
-        <Text style={styles.inputLabel}>URL do Logotipo (.PNG / .JPG)</Text>
-        <TextInput
-          value={logoUrl}
-          onChangeText={setLogoUrl}
-          placeholder="Ex: https://site.com/logo.png"
-          placeholderTextColor="#475569"
-          maxLength={500}
-          style={styles.formInput}
-        />
-
-        <View style={styles.switchRow}>
-          <View style={{ flex: 1, paddingRight: 8 }}>
-            <Text style={styles.switchLabel}>Numeração Sequencial de OS</Text>
-            <Text style={styles.switchDesc}>Gera IDs sequenciais automáticos (ex: OS-0001, OS-0002) para ordens de serviço.</Text>
-          </View>
-          <Switch
-            value={autoSequence}
-            onValueChange={setAutoSequence}
-            trackColor={{ false: '#1e293b', true: '#3b66ff' }}
-            thumbColor="#fff"
-          />
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <ArrowLeft size={20} color={colors.primary} />
+            <Text style={[styles.backButtonText, { color: colors.primary }]}>Voltar</Text>
+          </TouchableOpacity>
+          <Text style={[styles.tabTitle, { color: colors.text }]}>Configurações</Text>
         </View>
 
-        <TouchableOpacity onPress={handleSaveSettings} style={styles.saveBtn}>
-          <Text style={styles.saveBtnText}>Salvar Configurações</Text>
-        </TouchableOpacity>
-      </View>
-
-      <Text style={styles.sectionTitle}>BACKUP & EXPORTAÇÕES</Text>
-      <View style={styles.actionGrid}>
-        <TouchableOpacity style={styles.actionGridBtn} onPress={handleExportBackup}>
-          <Text style={styles.actionGridBtnTitle}>Exportar JSON</Text>
-          <Text style={styles.actionGridBtnDesc}>Compartilhar backup de segurança local</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.actionGridBtn} onPress={handleImportBackup}>
-          <Text style={styles.actionGridBtnTitle}>Importar JSON</Text>
-          <Text style={styles.actionGridBtnDesc}>Importar arquivo de dados de backup</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.actionGridBtn} onPress={handleExportCsv}>
-          <Text style={styles.actionGridBtnTitle}>Relatório Excel (.CSV)</Text>
-          <Text style={styles.actionGridBtnDesc}>Exportar lista completa de ordens</Text>
-        </TouchableOpacity>
-
-      </View>
-
-      <Text style={styles.sectionTitle}>SEGURANÇA & PRIVACIDADE</Text>
-      <View style={styles.privacyCard}>
-        <TouchableOpacity 
-          style={styles.privacyRowBtn}
-          onPress={() => setShowTermsModal(true)}
-        >
-          <View style={styles.privacyRowLeft}>
-            <Shield size={18} color={theme.colors.primary} />
-            <View>
-              <Text style={styles.privacyBtnTitle}>Termos de Uso e Política de Privacidade</Text>
-              <Text style={styles.privacyBtnDesc}>Conformidade LGPD e diretrizes de dados</Text>
+        {/* APARÊNCIA DO APLICATIVO */}
+        <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>APARÊNCIA DO APLICATIVO</Text>
+        <View style={[styles.themeBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => setThemeMode('dark')}
+            style={[
+              styles.themeOptionBtn,
+              { borderColor: colors.border, backgroundColor: isDark ? 'rgba(59, 130, 246, 0.12)' : 'transparent' },
+              isDark && { borderColor: colors.primary }
+            ]}
+          >
+            <View style={styles.themeOptionRow}>
+              <Moon size={20} color={isDark ? colors.primary : colors.textMuted} />
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={[styles.themeOptionTitle, { color: isDark ? colors.primary : colors.text }]}>
+                  Modo Escuro {isDark ? '(Ativo)' : ''}
+                </Text>
+                <Text style={[styles.themeOptionDesc, { color: colors.textMuted }]}>
+                  Tema elegante com fundo escuro e redução de fadiga visual
+                </Text>
+              </View>
             </View>
+          </TouchableOpacity>
+
+          <View style={[styles.themeDivider, { backgroundColor: colors.border }]} />
+
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => setThemeMode('light')}
+            style={[
+              styles.themeOptionBtn,
+              { borderColor: colors.border, backgroundColor: !isDark ? 'rgba(59, 130, 246, 0.12)' : 'transparent' },
+              !isDark && { borderColor: colors.primary }
+            ]}
+          >
+            <View style={styles.themeOptionRow}>
+              <Sun size={20} color={!isDark ? colors.primary : colors.textMuted} />
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={[styles.themeOptionTitle, { color: !isDark ? colors.primary : colors.text }]}>
+                  Modo Claro {!isDark ? '(Ativo)' : ''}
+                </Text>
+                <Text style={[styles.themeOptionDesc, { color: colors.textMuted }]}>
+                  Fundo limpo e cartões brancos de alto contraste
+                </Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        <View style={[styles.formCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.sectionHeading, { color: colors.textMuted }]}>DADOS DA OFICINA</Text>
+
+          <Text style={[styles.inputLabel, { color: colors.textMuted }]}>Nome Fantasia / Razão Social *</Text>
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            placeholder="Ex: Oficina Mecânica Central"
+            placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
+            maxLength={100}
+            style={[styles.formInput, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
+          />
+
+          <Text style={[styles.inputLabel, { color: colors.textMuted }]}>CNPJ da Empresa</Text>
+          <TextInput
+            value={cnpj}
+            onChangeText={setCnpj}
+            placeholder="Ex: 00.000.000/0001-00"
+            placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
+            maxLength={20}
+            style={[styles.formInput, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
+          />
+
+          <Text style={[styles.inputLabel, { color: colors.textMuted }]}>Telefone Comercial</Text>
+          <TextInput
+            value={phone}
+            onChangeText={setPhone}
+            placeholder="Ex: (11) 5555-5555"
+            placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
+            maxLength={20}
+            style={[styles.formInput, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
+          />
+
+          <Text style={[styles.inputLabel, { color: colors.textMuted }]}>WhatsApp Comercial</Text>
+          <TextInput
+            value={whatsapp}
+            onChangeText={setWhatsapp}
+            placeholder="Ex: (11) 99999-9999"
+            placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
+            maxLength={20}
+            style={[styles.formInput, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
+          />
+
+          <Text style={[styles.inputLabel, { color: colors.textMuted }]}>E-mail Comercial</Text>
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            placeholder="Ex: contato@oficina.com"
+            placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
+            maxLength={80}
+            style={[styles.formInput, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
+          />
+
+          <Text style={[styles.inputLabel, { color: colors.textMuted }]}>Endereço Comercial</Text>
+          <TextInput
+            value={address}
+            onChangeText={setAddress}
+            placeholder="Ex: Av. Principal, 123 - Centro"
+            placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
+            maxLength={200}
+            style={[styles.formInput, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
+          />
+
+          <Text style={[styles.inputLabel, { color: colors.textMuted }]}>URL do Logotipo (.PNG / .JPG)</Text>
+          <TextInput
+            value={logoUrl}
+            onChangeText={setLogoUrl}
+            placeholder="Ex: https://site.com/logo.png"
+            placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
+            maxLength={500}
+            style={[styles.formInput, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
+          />
+
+          <View style={[styles.switchRow, { borderTopColor: colors.border }]}>
+            <View style={{ flex: 1, paddingRight: 8 }}>
+              <Text style={[styles.switchLabel, { color: colors.text }]}>Numeração Sequencial de OS</Text>
+              <Text style={[styles.switchDesc, { color: colors.textMuted }]}>Gera IDs sequenciais automáticos (ex: OS-0001, OS-0002) para ordens de serviço.</Text>
+            </View>
+            <Switch
+              value={autoSequence}
+              onValueChange={setAutoSequence}
+              trackColor={{ false: isDark ? '#1e293b' : '#cbd5e1', true: colors.primary }}
+              thumbColor="#fff"
+            />
           </View>
-        </TouchableOpacity>
 
-        <View style={styles.privacyDivider} />
+          <TouchableOpacity onPress={handleSaveSettings} style={[styles.saveBtn, { backgroundColor: colors.primary }]}>
+            <Text style={styles.saveBtnText}>Salvar Configurações</Text>
+          </TouchableOpacity>
+        </View>
 
-        <TouchableOpacity 
-          style={styles.deleteAccountBtn}
-          onPress={handleDeleteAccount}
-        >
-          <Trash2 size={16} color={theme.colors.error} />
-          <Text style={styles.deleteAccountBtnText}>Excluir Minha Conta e Todos os Dados</Text>
-        </TouchableOpacity>
-      </View>
+        <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>BACKUP & EXPORTAÇÕES</Text>
+        <View style={styles.actionGrid}>
+          <TouchableOpacity style={[styles.actionGridBtn, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={handleExportBackup}>
+            <Text style={[styles.actionGridBtnTitle, { color: colors.text }]}>Exportar JSON</Text>
+            <Text style={[styles.actionGridBtnDesc, { color: colors.textMuted }]}>Compartilhar backup de segurança local</Text>
+          </TouchableOpacity>
 
-      <TermsPrivacyModal
-        visible={showTermsModal}
-        onClose={() => setShowTermsModal(false)}
-      />
-    </ScrollView>
+          <TouchableOpacity style={[styles.actionGridBtn, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={handleImportBackup}>
+            <Text style={[styles.actionGridBtnTitle, { color: colors.text }]}>Importar JSON</Text>
+            <Text style={[styles.actionGridBtnDesc, { color: colors.textMuted }]}>Importar arquivo de dados de backup</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[styles.actionGridBtn, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={handleExportCsv}>
+            <Text style={[styles.actionGridBtnTitle, { color: colors.text }]}>Relatório Excel (.CSV)</Text>
+            <Text style={[styles.actionGridBtnDesc, { color: colors.textMuted }]}>Exportar lista completa de ordens</Text>
+          </TouchableOpacity>
+        </View>
+
+        <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>SEGURANÇA & PRIVACIDADE</Text>
+        <View style={[styles.privacyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <TouchableOpacity 
+            style={styles.privacyRowBtn}
+            onPress={() => setShowTermsModal(true)}
+          >
+            <View style={styles.privacyRowLeft}>
+              <Shield size={18} color={colors.primary} />
+              <View>
+                <Text style={[styles.privacyBtnTitle, { color: colors.text }]}>Termos de Uso e Política de Privacidade</Text>
+                <Text style={[styles.privacyBtnDesc, { color: colors.textMuted }]}>Conformidade LGPD e diretrizes de dados</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+
+          <View style={[styles.privacyDivider, { backgroundColor: colors.border }]} />
+
+          <TouchableOpacity 
+            style={styles.deleteAccountBtn}
+            onPress={handleDeleteAccount}
+          >
+            <Trash2 size={16} color={colors.error} />
+            <Text style={[styles.deleteAccountBtnText, { color: colors.error }]}>Excluir Minha Conta e Todos os Dados</Text>
+          </TouchableOpacity>
+        </View>
+
+        <TermsPrivacyModal
+          visible={showTermsModal}
+          onClose={() => setShowTermsModal(false)}
+        />
+      </ScrollView>
     </View>
   );
 }
@@ -336,6 +386,35 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: theme.colors.text,
+  },
+  themeBox: {
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.roundness.md,
+    borderWidth: 1.5,
+    borderColor: theme.colors.border,
+    padding: 8,
+    marginBottom: 16,
+  },
+  themeOptionBtn: {
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1.5,
+  },
+  themeOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  themeOptionTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  themeOptionDesc: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  themeDivider: {
+    height: 1,
+    marginVertical: 6,
   },
   formCard: {
     backgroundColor: theme.colors.card,

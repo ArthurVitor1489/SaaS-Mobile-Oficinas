@@ -16,7 +16,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 // Store & Services
 import { useAppStore } from './src/store/useAppStore';
 import { startSyncEngine, stopSyncEngine, processOfflineQueue } from './src/services/syncEngine';
-import { theme } from './src/styles/theme';
+import { theme, useTheme } from './src/styles/theme';
 import { DatabaseProvider } from './src/context/DatabaseContext';
 
 // Screen Stacks
@@ -100,19 +100,20 @@ function MainTabNavigator() {
   const online = useAppStore((state) => state.isOnline);
   const queueLength = useAppStore((state) => state.offlineQueue.length);
   const navigation = useNavigation<any>();
+  const { colors, isDark } = useTheme();
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#090b0f" />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.headerBg} />
       
       {/* HEADER PRINCIPAL */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.headerBg, borderBottomColor: colors.border }]}>
         <View style={styles.headerLeft}>
-          <Text style={styles.headerTitle} numberOfLines={1}>
+          <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
              {settings.name ? settings.name.toUpperCase() : 'MECÂNICAPRO'}
           </Text>
           <View style={styles.headerSubRow}>
-            <Text style={styles.headerSubtitle}>PAINEL OFICINA</Text>
+            <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>PAINEL OFICINA</Text>
             <View style={online ? styles.statusBadgeOnline : styles.statusBadgeOffline}>
               {online ? (
                 <>
@@ -134,9 +135,9 @@ function MainTabNavigator() {
         screenOptions={({ route }) => ({
           headerShown: false,
           unmountOnBlur: true,
-          tabBarStyle: styles.tabBar,
-          tabBarActiveTintColor: '#3b66ff',
-          tabBarInactiveTintColor: '#64748b',
+          tabBarStyle: [styles.tabBar, { backgroundColor: colors.tabBarBg, borderTopColor: colors.tabBarBorder }],
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.textMuted,
           tabBarItemStyle: styles.tabItem,
           tabBarLabelStyle: styles.tabLabel,
           tabBarIcon: ({ color }) => {
@@ -267,6 +268,7 @@ function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
   const [isRegister, setIsRegister] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const { colors, isDark } = useTheme();
 
   // Form fields start clean and empty for end-consumers
   const [email, setEmail] = useState('');
@@ -322,74 +324,74 @@ function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
   return (
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
-      style={styles.authContainer}
+      style={[styles.authContainer, { backgroundColor: colors.background }]}
     >
-      <View style={styles.authCard}>
-        <Text style={styles.authTitle}>MECÂNICAPRO</Text>
-        <Text style={styles.authSubtitle}>
+      <View style={[styles.authCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.authTitle, { color: colors.text }]}>MECÂNICAPRO</Text>
+        <Text style={[styles.authSubtitle, { color: colors.textMuted }]}>
           {isRegister ? 'Crie a conta da sua oficina' : 'Acesse o painel da sua oficina'}
         </Text>
 
         {isRegister && (
           <>
-            <Text style={styles.inputLabel}>Seu Nome</Text>
+            <Text style={[styles.inputLabel, { color: colors.textDim }]}>Seu Nome</Text>
             <TextInput 
-              style={styles.modalInput} 
+              style={[styles.modalInput, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]} 
               value={name} 
               onChangeText={setName} 
               placeholder="Digite seu nome"
-              placeholderTextColor="#64748b"
+              placeholderTextColor={colors.textMuted}
             />
 
-            <Text style={styles.inputLabel}>Nome da Oficina</Text>
+            <Text style={[styles.inputLabel, { color: colors.textDim }]}>Nome da Oficina</Text>
             <TextInput 
-              style={styles.modalInput} 
+              style={[styles.modalInput, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]} 
               value={workshopName} 
               onChangeText={setWorkshopName} 
               placeholder="Nome da sua oficina"
-              placeholderTextColor="#64748b"
+              placeholderTextColor={colors.textMuted}
             />
 
-            <Text style={styles.inputLabel}>CNPJ (Opcional)</Text>
+            <Text style={[styles.inputLabel, { color: colors.textDim }]}>CNPJ (Opcional)</Text>
             <TextInput 
-              style={styles.modalInput} 
+              style={[styles.modalInput, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]} 
               value={cnpj} 
               onChangeText={setCnpj} 
               placeholder="00.000.000/0001-00"
-              placeholderTextColor="#64748b"
+              placeholderTextColor={colors.textMuted}
               keyboardType="numeric"
             />
 
-            <Text style={styles.inputLabel}>Telefone / WhatsApp</Text>
+            <Text style={[styles.inputLabel, { color: colors.textDim }]}>Telefone / WhatsApp</Text>
             <TextInput 
-              style={styles.modalInput} 
+              style={[styles.modalInput, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]} 
               value={phone} 
               onChangeText={setPhone} 
               placeholder="(11) 99999-9999"
-              placeholderTextColor="#64748b"
+              placeholderTextColor={colors.textMuted}
               keyboardType="phone-pad"
             />
           </>
         )}
 
-        <Text style={styles.inputLabel}>E-mail</Text>
+        <Text style={[styles.inputLabel, { color: colors.textDim }]}>E-mail</Text>
         <TextInput 
-          style={styles.modalInput} 
+          style={[styles.modalInput, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]} 
           value={email} 
           onChangeText={setEmail} 
           placeholder="seu@email.com"
-          placeholderTextColor="#64748b"
+          placeholderTextColor={colors.textMuted}
           keyboardType="email-address"
           autoCapitalize="none"
         />
 
-        <Text style={styles.inputLabel}>Senha</Text>
+        <Text style={[styles.inputLabel, { color: colors.textDim }]}>Senha</Text>
         <TextInput 
-          style={styles.modalInput} 
+          style={[styles.modalInput, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]} 
           value={password} 
           onChangeText={setPassword} 
           placeholder="••••••"
-          placeholderTextColor="#64748b"
+          placeholderTextColor={colors.textMuted}
           secureTextEntry
           autoCapitalize="none"
         />
@@ -412,7 +414,7 @@ function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
           style={styles.switchAuthMode}
           onPress={() => setIsRegister(!isRegister)}
         >
-          <Text style={styles.switchAuthText}>
+          <Text style={[styles.switchAuthText, { color: colors.primary }]}>
             {isRegister ? 'Já tem uma conta? Entrar' : 'Não tem conta? Cadastre-se'}
           </Text>
         </TouchableOpacity>
@@ -421,7 +423,7 @@ function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
           style={styles.termsLinkBtn}
           onPress={() => setShowTermsModal(true)}
         >
-          <Text style={styles.termsLinkBtnText}>
+          <Text style={[styles.termsLinkBtnText, { color: colors.textMuted }]}>
             Termos de Uso e Política de Privacidade (LGPD)
           </Text>
         </TouchableOpacity>
@@ -453,11 +455,26 @@ const MyDarkTheme = {
   },
 };
 
+const MyLightTheme = {
+  ...DefaultTheme,
+  dark: false,
+  colors: {
+    ...DefaultTheme.colors,
+    primary: '#2563eb',
+    background: '#f8fafc',
+    card: '#ffffff',
+    text: '#0f172a',
+    border: '#e2e8f0',
+    notification: '#dc2626',
+  },
+};
+
 function AppContent() {
   const user = useAppStore((state) => state.user);
   const accessToken = useAppStore((state) => state.accessToken);
   const loading = useAppStore((state) => state.loading);
   const pullAll = useAppStore((state) => state.pullAll);
+  const { isDark, colors } = useTheme();
 
   useEffect(() => {
     startSyncEngine();
@@ -471,14 +488,14 @@ function AppContent() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3b66ff" />
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <NavigationContainer theme={MyDarkTheme}>
+    <NavigationContainer theme={isDark ? MyDarkTheme : MyLightTheme}>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
         {!accessToken || !user ? (
           <RootStack.Screen name="Auth" options={{ animationTypeForReplace: 'pop' }}>

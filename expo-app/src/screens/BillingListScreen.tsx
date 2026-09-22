@@ -24,7 +24,7 @@ import {
   Car
 } from 'lucide-react-native';
 import { useDatabase } from '../context/DatabaseContext';
-import { theme } from '../styles/theme';
+import { theme, useTheme } from '../styles/theme';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Billing } from '../types';
@@ -33,6 +33,7 @@ import CreateBillingModal from '../components/CreateBillingModal';
 export default function BillingListScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
+  const { colors, isDark } = useTheme();
   const { billings, workOrders, clients, vehicles } = useDatabase();
 
   const [search, setSearch] = useState('');
@@ -177,18 +178,18 @@ export default function BillingListScreen() {
     const totalInstallments = item.installments.length;
     const isOverdue = item.installments.some(i => i.status === 'Pendente' && i.dueDate < todayStr);
 
-    let statusBadgeColor = theme.colors.primary;
+    let statusBadgeColor = colors.primary;
     let statusBadgeBg = 'rgba(59, 102, 255, 0.12)';
     let statusLabel: string = item.status;
 
     if (item.status === 'Pago') {
-      statusBadgeColor = theme.colors.success;
+      statusBadgeColor = colors.success;
       statusBadgeBg = 'rgba(34, 197, 94, 0.12)';
     } else if (item.status === 'Parcialmente pago') {
-      statusBadgeColor = theme.colors.warning;
+      statusBadgeColor = colors.warning;
       statusBadgeBg = 'rgba(234, 179, 8, 0.12)';
     } else if (isOverdue) {
-      statusBadgeColor = theme.colors.error;
+      statusBadgeColor = colors.error;
       statusBadgeBg = 'rgba(239, 68, 68, 0.12)';
       statusLabel = 'Atrasado';
     }
@@ -198,7 +199,7 @@ export default function BillingListScreen() {
     return (
       <TouchableOpacity
         key={item.id}
-        style={styles.billingCard}
+        style={[styles.billingCard, { backgroundColor: colors.card, borderColor: colors.border }]}
         activeOpacity={0.7}
         onPress={() => navigation.navigate('BillingDetail', { billingId: item.id })}
       >
@@ -206,13 +207,13 @@ export default function BillingListScreen() {
         <View style={styles.cardHeader}>
           <View style={styles.osBadgeWrapper}>
             <View style={styles.osIconBg}>
-              <FileText size={12} color={theme.colors.primary} />
+              <FileText size={12} color={colors.primary} />
             </View>
-            <Text style={styles.osBadgeText}>
+            <Text style={[styles.osBadgeText, { color: colors.primary }]}>
               {os ? os.osNumber : 'VENDA AVULSA'}
             </Text>
             {item.createdAt && (
-              <Text style={styles.cardDateText}>• {formatDate(item.createdAt)}</Text>
+              <Text style={[styles.cardDateText, { color: colors.textMuted }]}>• {formatDate(item.createdAt)}</Text>
             )}
           </View>
 
@@ -225,35 +226,35 @@ export default function BillingListScreen() {
 
         {/* Client & Vehicle */}
         <View style={styles.clientSection}>
-          <Text style={styles.clientNameText} numberOfLines={1}>
+          <Text style={[styles.clientNameText, { color: colors.text }]} numberOfLines={1}>
             {client?.name || item.customClientName || 'Cliente Balcão'}
           </Text>
           {vehicle ? (
             <View style={styles.vehicleRow}>
-              <Car size={13} color="#94a3b8" />
-              <Text style={styles.vehicleText} numberOfLines={1}>
+              <Car size={13} color={colors.textMuted} />
+              <Text style={[styles.vehicleText, { color: colors.textDim }]} numberOfLines={1}>
                 {vehicle.brand} {vehicle.model} • {vehicle.plate}
               </Text>
             </View>
           ) : item.customDescription ? (
-            <Text style={styles.vehicleText} numberOfLines={1}>
+            <Text style={[styles.vehicleText, { color: colors.textDim }]} numberOfLines={1}>
               {item.customDescription}
             </Text>
           ) : null}
         </View>
 
         {/* Payment & Installments Info */}
-        <View style={styles.billingDetailsRow}>
+        <View style={[styles.billingDetailsRow, { backgroundColor: isDark ? '#0f1218' : '#f1f5f9' }]}>
           <View style={styles.detailBlock}>
-            <Text style={styles.detailLabel}>FORMA DE PAGAMENTO</Text>
-            <Text style={styles.detailValue}>
+            <Text style={[styles.detailLabel, { color: colors.textMuted }]}>FORMA DE PAGAMENTO</Text>
+            <Text style={[styles.detailValue, { color: colors.text }]}>
               {item.paymentMethod} {totalInstallments > 1 ? `(${totalInstallments}x)` : 'à vista'}
             </Text>
           </View>
 
           <View style={[styles.detailBlock, { alignItems: 'flex-end' }]}>
-            <Text style={styles.detailLabel}>VALOR TOTAL</Text>
-            <Text style={styles.amountValue}>
+            <Text style={[styles.detailLabel, { color: colors.textMuted }]}>VALOR TOTAL</Text>
+            <Text style={[styles.amountValue, { color: colors.success }]}>
               {formatCurrency(item.amount)}
             </Text>
           </View>
@@ -262,22 +263,22 @@ export default function BillingListScreen() {
         {/* Installments Progress Bar */}
         <View style={styles.progressContainer}>
           <View style={styles.progressHeader}>
-            <Text style={styles.progressLabel}>
+            <Text style={[styles.progressLabel, { color: colors.textMuted }]}>
               Progresso: {paidCount} de {totalInstallments} parcelas quitadas
             </Text>
             {nextPending && (
-              <Text style={[styles.nextDueLabel, isOverdue ? { color: theme.colors.error } : null]}>
+              <Text style={[styles.nextDueLabel, { color: colors.textDim }, isOverdue ? { color: colors.error } : null]}>
                 Próx: {formatDate(nextPending.dueDate)}
               </Text>
             )}
           </View>
-          <View style={styles.progressBarBackground}>
+          <View style={[styles.progressBarBackground, { backgroundColor: colors.border }]}>
             <View
               style={[
                 styles.progressBarFill,
                 {
                   width: `${(paidCount / totalInstallments) * 100}%`,
-                  backgroundColor: paidCount === totalInstallments ? theme.colors.success : theme.colors.primary
+                  backgroundColor: paidCount === totalInstallments ? colors.success : colors.primary
                 }
               ]}
             />
@@ -285,7 +286,7 @@ export default function BillingListScreen() {
         </View>
 
         {/* Action Buttons Footer */}
-        <View style={styles.cardActionsRow}>
+        <View style={[styles.cardActionsRow, { borderTopColor: colors.border }]}>
           <TouchableOpacity
             style={styles.whatsAppButton}
             onPress={() => handleOpenWhatsApp(item)}
@@ -295,11 +296,11 @@ export default function BillingListScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.detailsButton}
+            style={[styles.detailsButton, { backgroundColor: isDark ? '#272e3f' : '#e2e8f0' }]}
             onPress={() => navigation.navigate('BillingDetail', { billingId: item.id })}
           >
-            <Text style={styles.detailsButtonText}>Ver Parcelas</Text>
-            <ChevronRight size={14} color="#fff" />
+            <Text style={[styles.detailsButtonText, { color: colors.text }]}>Ver Parcelas</Text>
+            <ChevronRight size={14} color={colors.text} />
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -307,16 +308,16 @@ export default function BillingListScreen() {
   };
 
   return (
-    <View style={styles.screenContainer}>
+    <View style={[styles.screenContainer, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={styles.screenHeader}>
         <View>
-          <Text style={styles.screenTitle}>Cobranças</Text>
-          <Text style={styles.screenSubtitle}>Gestão de faturamento e parcelas</Text>
+          <Text style={[styles.screenTitle, { color: colors.text }]}>Cobranças</Text>
+          <Text style={[styles.screenSubtitle, { color: colors.textMuted }]}>Gestão de faturamento e parcelas</Text>
         </View>
 
         <TouchableOpacity
-          style={styles.createButton}
+          style={[styles.createButton, { backgroundColor: colors.primary }]}
           onPress={() => {
             setPreselectedOsId(undefined);
             setCreateModalVisible(true);
@@ -330,60 +331,60 @@ export default function BillingListScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* KPI Cards Row */}
         <View style={styles.kpiContainer}>
-          <View style={[styles.kpiCard, { borderColor: 'rgba(59, 102, 255, 0.3)' }]}>
+          <View style={[styles.kpiCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.kpiHeaderRow}>
-              <Clock size={14} color={theme.colors.primary} />
-              <Text style={styles.kpiTitle}>A RECEBER HOJE</Text>
+              <Clock size={14} color={colors.primary} />
+              <Text style={[styles.kpiTitle, { color: colors.textMuted }]}>A RECEBER HOJE</Text>
             </View>
-            <Text style={[styles.kpiValue, { color: theme.colors.primary }]}>
+            <Text style={[styles.kpiValue, { color: colors.primary }]}>
               {formatCurrency(metrics.aReceberHoje)}
             </Text>
           </View>
 
-          <View style={[styles.kpiCard, { borderColor: 'rgba(234, 179, 8, 0.3)' }]}>
+          <View style={[styles.kpiCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.kpiHeaderRow}>
-              <Calendar size={14} color={theme.colors.warning} />
-              <Text style={styles.kpiTitle}>A RECEBER NO MÊS</Text>
+              <Calendar size={14} color={colors.warning} />
+              <Text style={[styles.kpiTitle, { color: colors.textMuted }]}>A RECEBER NO MÊS</Text>
             </View>
-            <Text style={[styles.kpiValue, { color: theme.colors.warning }]}>
+            <Text style={[styles.kpiValue, { color: colors.warning }]}>
               {formatCurrency(metrics.aReceberMes)}
             </Text>
           </View>
 
-          <View style={[styles.kpiCard, { borderColor: 'rgba(34, 197, 94, 0.3)' }]}>
+          <View style={[styles.kpiCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.kpiHeaderRow}>
-              <CheckCircle2 size={14} color={theme.colors.success} />
-              <Text style={styles.kpiTitle}>RECEBIDO NO MÊS</Text>
+              <CheckCircle2 size={14} color={colors.success} />
+              <Text style={[styles.kpiTitle, { color: colors.textMuted }]}>RECEBIDO NO MÊS</Text>
             </View>
-            <Text style={[styles.kpiValue, { color: theme.colors.success }]}>
+            <Text style={[styles.kpiValue, { color: colors.success }]}>
               {formatCurrency(metrics.recebidoMes)}
             </Text>
           </View>
 
-          <View style={[styles.kpiCard, { borderColor: 'rgba(239, 68, 68, 0.3)' }]}>
+          <View style={[styles.kpiCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.kpiHeaderRow}>
-              <AlertTriangle size={14} color={theme.colors.error} />
-              <Text style={styles.kpiTitle}>TOTAL EM ATRASO</Text>
+              <AlertTriangle size={14} color={colors.error} />
+              <Text style={[styles.kpiTitle, { color: colors.textMuted }]}>TOTAL EM ATRASO</Text>
             </View>
-            <Text style={[styles.kpiValue, { color: theme.colors.error }]}>
+            <Text style={[styles.kpiValue, { color: colors.error }]}>
               {formatCurrency(metrics.atrasadoTotal)}
             </Text>
           </View>
         </View>
 
         {/* Search Bar */}
-        <View style={styles.searchBox}>
-          <Search size={16} color="#94a3b8" />
+        <View style={[styles.searchBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Search size={16} color={colors.textMuted} />
           <TextInput
             placeholder="Buscar por OS, cliente, placa ou forma..."
-            placeholderTextColor="#64748b"
+            placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
             value={search}
             onChangeText={setSearch}
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: colors.text }]}
           />
           {search ? (
             <TouchableOpacity onPress={() => setSearch('')}>
-              <X size={16} color="#94a3b8" />
+              <X size={16} color={colors.textMuted} />
             </TouchableOpacity>
           ) : null}
         </View>
@@ -396,9 +397,17 @@ export default function BillingListScreen() {
               <TouchableOpacity
                 key={pill}
                 onPress={() => setStatusFilter(pill)}
-                style={[styles.filterPill, isActive && styles.filterPillActive]}
+                style={[
+                  styles.filterPill,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                  isActive && { backgroundColor: colors.primary, borderColor: colors.primary }
+                ]}
               >
-                <Text style={[styles.filterPillText, isActive && styles.filterPillTextActive]}>
+                <Text style={[
+                  styles.filterPillText,
+                  { color: colors.textMuted },
+                  isActive && { color: '#fff', fontWeight: 'bold' }
+                ]}>
                   {pill}
                 </Text>
               </TouchableOpacity>
@@ -412,13 +421,13 @@ export default function BillingListScreen() {
             filteredBillings.map(item => renderBillingCard(item))
           ) : (
             <View style={styles.emptyStateContainer}>
-              <DollarSign size={40} color="#64748b" />
-              <Text style={styles.emptyStateTitle}>Nenhuma cobrança encontrada</Text>
-              <Text style={styles.emptyStateSubtitle}>
+              <DollarSign size={40} color={colors.textMuted} />
+              <Text style={[styles.emptyStateTitle, { color: colors.text }]}>Nenhuma cobrança encontrada</Text>
+              <Text style={[styles.emptyStateSubtitle, { color: colors.textMuted }]}>
                 {search ? 'Tente buscar com outros termos.' : 'Crie sua primeira cobrança clicando no botão abaixo.'}
               </Text>
               <TouchableOpacity
-                style={styles.emptyStateButton}
+                style={[styles.emptyStateButton, { backgroundColor: colors.primary }]}
                 onPress={() => {
                   setPreselectedOsId(undefined);
                   setCreateModalVisible(true);

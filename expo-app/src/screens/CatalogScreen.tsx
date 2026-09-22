@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 import { ArrowLeft, Search, X, Plus, Edit2, Trash2 } from 'lucide-react-native';
 import { useDatabase } from '../context/DatabaseContext';
-import { theme } from '../styles/theme';
+import { theme, useTheme } from '../styles/theme';
 import { formatCurrency } from '../utils/formatters';
 import { useNavigation } from '@react-navigation/native';
 import CatalogServiceModal from '../components/CatalogServiceModal';
@@ -11,6 +11,7 @@ import { ServiceItem, PartItem } from '../types';
 
 export default function CatalogScreen() {
   const navigation = useNavigation<any>();
+  const { colors, isDark } = useTheme();
   const {
     services,
     parts,
@@ -184,15 +185,15 @@ export default function CatalogScreen() {
   };
 
   return (
-    <View style={styles.screenContainer}>
+    <View style={[styles.screenContainer, { backgroundColor: colors.background }]}>
       <View style={styles.screenHeader}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <ArrowLeft size={20} color={theme.colors.primary} />
-          <Text style={styles.backButtonText}>Voltar</Text>
+          <ArrowLeft size={20} color={colors.primary} />
+          <Text style={[styles.backButtonText, { color: colors.primary }]}>Voltar</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.actionButton}
+          style={[styles.actionButton, { backgroundColor: colors.primary }]}
           onPress={catalogSegment === 'services' ? handleOpenCatalogServiceForCreate : handleOpenCatalogPartForCreate}
         >
           <Plus size={16} color="#fff" />
@@ -202,33 +203,33 @@ export default function CatalogScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.segmentContainer}>
+      <View style={[styles.segmentContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <TouchableOpacity
           onPress={() => setCatalogSegment('services')}
-          style={[styles.segmentTab, catalogSegment === 'services' ? styles.segmentTabActive : null]}
+          style={[styles.segmentTab, catalogSegment === 'services' ? [styles.segmentTabActive, { backgroundColor: colors.card }] : null]}
         >
-          <Text style={[styles.segmentTabText, catalogSegment === 'services' ? styles.segmentTabTextActive : null]}>
+          <Text style={[styles.segmentTabText, { color: catalogSegment === 'services' ? colors.primary : colors.textMuted }]}>
             Serviços
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setCatalogSegment('parts')}
-          style={[styles.segmentTab, catalogSegment === 'parts' ? styles.segmentTabActive : null]}
+          style={[styles.segmentTab, catalogSegment === 'parts' ? [styles.segmentTabActive, { backgroundColor: colors.card }] : null]}
         >
-          <Text style={[styles.segmentTabText, catalogSegment === 'parts' ? styles.segmentTabTextActive : null]}>
+          <Text style={[styles.segmentTabText, { color: catalogSegment === 'parts' ? colors.primary : colors.textMuted }]}>
             Peças / Produtos
           </Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.searchBarWrapper}>
+      <View style={[styles.searchBarWrapper, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }]}>
         <Search size={16} color="#64748b" style={{ marginRight: 8 }} />
         <TextInput
           placeholder="Buscar no catálogo..."
-          placeholderTextColor="#475569"
+          placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
           value={catalogSearch}
           onChangeText={setCatalogSearch}
-          style={styles.searchBarInput}
+          style={[styles.searchBarInput, { color: colors.text }]}
         />
         {catalogSearch !== '' && (
           <TouchableOpacity onPress={() => setCatalogSearch('')}>
@@ -240,23 +241,23 @@ export default function CatalogScreen() {
       <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
         {catalogSegment === 'services' ? (
           filteredServices.length === 0 ? (
-            <Text style={styles.emptyText}>Nenhum serviço cadastrado.</Text>
+            <Text style={[styles.emptyText, { color: colors.textMuted }]}>Nenhum serviço cadastrado.</Text>
           ) : (
             filteredServices.map(item => (
-              <View key={item.id} style={styles.catalogCard}>
+              <View key={item.id} style={[styles.catalogCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <View style={{ flex: 1, paddingRight: 8 }}>
-                  <Text style={styles.itemTitle}>{item.name}</Text>
-                  {item.code ? <Text style={styles.itemSub}>Cód: {item.code}</Text> : null}
-                  {item.description ? <Text style={styles.itemDesc}>{item.description}</Text> : null}
+                  <Text style={[styles.itemTitle, { color: colors.text }]}>{item.name}</Text>
+                  {item.code ? <Text style={[styles.itemSub, { color: colors.textMuted }]}>Cód: {item.code}</Text> : null}
+                  {item.description ? <Text style={[styles.itemDesc, { color: colors.textDim }]}>{item.description}</Text> : null}
                 </View>
                 <View style={{ alignItems: 'flex-end', gap: 6 }}>
-                  <Text style={styles.itemPrice}>{formatCurrency(item.price)}</Text>
+                  <Text style={[styles.itemPrice, { color: colors.success }]}>{formatCurrency(item.price)}</Text>
                   <View style={{ flexDirection: 'row', gap: 6 }}>
-                    <TouchableOpacity style={styles.actionBtnIcon} onPress={() => handleOpenCatalogServiceForEdit(item)}>
-                      <Edit2 size={12} color={theme.colors.primary} />
+                    <TouchableOpacity style={[styles.actionBtnIcon, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => handleOpenCatalogServiceForEdit(item)}>
+                      <Edit2 size={12} color={colors.primary} />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.actionBtnIcon} onPress={() => handleDeleteService(item.id)}>
-                      <Trash2 size={12} color={theme.colors.error} />
+                    <TouchableOpacity style={[styles.actionBtnIcon, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => handleDeleteService(item.id)}>
+                      <Trash2 size={12} color={colors.error} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -265,24 +266,24 @@ export default function CatalogScreen() {
           )
         ) : (
           filteredParts.length === 0 ? (
-            <Text style={styles.emptyText}>Nenhuma peça cadastrada.</Text>
+            <Text style={[styles.emptyText, { color: colors.textMuted }]}>Nenhuma peça cadastrada.</Text>
           ) : (
             filteredParts.map(item => (
-              <View key={item.id} style={styles.catalogCard}>
+              <View key={item.id} style={[styles.catalogCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <View style={{ flex: 1, paddingRight: 8 }}>
-                  <Text style={styles.itemTitle}>{item.name}</Text>
-                  <Text style={styles.itemSub}>Cód/SKU: {item.code} • Forn: {item.supplier || '-'}</Text>
-                  <Text style={styles.itemDesc}>Estoque: <Text style={{ color: item.stock > 0 ? theme.colors.success : theme.colors.error, fontWeight: 'bold' }}>{item.stock} un</Text></Text>
+                  <Text style={[styles.itemTitle, { color: colors.text }]}>{item.name}</Text>
+                  <Text style={[styles.itemSub, { color: colors.textMuted }]}>Cód/SKU: {item.code} • Forn: {item.supplier || '-'}</Text>
+                  <Text style={[styles.itemDesc, { color: colors.textDim }]}>Estoque: <Text style={{ color: item.stock > 0 ? colors.success : colors.error, fontWeight: 'bold' }}>{item.stock} un</Text></Text>
                 </View>
                 <View style={{ alignItems: 'flex-end', gap: 6 }}>
-                  <Text style={styles.itemPrice}>{formatCurrency(item.salePrice)}</Text>
-                  <Text style={{ fontSize: 10, color: theme.colors.textMuted }}>Custo: {formatCurrency(item.purchasePrice)}</Text>
+                  <Text style={[styles.itemPrice, { color: colors.success }]}>{formatCurrency(item.salePrice)}</Text>
+                  <Text style={{ fontSize: 10, color: colors.textMuted }}>Custo: {formatCurrency(item.purchasePrice)}</Text>
                   <View style={{ flexDirection: 'row', gap: 6 }}>
-                    <TouchableOpacity style={styles.actionBtnIcon} onPress={() => handleOpenCatalogPartForEdit(item)}>
-                      <Edit2 size={12} color={theme.colors.primary} />
+                    <TouchableOpacity style={[styles.actionBtnIcon, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => handleOpenCatalogPartForEdit(item)}>
+                      <Edit2 size={12} color={colors.primary} />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.actionBtnIcon} onPress={() => handleDeletePart(item.id)}>
-                      <Trash2 size={12} color={theme.colors.error} />
+                    <TouchableOpacity style={[styles.actionBtnIcon, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => handleDeletePart(item.id)}>
+                      <Trash2 size={12} color={colors.error} />
                     </TouchableOpacity>
                   </View>
                 </View>

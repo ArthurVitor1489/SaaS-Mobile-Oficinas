@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { theme } from '../styles/theme';
+import { theme, useTheme } from '../styles/theme';
 import { TransactionCategory } from '../types';
 import { containsInjection } from '../utils/formatters';
 
@@ -36,6 +36,7 @@ export default function ExpenseModal({
   onClose,
   onSubmit,
 }: ExpenseModalProps) {
+  const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const [form, setForm] = useState<ExpenseForm>(emptyForm());
   const [submitting, setSubmitting] = useState(false);
@@ -97,65 +98,76 @@ export default function ExpenseModal({
     }
   };
 
+  const inputStyle = [styles.modalInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }];
+  const labelStyle = [styles.inputLabel, { color: colors.textMuted }];
+  const placeholderColor = isDark ? '#475569' : '#94a3b8';
+
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.modalBg}
       >
-        <View style={[styles.modalContent, { paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : theme.spacing.xxl }]}>
+        <View style={[styles.modalContent, { backgroundColor: colors.card, paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : theme.spacing.xxl }]}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Lançar Despesa de Caixa</Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Lançar Despesa de Caixa</Text>
             <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-              <X size={20} color="#94a3b8" />
+              <X size={20} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
-            <Text style={styles.inputLabel}>Descrição da Despesa *</Text>
+            <Text style={labelStyle}>Descrição da Despesa *</Text>
             <TextInput
               placeholder="Ex: Compra de Óleo de freio ou Energia Elétrica"
-              placeholderTextColor="#475569"
+              placeholderTextColor={placeholderColor}
               value={form.description}
               onChangeText={t => setForm(prev => ({ ...prev, description: t }))}
               maxLength={150}
-              style={styles.modalInput}
+              style={inputStyle}
             />
 
-            <Text style={styles.inputLabel}>Valor Pago (R$) *</Text>
+            <Text style={labelStyle}>Valor Pago (R$) *</Text>
             <TextInput
               placeholder="Ex: 150.00"
-              placeholderTextColor="#475569"
+              placeholderTextColor={placeholderColor}
               keyboardType="numeric"
               value={form.amount}
               onChangeText={t => setForm(prev => ({ ...prev, amount: t }))}
               maxLength={10}
-              style={styles.modalInput}
+              style={inputStyle}
             />
 
-            <Text style={styles.inputLabel}>Data do Pagamento (AAAA-MM-DD) *</Text>
+            <Text style={labelStyle}>Data do Pagamento (AAAA-MM-DD) *</Text>
             <TextInput
               placeholder="Ex: 2026-06-03"
-              placeholderTextColor="#475569"
+              placeholderTextColor={placeholderColor}
               value={form.date}
               onChangeText={t => setForm(prev => ({ ...prev, date: t }))}
               maxLength={10}
-              style={styles.modalInput}
+              style={inputStyle}
             />
 
-            <Text style={styles.inputLabel}>Categoria da Despesa</Text>
+            <Text style={labelStyle}>Categoria da Despesa</Text>
             <View style={styles.pickerFakeRow}>
-              {(['Compra Peças', 'Salário', 'Operacional', 'Outros'] as TransactionCategory[]).map(cat => (
-                <TouchableOpacity
-                  key={cat}
-                  onPress={() => setForm(prev => ({ ...prev, category: cat }))}
-                  style={[styles.pickerTag, form.category === cat ? styles.pickerTagActive : null]}
-                >
-                  <Text style={[styles.pickerTagText, form.category === cat ? styles.pickerTagActiveText : null]}>
-                    {cat}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {(['Compra Peças', 'Salário', 'Operacional', 'Outros'] as TransactionCategory[]).map(cat => {
+                const isActive = form.category === cat;
+                return (
+                  <TouchableOpacity
+                    key={cat}
+                    onPress={() => setForm(prev => ({ ...prev, category: cat }))}
+                    style={[
+                      styles.pickerTag,
+                      { backgroundColor: colors.surface, borderColor: colors.border },
+                      isActive ? { backgroundColor: colors.primary, borderColor: colors.primary } : null
+                    ]}
+                  >
+                    <Text style={[styles.pickerTagText, { color: colors.textMuted }, isActive ? { color: '#ffffff', fontWeight: 'bold' } : null]}>
+                      {cat}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
             <TouchableOpacity 

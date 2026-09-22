@@ -28,12 +28,13 @@ import {
   X
 } from 'lucide-react-native';
 import { useDatabase } from '../context/DatabaseContext';
-import { theme } from '../styles/theme';
+import { theme, useTheme } from '../styles/theme';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Billing } from '../types';
 
 export default function BillingDetailScreen() {
+  const { colors, isDark } = useTheme();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const billingId = route.params?.billingId;
@@ -59,10 +60,10 @@ export default function BillingDetailScreen() {
 
   if (!billing) {
     return (
-      <View style={[styles.screenContainer, { justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{ color: theme.colors.textMuted }}>Cobrança não encontrada.</Text>
+      <View style={[styles.screenContainer, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ color: colors.textMuted }}>Cobrança não encontrada.</Text>
         <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backButton, { marginTop: 12 }]}>
-          <Text style={styles.backButtonText}>Voltar</Text>
+          <Text style={[styles.backButtonText, { color: colors.primary }]}>Voltar</Text>
         </TouchableOpacity>
       </View>
     );
@@ -215,34 +216,34 @@ export default function BillingDetailScreen() {
   const totalPaidAmount = billing.installments.filter(i => i.status === 'Pago').reduce((acc, i) => acc + i.amount, 0);
   const totalPendingAmount = billing.amount - totalPaidAmount;
 
-  let statusBadgeColor = theme.colors.primary;
-  let statusBadgeBg = 'rgba(59, 102, 255, 0.12)';
+  let statusBadgeColor = colors.primary;
+  let statusBadgeBg = isDark ? 'rgba(59, 102, 255, 0.12)' : 'rgba(59, 102, 255, 0.08)';
   if (billing.status === 'Pago') {
-    statusBadgeColor = theme.colors.success;
-    statusBadgeBg = 'rgba(34, 197, 94, 0.12)';
+    statusBadgeColor = colors.success;
+    statusBadgeBg = isDark ? 'rgba(34, 197, 94, 0.12)' : 'rgba(34, 197, 94, 0.10)';
   } else if (billing.status === 'Parcialmente pago') {
-    statusBadgeColor = theme.colors.warning;
-    statusBadgeBg = 'rgba(234, 179, 8, 0.12)';
+    statusBadgeColor = colors.warning;
+    statusBadgeBg = isDark ? 'rgba(234, 179, 8, 0.12)' : 'rgba(234, 179, 8, 0.10)';
   }
 
   return (
-    <View style={styles.screenContainer}>
+    <View style={[styles.screenContainer, { backgroundColor: colors.background }]}>
       {/* Back button */}
       <TouchableOpacity
         onPress={() => navigation.goBack()}
         style={styles.backButton}
       >
-        <ArrowLeft size={20} color={theme.colors.primary} />
-        <Text style={styles.backButtonText}>Voltar</Text>
+        <ArrowLeft size={20} color={colors.primary} />
+        <Text style={[styles.backButtonText, { color: colors.primary }]}>Voltar</Text>
       </TouchableOpacity>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
         {/* Main Card */}
-        <View style={styles.mainCard}>
+        <View style={[styles.mainCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.cardHeader}>
             <View>
-              <Text style={styles.cardLabelText}>DETALHES DA COBRANÇA</Text>
-              <Text style={styles.detailedOSNum}>
+              <Text style={[styles.cardLabelText, { color: colors.textMuted }]}>DETALHES DA COBRANÇA</Text>
+              <Text style={[styles.detailedOSNum, { color: colors.text }]}>
                 {os ? os.osNumber : 'VENDA AVULSA'}
               </Text>
             </View>
@@ -254,62 +255,62 @@ export default function BillingDetailScreen() {
             </View>
           </View>
 
-          <View style={styles.infoDivider} />
+          <View style={[styles.infoDivider, { backgroundColor: colors.border }]} />
 
           {/* Client & Vehicle */}
           <View style={styles.infoGrid}>
             <View style={styles.infoItem}>
               <View style={styles.infoLabelRow}>
-                <User size={12} color="#94a3b8" />
-                <Text style={styles.infoLabel}>CLIENTE</Text>
+                <User size={12} color={colors.textMuted} />
+                <Text style={[styles.infoLabel, { color: colors.textMuted }]}>CLIENTE</Text>
               </View>
-              <Text style={styles.infoValue}>{client?.name || billing.customClientName || 'Cliente Balcão'}</Text>
+              <Text style={[styles.infoValue, { color: colors.text }]}>{client?.name || billing.customClientName || 'Cliente Balcão'}</Text>
               {client?.phone ? (
-                <Text style={styles.infoSubValue}>{client.phone}</Text>
+                <Text style={[styles.infoSubValue, { color: colors.textMuted }]}>{client.phone}</Text>
               ) : billing.customDescription ? (
-                <Text style={styles.infoSubValue}>{billing.customDescription}</Text>
+                <Text style={[styles.infoSubValue, { color: colors.textMuted }]}>{billing.customDescription}</Text>
               ) : null}
             </View>
 
             {vehicle && (
               <View style={styles.infoItem}>
                 <View style={styles.infoLabelRow}>
-                  <Car size={12} color="#94a3b8" />
-                  <Text style={styles.infoLabel}>VEÍCULO</Text>
+                  <Car size={12} color={colors.textMuted} />
+                  <Text style={[styles.infoLabel, { color: colors.textMuted }]}>VEÍCULO</Text>
                 </View>
-                <Text style={styles.infoValue}>{vehicle.brand} {vehicle.model}</Text>
-                <Text style={styles.infoSubValue}>Placa: {vehicle.plate}</Text>
+                <Text style={[styles.infoValue, { color: colors.text }]}>{vehicle.brand} {vehicle.model}</Text>
+                <Text style={[styles.infoSubValue, { color: colors.textMuted }]}>Placa: {vehicle.plate}</Text>
               </View>
             )}
           </View>
 
-          <View style={styles.infoDivider} />
+          <View style={[styles.infoDivider, { backgroundColor: colors.border }]} />
 
           {/* Payment Method & Totals */}
           <View style={styles.totalsRow}>
             <View>
-              <Text style={styles.infoLabel}>FORMA DE PAGAMENTO</Text>
-              <Text style={styles.infoValue}>{billing.paymentMethod}</Text>
-              <Text style={styles.infoSubValue}>{totalCount}x parcela{totalCount > 1 ? 's' : ''}</Text>
+              <Text style={[styles.infoLabel, { color: colors.textMuted }]}>FORMA DE PAGAMENTO</Text>
+              <Text style={[styles.infoValue, { color: colors.text }]}>{billing.paymentMethod}</Text>
+              <Text style={[styles.infoSubValue, { color: colors.textMuted }]}>{totalCount}x parcela{totalCount > 1 ? 's' : ''}</Text>
             </View>
 
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={styles.infoLabel}>VALOR TOTAL</Text>
-              <Text style={styles.totalAmount}>{formatCurrency(billing.amount)}</Text>
+              <Text style={[styles.infoLabel, { color: colors.textMuted }]}>VALOR TOTAL</Text>
+              <Text style={[styles.totalAmount, { color: colors.success }]}>{formatCurrency(billing.amount)}</Text>
             </View>
           </View>
 
           {/* Quick Balance Breakdown */}
-          <View style={styles.balanceBox}>
+          <View style={[styles.balanceBox, { backgroundColor: isDark ? '#0f1218' : colors.surface }]}>
             <View style={styles.balanceItem}>
-              <Text style={styles.balanceLabel}>Já Recebido:</Text>
-              <Text style={[styles.balanceValue, { color: theme.colors.success }]}>
+              <Text style={[styles.balanceLabel, { color: colors.textMuted }]}>Já Recebido:</Text>
+              <Text style={[styles.balanceValue, { color: colors.success }]}>
                 {formatCurrency(totalPaidAmount)} ({paidCount}/{totalCount})
               </Text>
             </View>
             <View style={styles.balanceItem}>
-              <Text style={styles.balanceLabel}>Saldo Restante:</Text>
-              <Text style={[styles.balanceValue, { color: totalPendingAmount > 0 ? theme.colors.warning : theme.colors.textMuted }]}>
+              <Text style={[styles.balanceLabel, { color: colors.textMuted }]}>Saldo Restante:</Text>
+              <Text style={[styles.balanceValue, { color: totalPendingAmount > 0 ? colors.warning : colors.textMuted }]}>
                 {formatCurrency(totalPendingAmount)}
               </Text>
             </View>
@@ -327,7 +328,7 @@ export default function BillingDetailScreen() {
 
         {/* Section title */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>
+          <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
             CRONOGRAMA DE PARCELAS ({paidCount}/{totalCount} PAGAS)
           </Text>
         </View>
@@ -343,12 +344,13 @@ export default function BillingDetailScreen() {
               key={index}
               style={[
                 styles.installmentCard,
+                { backgroundColor: colors.card, borderColor: colors.border },
                 isPaid ? styles.cardPaid : isOverdue ? styles.cardOverdue : styles.cardPending
               ]}
             >
               <View style={{ flex: 1, paddingRight: 8, gap: 4 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                  <Text style={styles.installmentTitle}>
+                  <Text style={[styles.installmentTitle, { color: colors.text }]}>
                     {isBoleto ? `Boleto ${inst.number} de ${totalCount}` : `Parcela ${inst.number} de ${totalCount}`}
                   </Text>
                   <View style={[
@@ -360,7 +362,7 @@ export default function BillingDetailScreen() {
                     <Text style={{
                       fontSize: 9,
                       fontWeight: 'bold',
-                      color: isPaid ? theme.colors.success : isOverdue ? theme.colors.error : theme.colors.warning
+                      color: isPaid ? colors.success : isOverdue ? colors.error : colors.warning
                     }}>
                       {isPaid ? 'PAGO' : isOverdue ? 'ATRASADO' : 'PENDENTE'}
                     </Text>
@@ -369,8 +371,8 @@ export default function BillingDetailScreen() {
 
                 <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <Calendar size={12} color="#94a3b8" />
-                    <Text style={styles.installmentDate}>
+                    <Calendar size={12} color={colors.textMuted} />
+                    <Text style={[styles.installmentDate, { color: colors.textMuted }]}>
                       Vencimento: {formatDate(inst.dueDate)}
                     </Text>
                   </View>
@@ -378,18 +380,18 @@ export default function BillingDetailScreen() {
                   {!isPaid && (
                     <TouchableOpacity
                       onPress={() => handleOpenEditDueDate(inst.number, inst.dueDate)}
-                      style={styles.editDateBtn}
+                      style={[styles.editDateBtn, { borderColor: isDark ? 'rgba(59, 102, 255, 0.3)' : 'rgba(59, 102, 255, 0.4)' }]}
                     >
-                      <Edit3 size={11} color="#3b66ff" />
-                      <Text style={styles.editDateBtnText}>Alterar Data</Text>
+                      <Edit3 size={11} color={colors.primary} />
+                      <Text style={[styles.editDateBtnText, { color: colors.primary }]}>Alterar Data</Text>
                     </TouchableOpacity>
                   )}
                 </View>
 
                 {isPaid && inst.paidAt && (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <Check size={12} color={theme.colors.success} />
-                    <Text style={[styles.installmentDate, { color: theme.colors.success }]}>
+                    <Check size={12} color={colors.success} />
+                    <Text style={[styles.installmentDate, { color: colors.success }]}>
                       Pago em: {formatDate(inst.paidAt)}
                     </Text>
                   </View>
@@ -397,7 +399,7 @@ export default function BillingDetailScreen() {
               </View>
 
               <View style={{ alignItems: 'flex-end', gap: 8 }}>
-                <Text style={styles.installmentAmount}>{formatCurrency(inst.amount)}</Text>
+                <Text style={[styles.installmentAmount, { color: colors.text }]}>{formatCurrency(inst.amount)}</Text>
 
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <TouchableOpacity
@@ -416,7 +418,7 @@ export default function BillingDetailScreen() {
                     </TouchableOpacity>
                   ) : (
                     <View style={styles.paidCheckIconBg}>
-                      <Check size={16} color={theme.colors.success} />
+                      <Check size={16} color={colors.success} />
                     </View>
                   )}
                 </View>
@@ -437,68 +439,68 @@ export default function BillingDetailScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.editModalOverlay}
         >
-          <View style={styles.editModalSheet}>
-            <View style={styles.editModalHeader}>
+          <View style={[styles.editModalSheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.editModalHeader, { backgroundColor: isDark ? '#161c28' : colors.surface, borderBottomColor: colors.border }]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <CalendarDays size={18} color="#3b66ff" />
-                <Text style={styles.editModalTitle}>
+                <CalendarDays size={18} color={colors.primary} />
+                <Text style={[styles.editModalTitle, { color: colors.text }]}>
                   Alterar Vencimento ({billing.paymentMethod === 'Boleto' ? 'Boleto' : 'Parcela'} {editingInstallmentNum})
                 </Text>
               </View>
               <TouchableOpacity onPress={() => setEditingModalVisible(false)} style={styles.editModalCloseBtn}>
-                <X size={18} color="#94a3b8" />
+                <X size={18} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
 
             <View style={styles.editModalBody}>
-              <Text style={styles.editModalLabel}>Novo Vencimento (AAAA-MM-DD):</Text>
+              <Text style={[styles.editModalLabel, { color: colors.textMuted }]}>Novo Vencimento (AAAA-MM-DD):</Text>
               <TextInput
                 value={editDueDateStr}
                 onChangeText={setEditDueDateStr}
                 placeholder="2026-11-20"
-                placeholderTextColor="#64748b"
-                style={styles.editModalInput}
+                placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
+                style={[styles.editModalInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
               />
 
               {/* Atalhos Rápidos */}
-              <Text style={styles.editModalSubLabel}>Atalhos rápidos de prorrogação:</Text>
+              <Text style={[styles.editModalSubLabel, { color: colors.textMuted }]}>Atalhos rápidos de prorrogação:</Text>
               <View style={styles.editQuickChipsRow}>
                 <TouchableOpacity
-                  style={styles.editQuickChip}
+                  style={[styles.editQuickChip, { backgroundColor: colors.surface, borderColor: colors.border }]}
                   onPress={() => addDaysToCurrentDate(7)}
                 >
-                  <Text style={styles.editQuickChipText}>+7 dias</Text>
+                  <Text style={[styles.editQuickChipText, { color: colors.primary }]}>+7 dias</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={styles.editQuickChip}
+                  style={[styles.editQuickChip, { backgroundColor: colors.surface, borderColor: colors.border }]}
                   onPress={() => addDaysToCurrentDate(15)}
                 >
-                  <Text style={styles.editQuickChipText}>+15 dias</Text>
+                  <Text style={[styles.editQuickChipText, { color: colors.primary }]}>+15 dias</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={styles.editQuickChip}
+                  style={[styles.editQuickChip, { backgroundColor: colors.surface, borderColor: colors.border }]}
                   onPress={() => addDaysToCurrentDate(30)}
                 >
-                  <Text style={styles.editQuickChipText}>+30 dias</Text>
+                  <Text style={[styles.editQuickChipText, { color: colors.primary }]}>+30 dias</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={styles.editQuickChip}
+                  style={[styles.editQuickChip, { backgroundColor: colors.surface, borderColor: colors.border }]}
                   onPress={() => setEditDueDateStr(new Date().toISOString().split('T')[0])}
                 >
-                  <Text style={styles.editQuickChipText}>Hoje</Text>
+                  <Text style={[styles.editQuickChipText, { color: colors.primary }]}>Hoje</Text>
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.editModalFooter}>
+              <View style={[styles.editModalFooter, { borderTopColor: colors.border }]}>
                 <TouchableOpacity
-                  style={styles.cancelEditBtn}
+                  style={[styles.cancelEditBtn, { backgroundColor: colors.surface }]}
                   onPress={() => setEditingModalVisible(false)}
                 >
-                  <Text style={styles.cancelEditBtnText}>Cancelar</Text>
+                  <Text style={[styles.cancelEditBtnText, { color: colors.textMuted }]}>Cancelar</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.saveEditBtn, updatingDate && { opacity: 0.6 }]}
+                  style={[styles.saveEditBtn, { backgroundColor: colors.primary }, updatingDate && { opacity: 0.6 }]}
                   onPress={handleConfirmUpdateDueDate}
                   disabled={updatingDate}
                 >

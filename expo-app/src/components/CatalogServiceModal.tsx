@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { theme } from '../styles/theme';
+import { theme, useTheme } from '../styles/theme';
 import { containsInjection } from '../utils/formatters';
 
 interface ServiceForm {
@@ -37,6 +37,7 @@ export default function CatalogServiceModal({
   onClose,
   onSubmit,
 }: CatalogServiceModalProps) {
+  const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const [form, setForm] = useState<ServiceForm>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
@@ -93,63 +94,67 @@ export default function CatalogServiceModal({
     }
   };
 
+  const inputStyle = [styles.modalInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }];
+  const labelStyle = [styles.inputLabel, { color: colors.textMuted }];
+  const placeholderColor = isDark ? '#475569' : '#94a3b8';
+
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.modalBg}
       >
-        <View style={[styles.modalContent, { paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : theme.spacing.xxl }]}>
+        <View style={[styles.modalContent, { backgroundColor: colors.card, paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : theme.spacing.xxl }]}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
               {editingServiceId ? 'Editar Mão de Obra' : 'Adicionar Mão de Obra'}
             </Text>
             <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-              <X size={20} color="#94a3b8" />
+              <X size={20} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
-            <Text style={styles.inputLabel}>Nome do Serviço *</Text>
+            <Text style={labelStyle}>Nome do Serviço *</Text>
             <TextInput
               placeholder="Ex: Regulagem de Freio"
-              placeholderTextColor="#475569"
+              placeholderTextColor={placeholderColor}
               value={form.name}
               onChangeText={t => setForm(prev => ({ ...prev, name: t }))}
               maxLength={150}
-              style={styles.modalInput}
+              style={inputStyle}
             />
 
-            <Text style={styles.inputLabel}>Código de Referência</Text>
+            <Text style={labelStyle}>Código de Referência</Text>
             <TextInput
               placeholder="Ex: SRV-FREIO"
-              placeholderTextColor="#475569"
+              placeholderTextColor={placeholderColor}
               autoCapitalize="characters"
               value={form.code}
               onChangeText={t => setForm(prev => ({ ...prev, code: t }))}
               maxLength={30}
-              style={styles.modalInput}
+              style={inputStyle}
             />
 
-            <Text style={styles.inputLabel}>Valor Cobrado (R$) *</Text>
+            <Text style={labelStyle}>Valor Cobrado (R$) *</Text>
             <TextInput
               placeholder="Ex: 80.00"
-              placeholderTextColor="#475569"
+              placeholderTextColor={placeholderColor}
               keyboardType="numeric"
               value={form.price}
               onChangeText={t => setForm(prev => ({ ...prev, price: t }))}
               maxLength={10}
-              style={styles.modalInput}
+              style={inputStyle}
             />
 
-            <Text style={styles.inputLabel}>Descrição</Text>
+            <Text style={labelStyle}>Descrição</Text>
             <TextInput
               placeholder="Explicativo do serviço..."
-              placeholderTextColor="#475569"
+              placeholderTextColor={placeholderColor}
               value={form.description}
               onChangeText={t => setForm(prev => ({ ...prev, description: t }))}
               maxLength={500}
-              style={styles.modalInput}
+              style={inputStyle}
             />
 
             <TouchableOpacity 

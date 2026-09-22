@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { theme } from '../styles/theme';
+import { theme, useTheme } from '../styles/theme';
 import { containsInjection } from '../utils/formatters';
 
 interface PartForm {
@@ -41,6 +41,7 @@ export default function CatalogPartModal({
   onClose,
   onSubmit,
 }: CatalogPartModalProps) {
+  const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const [form, setForm] = useState<PartForm>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
@@ -114,85 +115,89 @@ export default function CatalogPartModal({
     }
   };
 
+  const inputStyle = [styles.modalInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }];
+  const labelStyle = [styles.inputLabel, { color: colors.textMuted }];
+  const placeholderColor = isDark ? '#475569' : '#94a3b8';
+
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.modalBg}
       >
-        <View style={[styles.modalContent, { paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : theme.spacing.xxl }]}>
+        <View style={[styles.modalContent, { backgroundColor: colors.card, paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : theme.spacing.xxl }]}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
               {editingPartId ? 'Editar Peça' : 'Adicionar Peça ao Catálogo'}
             </Text>
             <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-              <X size={20} color="#94a3b8" />
+              <X size={20} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
-            <Text style={styles.inputLabel}>Nome da Peça *</Text>
+            <Text style={labelStyle}>Nome da Peça *</Text>
             <TextInput
               placeholder="Ex: Filtro de Óleo Volvo"
-              placeholderTextColor="#475569"
+              placeholderTextColor={placeholderColor}
               value={form.name}
               onChangeText={t => setForm(prev => ({ ...prev, name: t }))}
               maxLength={150}
-              style={styles.modalInput}
+              style={inputStyle}
             />
 
-            <Text style={styles.inputLabel}>Código / Referência SKU *</Text>
+            <Text style={labelStyle}>Código / Referência SKU *</Text>
             <TextInput
               placeholder="Ex: 20565617"
-              placeholderTextColor="#475569"
+              placeholderTextColor={placeholderColor}
               autoCapitalize="characters"
               value={form.code}
               onChangeText={t => setForm(prev => ({ ...prev, code: t }))}
               maxLength={30}
-              style={styles.modalInput}
+              style={inputStyle}
             />
 
-            <Text style={styles.inputLabel}>Fabricante / Fornecedor</Text>
+            <Text style={labelStyle}>Fabricante / Fornecedor</Text>
             <TextInput
               placeholder="Ex: Volvo Parts"
-              placeholderTextColor="#475569"
+              placeholderTextColor={placeholderColor}
               value={form.supplier}
               onChangeText={t => setForm(prev => ({ ...prev, supplier: t }))}
               maxLength={100}
-              style={styles.modalInput}
+              style={inputStyle}
             />
 
-            <Text style={styles.inputLabel}>Valor de Compra (R$)</Text>
+            <Text style={labelStyle}>Valor de Compra (R$)</Text>
             <TextInput
               placeholder="Ex: 120.00"
-              placeholderTextColor="#475569"
+              placeholderTextColor={placeholderColor}
               keyboardType="numeric"
               value={form.purchasePrice}
               onChangeText={t => setForm(prev => ({ ...prev, purchasePrice: t }))}
               maxLength={10}
-              style={styles.modalInput}
+              style={inputStyle}
             />
 
-            <Text style={styles.inputLabel}>Valor de Venda (R$) *</Text>
+            <Text style={labelStyle}>Valor de Venda (R$) *</Text>
             <TextInput
               placeholder="Ex: 210.00"
-              placeholderTextColor="#475569"
+              placeholderTextColor={placeholderColor}
               keyboardType="numeric"
               value={form.salePrice}
               onChangeText={t => setForm(prev => ({ ...prev, salePrice: t }))}
               maxLength={10}
-              style={styles.modalInput}
+              style={inputStyle}
             />
 
-            <Text style={styles.inputLabel}>Quantidade em Estoque *</Text>
+            <Text style={labelStyle}>Quantidade em Estoque *</Text>
             <TextInput
               placeholder="Ex: 15"
-              placeholderTextColor="#475569"
+              placeholderTextColor={placeholderColor}
               keyboardType="numeric"
               value={form.stock}
               onChangeText={t => setForm(prev => ({ ...prev, stock: t }))}
               maxLength={8}
-              style={styles.modalInput}
+              style={inputStyle}
             />
 
             <TouchableOpacity 

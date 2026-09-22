@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { theme } from '../styles/theme';
+import { theme, useTheme } from '../styles/theme';
 import { validatePlate, containsInjection } from '../utils/formatters';
 
 interface VehicleForm {
@@ -43,6 +43,7 @@ export default function VehicleModal({
   onClose,
   onSubmit,
 }: VehicleModalProps) {
+  const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const [form, setForm] = useState<VehicleForm>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
@@ -113,88 +114,92 @@ export default function VehicleModal({
     }
   };
 
+  const inputStyle = [styles.modalInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }];
+  const labelStyle = [styles.inputLabel, { color: colors.textMuted }];
+  const placeholderColor = isDark ? '#475569' : '#94a3b8';
+
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.modalBg}
       >
-        <View style={[styles.modalContent, { paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : theme.spacing.xxl }]}>
+        <View style={[styles.modalContent, { backgroundColor: colors.card, paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : theme.spacing.xxl }]}>
           <View style={styles.modalHeader}>
             <View>
-              <Text style={styles.modalTitle}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
                 {editingVehicleId ? 'Editar Veículo' : 'Novo Veículo'}
               </Text>
-              <Text style={styles.modalSubtitle}>Cliente: {clientName}</Text>
+              <Text style={[styles.modalSubtitle, { color: colors.textMuted }]}>Cliente: {clientName}</Text>
             </View>
             <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-              <X size={20} color="#94a3b8" />
+              <X size={20} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
-            <Text style={styles.inputLabel}>Marca *</Text>
+            <Text style={labelStyle}>Marca *</Text>
             <TextInput
               placeholder="Ex: Volvo"
-              placeholderTextColor="#475569"
+              placeholderTextColor={placeholderColor}
               value={form.brand}
               onChangeText={t => setForm(prev => ({ ...prev, brand: t }))}
               maxLength={50}
-              style={styles.modalInput}
+              style={inputStyle}
             />
 
-            <Text style={styles.inputLabel}>Modelo *</Text>
+            <Text style={labelStyle}>Modelo *</Text>
             <TextInput
               placeholder="Ex: FH 540"
-              placeholderTextColor="#475569"
+              placeholderTextColor={placeholderColor}
               value={form.model}
               onChangeText={t => setForm(prev => ({ ...prev, model: t }))}
               maxLength={100}
-              style={styles.modalInput}
+              style={inputStyle}
             />
 
-            <Text style={styles.inputLabel}>Placa *</Text>
+            <Text style={labelStyle}>Placa *</Text>
             <TextInput
               placeholder="Ex: AAA9A99"
-              placeholderTextColor="#475569"
+              placeholderTextColor={placeholderColor}
               autoCapitalize="characters"
               value={form.plate}
               onChangeText={t => setForm(prev => ({ ...prev, plate: t }))}
               maxLength={10}
-              style={styles.modalInput}
+              style={inputStyle}
             />
 
-            <Text style={styles.inputLabel}>Ano</Text>
+            <Text style={labelStyle}>Ano</Text>
             <TextInput
               placeholder={`Ex: ${new Date().getFullYear()}`}
-              placeholderTextColor="#475569"
+              placeholderTextColor={placeholderColor}
               keyboardType="number-pad"
               value={form.year}
               onChangeText={t => setForm(prev => ({ ...prev, year: t }))}
               maxLength={4}
-              style={styles.modalInput}
+              style={inputStyle}
             />
 
-            <Text style={styles.inputLabel}>Código do Chassi (Opcional)</Text>
+            <Text style={labelStyle}>Código do Chassi (Opcional)</Text>
             <TextInput
               placeholder="Número do Chassi"
-              placeholderTextColor="#475569"
+              placeholderTextColor={placeholderColor}
               autoCapitalize="characters"
               value={form.chassis}
               onChangeText={t => setForm(prev => ({ ...prev, chassis: t }))}
               maxLength={30}
-              style={styles.modalInput}
+              style={inputStyle}
             />
 
-            <Text style={styles.inputLabel}>Quilometragem Atual (Odomêtro)</Text>
+            <Text style={labelStyle}>Quilometragem Atual (Odomêtro)</Text>
             <TextInput
               placeholder="Ex: 125000"
-              placeholderTextColor="#475569"
+              placeholderTextColor={placeholderColor}
               keyboardType="numeric"
               value={form.odometer}
               onChangeText={t => setForm(prev => ({ ...prev, odometer: t }))}
               maxLength={15}
-              style={styles.modalInput}
+              style={inputStyle}
             />
 
             <TouchableOpacity 

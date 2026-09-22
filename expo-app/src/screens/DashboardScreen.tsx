@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { ClipboardList, Play, CheckCircle, Wallet, ArrowUpRight, ArrowDownRight, Clock, Sparkles, ChevronRight } from 'lucide-react-native';
 import { useDatabase } from '../context/DatabaseContext';
-import { theme } from '../styles/theme';
+import { theme, useTheme } from '../styles/theme';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { WorkOrder } from '../types';
 
@@ -12,6 +12,7 @@ import { MainTabParamList } from '../types/navigation';
 
 export default function DashboardScreen() {
   const navigation = useNavigation<any>();
+  const { colors, isDark } = useTheme();
   const { clients, vehicles, workOrders, billings, transactions } = useDatabase();
 
   // Metrics using useMemo to optimize re-renders
@@ -50,260 +51,258 @@ export default function DashboardScreen() {
   const billingMap = useMemo(() => new Map(billings.map(b => [b.osId, b])), [billings]);
 
   return (
-    <View style={styles.screenContainer}>
+    <View style={[styles.screenContainer, { backgroundColor: colors.background }]}>
       <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
         <View style={[styles.card, styles.heroCard]}>
-        <Text style={styles.heroCardLabel}>FATURAMENTO DO MÊS</Text>
-        <Text style={styles.heroCardValue}>{formatCurrency(metrics.faturamentoMes)}</Text>
-        <View style={styles.heroSubRow}>
-          <Text style={styles.heroSubTextVal}>{formatCurrency(metrics.entradasMes)}</Text>
-          <Text style={styles.heroSubText}>recebido à vista/parcelas</Text>
-        </View>
-      </View>
-
-      {/* Metrics cards grid */}
-      <View style={styles.grid}>
-        <View style={[styles.gridCol, styles.card]}>
-          <View style={styles.metricHeader}>
-            <Text style={styles.metricTitle}>TOTAL ORDENS</Text>
-            <ClipboardList size={14} color={theme.colors.primary} />
+          <Text style={styles.heroCardLabel}>FATURAMENTO DO MÊS</Text>
+          <Text style={styles.heroCardValue}>{formatCurrency(metrics.faturamentoMes)}</Text>
+          <View style={styles.heroSubRow}>
+            <Text style={styles.heroSubTextVal}>{formatCurrency(metrics.entradasMes)}</Text>
+            <Text style={styles.heroSubText}>recebido à vista/parcelas</Text>
           </View>
-          <Text style={styles.metricValue}>{metrics.totalOrdens}</Text>
         </View>
 
-        <View style={[styles.gridCol, styles.card]}>
-          <View style={styles.metricHeader}>
-            <Text style={styles.metricTitle}>A FATURAR</Text>
-            <Clock size={14} color="#f59e0b" />
-          </View>
-          <Text style={[styles.metricValue, { color: '#f59e0b' }]}>{metrics.aFaturar}</Text>
-        </View>
-      </View>
-
-      <View style={styles.grid}>
-        <View style={[styles.gridCol, styles.card]}>
-          <View style={styles.metricHeader}>
-            <Text style={styles.metricTitle}>FATURADAS</Text>
-            <CheckCircle size={14} color={theme.colors.success} />
-          </View>
-          <Text style={[styles.metricValue, { color: theme.colors.success }]}>{metrics.faturadas}</Text>
-        </View>
-
-        <View style={[styles.gridCol, styles.card]}>
-          <View style={styles.metricHeader}>
-            <Text style={styles.metricTitle}>A RECEBER</Text>
-            <Wallet size={14} color={theme.colors.primary} />
-          </View>
-          <Text style={styles.metricValuePrimary} numberOfLines={1}>
-            {formatCurrency(metrics.totalAReceber)}
-          </Text>
-        </View>
-      </View>
-
-
-
-      {/* Onboarding Checklist for New Workshops */}
-      {workOrders.length === 0 && clients.length === 0 && (
-        <View style={styles.onboardingCard}>
-          <View style={styles.onboardingHeader}>
-            <View style={styles.onboardingIconBadge}>
-              <Sparkles size={18} color="#3b82f6" />
+        {/* Metrics cards grid */}
+        <View style={styles.grid}>
+          <View style={[styles.gridCol, styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.metricHeader}>
+              <Text style={[styles.metricTitle, { color: colors.textMuted }]}>TOTAL ORDENS</Text>
+              <ClipboardList size={14} color={colors.primary} />
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.onboardingTitle}>Primeiros Passos</Text>
-              <Text style={styles.onboardingSubtitle}>Configure sua oficina para começar a operar:</Text>
+            <Text style={[styles.metricValue, { color: colors.text }]}>{metrics.totalOrdens}</Text>
+          </View>
+
+          <View style={[styles.gridCol, styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.metricHeader}>
+              <Text style={[styles.metricTitle, { color: colors.textMuted }]}>A FATURAR</Text>
+              <Clock size={14} color="#f59e0b" />
+            </View>
+            <Text style={[styles.metricValue, { color: '#f59e0b' }]}>{metrics.aFaturar}</Text>
+          </View>
+        </View>
+
+        <View style={styles.grid}>
+          <View style={[styles.gridCol, styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.metricHeader}>
+              <Text style={[styles.metricTitle, { color: colors.textMuted }]}>FATURADAS</Text>
+              <CheckCircle size={14} color={colors.success} />
+            </View>
+            <Text style={[styles.metricValue, { color: colors.success }]}>{metrics.faturadas}</Text>
+          </View>
+
+          <View style={[styles.gridCol, styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.metricHeader}>
+              <Text style={[styles.metricTitle, { color: colors.textMuted }]}>A RECEBER</Text>
+              <Wallet size={14} color={colors.primary} />
+            </View>
+            <Text style={[styles.metricValuePrimary, { color: colors.primary }]} numberOfLines={1}>
+              {formatCurrency(metrics.totalAReceber)}
+            </Text>
+          </View>
+        </View>
+
+        {/* Onboarding Checklist for New Workshops */}
+        {workOrders.length === 0 && clients.length === 0 && (
+          <View style={[styles.onboardingCard, { backgroundColor: isDark ? '#111827' : '#ffffff', borderColor: isDark ? 'rgba(59, 130, 246, 0.35)' : '#cbd5e1' }]}>
+            <View style={[styles.onboardingHeader, { borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]}>
+              <View style={styles.onboardingIconBadge}>
+                <Sparkles size={18} color="#3b82f6" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.onboardingTitle, { color: colors.text }]}>Primeiros Passos</Text>
+                <Text style={[styles.onboardingSubtitle, { color: colors.textMuted }]}>Configure sua oficina para começar a operar:</Text>
+              </View>
+            </View>
+
+            <View style={styles.onboardingStepsList}>
+              <TouchableOpacity 
+                style={[styles.onboardingStepItem, { borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.06)' }]}
+                onPress={() => navigation.navigate('MoreTab', { screen: 'Settings' })}
+                activeOpacity={0.7}
+              >
+                <View style={styles.onboardingStepNumBadge}>
+                  <Text style={styles.onboardingStepNumText}>1</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.onboardingStepTitle, { color: colors.text }]}>Dados da Oficina</Text>
+                  <Text style={[styles.onboardingStepDesc, { color: colors.textMuted }]}>Defina nome, CNPJ, telefone e logo para os comprovantes.</Text>
+                </View>
+                <ChevronRight size={18} color={colors.textMuted} />
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.onboardingStepItem, { borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.06)' }]}
+                onPress={() => navigation.navigate('ClientsTab', { screen: 'ClientsList' })}
+                activeOpacity={0.7}
+              >
+                <View style={styles.onboardingStepNumBadge}>
+                  <Text style={styles.onboardingStepNumText}>2</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.onboardingStepTitle, { color: colors.text }]}>Cadastrar Cliente & Veículo</Text>
+                  <Text style={[styles.onboardingStepDesc, { color: colors.textMuted }]}>Adicione o primeiro cliente e veículo da oficina.</Text>
+                </View>
+                <ChevronRight size={18} color={colors.textMuted} />
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.onboardingStepItem, { borderBottomWidth: 0 }]}
+                onPress={() => navigation.navigate('OSTab', { screen: 'OSList' })}
+                activeOpacity={0.7}
+              >
+                <View style={styles.onboardingStepNumBadge}>
+                  <Text style={styles.onboardingStepNumText}>3</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.onboardingStepTitle, { color: colors.text }]}>Abrir Ordem de Serviço</Text>
+                  <Text style={[styles.onboardingStepDesc, { color: colors.textMuted }]}>Lance serviços, peças e compartilhe o comprovante via WhatsApp.</Text>
+                </View>
+                <ChevronRight size={18} color={colors.textMuted} />
+              </TouchableOpacity>
             </View>
           </View>
+        )}
 
-          <View style={styles.onboardingStepsList}>
-            <TouchableOpacity 
-              style={styles.onboardingStepItem}
-              onPress={() => navigation.navigate('MoreTab', { screen: 'Settings' })}
-              activeOpacity={0.7}
-            >
-              <View style={styles.onboardingStepNumBadge}>
-                <Text style={styles.onboardingStepNumText}>1</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.onboardingStepTitle}>Dados da Oficina</Text>
-                <Text style={styles.onboardingStepDesc}>Defina nome, CNPJ, telefone e logo para os comprovantes.</Text>
-              </View>
-              <ChevronRight size={18} color={theme.colors.textMuted} />
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.onboardingStepItem}
-              onPress={() => navigation.navigate('ClientsTab', { screen: 'ClientsList' })}
-              activeOpacity={0.7}
-            >
-              <View style={styles.onboardingStepNumBadge}>
-                <Text style={styles.onboardingStepNumText}>2</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.onboardingStepTitle}>Cadastrar Cliente & Veículo</Text>
-                <Text style={styles.onboardingStepDesc}>Adicione o primeiro cliente e veículo da oficina.</Text>
-              </View>
-              <ChevronRight size={18} color={theme.colors.textMuted} />
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.onboardingStepItem, { borderBottomWidth: 0 }]}
-              onPress={() => navigation.navigate('OSTab', { screen: 'OSList' })}
-              activeOpacity={0.7}
-            >
-              <View style={styles.onboardingStepNumBadge}>
-                <Text style={styles.onboardingStepNumText}>3</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.onboardingStepTitle}>Abrir Ordem de Serviço</Text>
-                <Text style={styles.onboardingStepDesc}>Lance serviços, peças e compartilhe o comprovante via WhatsApp.</Text>
-              </View>
-              <ChevronRight size={18} color={theme.colors.textMuted} />
-            </TouchableOpacity>
+        {/* Recent OS List */}
+        <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>ORDENS DE SERVIÇO RECENTES</Text>
+        {workOrders.length === 0 ? (
+          <View style={[styles.emptyContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.emptyText, { color: colors.textMuted }]}>Nenhuma Ordem de Serviço cadastrada.</Text>
           </View>
-        </View>
-      )}
+        ) : (
+          workOrders.slice(0, 3).map(os => {
+            const client = clientMap.get(os.clientId);
+            const vehicle = vehicleMap.get(os.vehicleId);
+            const billing = billingMap.get(os.id);
+            
+            let cardStyle = styles.cardProgress;
+            if (billing?.status === 'Pago') {
+              cardStyle = styles.cardDone;
+            } else if (!billing) {
+              cardStyle = styles.cardOpen;
+            }
 
-      {/* Recent OS List */}
-      <Text style={styles.sectionTitle}>ORDENS DE SERVIÇO RECENTES</Text>
-      {workOrders.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Nenhuma Ordem de Serviço cadastrada.</Text>
-        </View>
-      ) : (
-        workOrders.slice(0, 3).map(os => {
-          const client = clientMap.get(os.clientId);
-          const vehicle = vehicleMap.get(os.vehicleId);
-          const billing = billingMap.get(os.id);
-          
-          let cardStyle = styles.cardProgress;
-          if (billing?.status === 'Pago') {
-            cardStyle = styles.cardDone;
-          } else if (!billing) {
-            cardStyle = styles.cardOpen;
-          }
-
-          return (
-            <TouchableOpacity 
-              key={os.id} 
-              style={[styles.listItem, cardStyle, styles.listItemCol]}
-              onPress={() => {
-                navigation.navigate('OSTab', {
-                  screen: 'OSDetail',
-                  params: { osId: os.id }
-                });
-              }}
-            >
-              <View style={styles.cardHeaderRow}>
-                <View style={styles.cardHeaderLeft}>
-                  <Text style={styles.osNum}>{os.osNumber}</Text>
-                  {billing ? (
-                    <View style={[
-                      styles.statusBadge,
-                      {
-                        backgroundColor: billing.status === 'Pago' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(234, 179, 8, 0.1)',
-                        borderColor: billing.status === 'Pago' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(234, 179, 8, 0.3)'
-                      }
-                    ]}>
-                      <Text style={[
-                        styles.statusBadgeText,
-                        { color: billing.status === 'Pago' ? theme.colors.success : theme.colors.warning }
+            return (
+              <TouchableOpacity 
+                key={os.id} 
+                style={[styles.listItem, cardStyle, styles.listItemCol, { backgroundColor: colors.card, borderColor: colors.border }]}
+                onPress={() => {
+                  navigation.navigate('OSTab', {
+                    screen: 'OSDetail',
+                    params: { osId: os.id }
+                  });
+                }}
+              >
+                <View style={styles.cardHeaderRow}>
+                  <View style={styles.cardHeaderLeft}>
+                    <Text style={[styles.osNum, { color: colors.primary }]}>{os.osNumber}</Text>
+                    {billing ? (
+                      <View style={[
+                        styles.statusBadge,
+                        {
+                          backgroundColor: billing.status === 'Pago' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(234, 179, 8, 0.1)',
+                          borderColor: billing.status === 'Pago' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(234, 179, 8, 0.3)'
+                        }
                       ]}>
-                        {billing.status === 'Pago' ? 'PAGO' : 'FATURADA'}
+                        <Text style={[
+                          styles.statusBadgeText,
+                          { color: billing.status === 'Pago' ? colors.success : colors.warning }
+                        ]}>
+                          {billing.status === 'Pago' ? 'PAGO' : 'FATURADA'}
+                        </Text>
+                      </View>
+                    ) : (
+                      <View style={[
+                        styles.statusBadge,
+                        {
+                          backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                          borderColor: 'rgba(245, 158, 11, 0.3)'
+                        }
+                      ]}>
+                        <Text style={[styles.statusBadgeText, { color: '#f59e0b' }]}>
+                          A FATURAR
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={[styles.osDate, { color: colors.textMuted }]}>{formatDate(os.date)}</Text>
+                </View>
+
+                <View style={styles.marginVerticalSm}>
+                  <Text style={[styles.cardLabelText, { color: colors.textMuted }]}>Cliente</Text>
+                  <Text style={[styles.cardValueTextBold, { color: colors.text }]}>{client?.name}</Text>
+                  
+                  {vehicle && (
+                    <>
+                      <Text style={[styles.cardLabelText, { color: colors.textMuted }]}>Veículo</Text>
+                      <Text style={[styles.cardValueText, { color: colors.textDim }]}>
+                        {vehicle.brand} {vehicle.model} • Placa: <Text style={[styles.plateBold, { color: colors.text }]}>{vehicle.plate}</Text>
                       </Text>
-                    </View>
-                  ) : (
-                    <View style={[
-                      styles.statusBadge,
-                      {
-                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                        borderColor: 'rgba(245, 158, 11, 0.3)'
-                      }
-                    ]}>
-                      <Text style={[styles.statusBadgeText, { color: '#f59e0b' }]}>
-                        A FATURAR
-                      </Text>
-                    </View>
+                    </>
                   )}
                 </View>
-                <Text style={styles.osDate}>{formatDate(os.date)}</Text>
-              </View>
 
-              <View style={styles.marginVerticalSm}>
-                <Text style={styles.cardLabelText}>Cliente</Text>
-                <Text style={styles.cardValueTextBold}>{client?.name}</Text>
-                
-                {vehicle && (
-                  <>
-                    <Text style={styles.cardLabelText}>Veículo</Text>
-                    <Text style={styles.cardValueText}>
-                      {vehicle.brand} {vehicle.model} • Placa: <Text style={styles.plateBold}>{vehicle.plate}</Text>
-                    </Text>
-                  </>
-                )}
-              </View>
-
-              <View style={styles.cardFooterRow}>
-                <View style={styles.footerBadgeRow}>
-                  {billing ? (
-                    <Text style={{ fontSize: 11, color: theme.colors.textMuted, fontWeight: 'bold' }}>
-                      💳 {billing.paymentMethod.toUpperCase()} {billing.installments.length > 1 ? `(${billing.installments.length}x)` : ''}
-                    </Text>
-                  ) : (
-                    <Text style={{ fontSize: 11, color: '#f59e0b', fontWeight: 'bold' }}>
-                      ⚙️ EM EXECUÇÃO
-                    </Text>
-                  )}
+                <View style={[styles.cardFooterRow, { borderTopColor: colors.border }]}>
+                  <View style={styles.footerBadgeRow}>
+                    {billing ? (
+                      <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: 'bold' }}>
+                        💳 {billing.paymentMethod.toUpperCase()} {billing.installments.length > 1 ? `(${billing.installments.length}x)` : ''}
+                      </Text>
+                    ) : (
+                      <Text style={{ fontSize: 11, color: '#f59e0b', fontWeight: 'bold' }}>
+                        ⚙️ EM EXECUÇÃO
+                      </Text>
+                    )}
+                  </View>
+                  <Text style={[styles.osTotal, { color: colors.text }]}>
+                    {formatCurrency(os.grandTotal)}
+                  </Text>
                 </View>
-                <Text style={styles.osTotal}>
-                  {formatCurrency(os.grandTotal)}
+              </TouchableOpacity>
+            );
+          })
+        )}
+
+        {/* Recent Finance Transactions Feed */}
+        <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>ÚLTIMOS LANÇAMENTOS</Text>
+        {transactions.length === 0 ? (
+          <View style={[styles.emptyContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.emptyText, { color: colors.textMuted }]}>Nenhum lançamento financeiro cadastrado.</Text>
+          </View>
+        ) : (
+          transactions.slice(0, 4).map(t => {
+            const isInflow = t.type === 'Entrada';
+            const transStyle = isInflow ? styles.cardInflow : styles.cardOutflow;
+            return (
+              <View key={t.id} style={[styles.listItem, transStyle, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <View style={styles.transMainInfo}>
+                  <View style={[
+                    styles.transIconBg,
+                    isInflow ? styles.badgeSuccessBg : styles.badgeErrorBg
+                  ]}>
+                    {isInflow ? (
+                      <ArrowUpRight size={16} color={colors.success} />
+                    ) : (
+                      <ArrowDownRight size={16} color={colors.error} />
+                    )}
+                  </View>
+                  <View style={styles.transTextWrapper}>
+                    <Text style={[styles.tDesc, { color: colors.text }]} numberOfLines={1}>
+                      {t.description}
+                    </Text>
+                    <Text style={[styles.tMeta, { color: colors.textMuted }]}>
+                      {t.category} • {formatDate(t.date)}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={[styles.tAmount, isInflow ? styles.textGreen : styles.textRed]}>
+                  {isInflow ? '+' : '-'}{formatCurrency(t.amount)}
                 </Text>
               </View>
-            </TouchableOpacity>
-          );
-        })
-      )}
-
-      {/* Recent Finance Transactions Feed */}
-      <Text style={styles.sectionTitle}>ÚLTIMOS LANÇAMENTOS</Text>
-      {transactions.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Nenhum lançamento financeiro cadastrado.</Text>
-        </View>
-      ) : (
-        transactions.slice(0, 4).map(t => {
-          const isInflow = t.type === 'Entrada';
-          const transStyle = isInflow ? styles.cardInflow : styles.cardOutflow;
-          return (
-            <View key={t.id} style={[styles.listItem, transStyle]}>
-              <View style={styles.transMainInfo}>
-                <View style={[
-                  styles.transIconBg,
-                  isInflow ? styles.badgeSuccessBg : styles.badgeErrorBg
-                ]}>
-                  {isInflow ? (
-                    <ArrowUpRight size={16} color={theme.colors.success} />
-                  ) : (
-                    <ArrowDownRight size={16} color={theme.colors.error} />
-                  )}
-                </View>
-                <View style={styles.transTextWrapper}>
-                  <Text style={styles.tDesc} numberOfLines={1}>
-                    {t.description}
-                  </Text>
-                  <Text style={styles.tMeta}>
-                    {t.category} • {formatDate(t.date)}
-                  </Text>
-                </View>
-              </View>
-              <Text style={[styles.tAmount, isInflow ? styles.textGreen : styles.textRed]}>
-                {isInflow ? '+' : '-'}{formatCurrency(t.amount)}
-              </Text>
-            </View>
-          );
-        })
-      )}
-    </ScrollView>
+            );
+          })
+        )}
+      </ScrollView>
     </View>
   );
 }

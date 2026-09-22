@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 import { Plus, Search, X, ArrowUpRight, ArrowDownRight, Trash2 } from 'lucide-react-native';
 import { useDatabase } from '../context/DatabaseContext';
-import { theme } from '../styles/theme';
+import { theme, useTheme } from '../styles/theme';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { useNavigation } from '@react-navigation/native';
 import ExpenseModal from '../components/ExpenseModal';
@@ -10,6 +10,7 @@ import { Billing, BillingStatus } from '../types';
 
 export default function FinanceFlowScreen() {
   const navigation = useNavigation<any>();
+  const { colors, isDark } = useTheme();
   const { transactions, billings, workOrders, clients, deleteTransaction, addTransaction } = useDatabase();
   const [activeFinanceTab, setActiveFinanceTab] = useState<'flow' | 'billings'>('flow');
   const [summaryPeriod, setSummaryPeriod] = useState<'diario' | 'semanal' | 'mensal'>('mensal');
@@ -134,31 +135,31 @@ export default function FinanceFlowScreen() {
   };
 
   return (
-    <View style={styles.screenContainer}>
+    <View style={[styles.screenContainer, { backgroundColor: colors.background }]}>
       <View style={styles.screenHeader}>
-        <Text style={styles.tabTitle}>Financeiro</Text>
+        <Text style={[styles.tabTitle, { color: colors.text }]}>Financeiro</Text>
         {activeFinanceTab === 'flow' && (
-          <TouchableOpacity style={[styles.actionButton, { backgroundColor: theme.colors.error }]} onPress={() => setExpenseModalVisible(true)}>
+          <TouchableOpacity style={[styles.actionButton, { backgroundColor: colors.error }]} onPress={() => setExpenseModalVisible(true)}>
             <Plus size={16} color="#fff" />
             <Text style={styles.actionButtonText}>Despesa</Text>
           </TouchableOpacity>
         )}
       </View>
 
-      <View style={styles.segmentContainer}>
+      <View style={[styles.segmentContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <TouchableOpacity
           onPress={() => setActiveFinanceTab('flow')}
-          style={[styles.segmentTab, activeFinanceTab === 'flow' ? styles.segmentTabActive : null]}
+          style={[styles.segmentTab, activeFinanceTab === 'flow' ? [styles.segmentTabActive, { backgroundColor: colors.card }] : null]}
         >
-          <Text style={[styles.segmentTabText, activeFinanceTab === 'flow' ? styles.segmentTabTextActive : null]}>
+          <Text style={[styles.segmentTabText, { color: activeFinanceTab === 'flow' ? colors.primary : colors.textMuted }]}>
             Fluxo de Caixa
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setActiveFinanceTab('billings')}
-          style={[styles.segmentTab, activeFinanceTab === 'billings' ? styles.segmentTabActive : null]}
+          style={[styles.segmentTab, activeFinanceTab === 'billings' ? [styles.segmentTabActive, { backgroundColor: colors.card }] : null]}
         >
-          <Text style={[styles.segmentTabText, activeFinanceTab === 'billings' ? styles.segmentTabTextActive : null]}>
+          <Text style={[styles.segmentTabText, { color: activeFinanceTab === 'billings' ? colors.primary : colors.textMuted }]}>
             Cobranças
           </Text>
         </TouchableOpacity>
@@ -166,44 +167,44 @@ export default function FinanceFlowScreen() {
 
       {activeFinanceTab === 'flow' ? (
         <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }}>
-          <View style={[styles.card, styles.balanceCard]}>
+          <View style={[styles.card, styles.balanceCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.balanceHeader}>
               <View>
-                <Text style={styles.balanceLabel}>SALDO EM CAIXA (ATUAL)</Text>
+                <Text style={[styles.balanceLabel, { color: colors.textMuted }]}>SALDO EM CAIXA (ATUAL)</Text>
                 <Text style={[styles.balanceValue, financeMetrics.saldoAtual >= 0 ? styles.textGreen : styles.textRed]}>
                   {formatCurrency(financeMetrics.saldoAtual)}
                 </Text>
               </View>
               <View style={styles.balanceQuickMeta}>
-                <Text style={styles.balanceMetaText}>
-                  Faturamento: <Text style={{ color: '#f1f5f9' }}>{formatCurrency(financeMetrics.faturamentoMes)}</Text>
+                <Text style={[styles.balanceMetaText, { color: colors.textDim }]}>
+                  Faturamento: <Text style={{ color: colors.text }}>{formatCurrency(financeMetrics.faturamentoMes)}</Text>
                 </Text>
-                <Text style={styles.balanceMetaText}>
-                  A Receber: <Text style={{ color: theme.colors.primary }}>{formatCurrency(financeMetrics.totalAReceber)}</Text>
+                <Text style={[styles.balanceMetaText, { color: colors.textDim }]}>
+                  A Receber: <Text style={{ color: colors.primary }}>{formatCurrency(financeMetrics.totalAReceber)}</Text>
                 </Text>
               </View>
             </View>
-            <View style={styles.balanceTotalsDividerRow}>
-              <Text style={styles.balanceSubText}>Total Entradas: <Text style={styles.textGreen}>{formatCurrency(financeMetrics.totalRecebido)}</Text></Text>
-              <Text style={styles.balanceSubText}>Total Saídas: <Text style={styles.textRed}>{formatCurrency(financeMetrics.totalDespesas)}</Text></Text>
+            <View style={[styles.balanceTotalsDividerRow, { borderTopColor: colors.border }]}>
+              <Text style={[styles.balanceSubText, { color: colors.textDim }]}>Total Entradas: <Text style={styles.textGreen}>{formatCurrency(financeMetrics.totalRecebido)}</Text></Text>
+              <Text style={[styles.balanceSubText, { color: colors.textDim }]}>Total Saídas: <Text style={styles.textRed}>{formatCurrency(financeMetrics.totalDespesas)}</Text></Text>
             </View>
           </View>
 
-          <View style={[styles.card, { padding: 16, marginBottom: 14 }]}>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, padding: 16, marginBottom: 14 }]}>
             <View style={styles.periodHeaderRow}>
               <View>
-                <Text style={styles.periodCardTitle}>RESUMO POR PERÍODO</Text>
-                <Text style={styles.periodCardSubtitle}>Entradas, saídas e resultado líquido</Text>
+                <Text style={[styles.periodCardTitle, { color: colors.text }]}>RESUMO POR PERÍODO</Text>
+                <Text style={[styles.periodCardSubtitle, { color: colors.textMuted }]}>Entradas, saídas e resultado líquido</Text>
               </View>
               
-              <View style={styles.periodSelectWrapper}>
+              <View style={[styles.periodSelectWrapper, { backgroundColor: colors.surface }]}>
                 {(['diario', 'semanal', 'mensal'] as const).map(period => (
                   <TouchableOpacity
                     key={period}
                     onPress={() => setSummaryPeriod(period)}
-                    style={[styles.periodTab, summaryPeriod === period ? styles.periodTabActive : null]}
+                    style={[styles.periodTab, summaryPeriod === period ? [styles.periodTabActive, { backgroundColor: colors.primary }] : null]}
                   >
-                    <Text style={[styles.periodTabText, summaryPeriod === period ? styles.periodTabTextActive : null]}>
+                    <Text style={[styles.periodTabText, { color: summaryPeriod === period ? '#fff' : colors.textMuted }]}>
                       {period === 'diario' ? 'Diário' : period === 'semanal' ? 'Semanal' : 'Mensal'}
                     </Text>
                   </TouchableOpacity>
@@ -212,9 +213,9 @@ export default function FinanceFlowScreen() {
             </View>
 
             <View style={styles.periodGrid}>
-              <View style={styles.periodGridCol}>
-                <Text style={[styles.periodGridLabel, { color: theme.colors.success }]}>ENTRADAS</Text>
-                <Text style={styles.periodGridVal}>
+              <View style={[styles.periodGridCol, { backgroundColor: colors.surface }]}>
+                <Text style={[styles.periodGridLabel, { color: colors.success }]}>ENTRADAS</Text>
+                <Text style={[styles.periodGridVal, { color: colors.text }]}>
                   {formatCurrency(
                     summaryPeriod === 'diario' ? financeMetrics.entradasHoje :
                     summaryPeriod === 'semanal' ? financeMetrics.entradasSemana :
@@ -222,9 +223,9 @@ export default function FinanceFlowScreen() {
                   )}
                 </Text>
               </View>
-              <View style={styles.periodGridCol}>
-                <Text style={[styles.periodGridLabel, { color: theme.colors.error }]}>SAÍDAS</Text>
-                <Text style={styles.periodGridVal}>
+              <View style={[styles.periodGridCol, { backgroundColor: colors.surface }]}>
+                <Text style={[styles.periodGridLabel, { color: colors.error }]}>SAÍDAS</Text>
+                <Text style={[styles.periodGridVal, { color: colors.text }]}>
                   {formatCurrency(
                     summaryPeriod === 'diario' ? financeMetrics.saidasHoje :
                     summaryPeriod === 'semanal' ? financeMetrics.saidasSemana :
@@ -232,8 +233,8 @@ export default function FinanceFlowScreen() {
                   )}
                 </Text>
               </View>
-              <View style={styles.periodGridCol}>
-                <Text style={[styles.periodGridLabel, { color: theme.colors.primary }]}>LÍQUIDO</Text>
+              <View style={[styles.periodGridCol, { backgroundColor: colors.surface }]}>
+                <Text style={[styles.periodGridLabel, { color: colors.primary }]}>LÍQUIDO</Text>
                 <Text style={[
                   styles.periodGridVal,
                   (summaryPeriod === 'diario' ? financeMetrics.saldoHoje : summaryPeriod === 'semanal' ? financeMetrics.saldoSemana : financeMetrics.saldoMes) >= 0
@@ -251,16 +252,16 @@ export default function FinanceFlowScreen() {
           </View>
 
           <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>TRANSAÇÕES</Text>
+            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>TRANSAÇÕES</Text>
             
-            <View style={styles.filterChipsRow}>
+            <View style={[styles.filterChipsRow, { backgroundColor: colors.border }]}>
               {(['Todos', 'Entradas', 'Saídas'] as const).map(fl => (
                 <TouchableOpacity
                   key={fl}
                   onPress={() => setActiveFinanceFilter(fl)}
-                  style={[styles.filterChip, activeFinanceFilter === fl ? styles.filterChipActive : null]}
+                  style={[styles.filterChip, activeFinanceFilter === fl ? [styles.filterChipActive, { backgroundColor: colors.primary }] : null]}
                 >
-                  <Text style={[styles.filterChipText, activeFinanceFilter === fl ? styles.filterChipTextActive : null]}>
+                  <Text style={[styles.filterChipText, { color: activeFinanceFilter === fl ? '#fff' : colors.textDim }]}>
                     {fl}
                   </Text>
                 </TouchableOpacity>
@@ -269,42 +270,42 @@ export default function FinanceFlowScreen() {
           </View>
 
           {filteredTransactions.length === 0 ? (
-            <Text style={styles.emptyText}>Nenhum lançamento encontrado.</Text>
+            <Text style={[styles.emptyText, { color: colors.textMuted }]}>Nenhum lançamento encontrado.</Text>
           ) : (
             filteredTransactions.map(t => {
               const isInflow = t.type === 'Entrada';
               const transStyle = isInflow ? styles.cardInflow : styles.cardOutflow;
               return (
-                <View key={t.id} style={[styles.listItem, transStyle]}>
+                <View key={t.id} style={[styles.listItem, transStyle, { backgroundColor: colors.card, borderColor: colors.border }]}>
                   <View style={styles.transMainInfo}>
                     <View style={[
                       styles.transIconBg,
                       { backgroundColor: isInflow ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)' }
                     ]}>
                       {isInflow ? (
-                        <ArrowUpRight size={16} color={theme.colors.success} />
+                        <ArrowUpRight size={16} color={colors.success} />
                       ) : (
-                        <ArrowDownRight size={16} color={theme.colors.error} />
+                        <ArrowDownRight size={16} color={colors.error} />
                       )}
                     </View>
                     <View style={{ flex: 1, paddingRight: 6 }}>
-                      <Text style={styles.tDesc} numberOfLines={1}>
+                      <Text style={[styles.tDesc, { color: colors.text }]} numberOfLines={1}>
                         {t.description}
                       </Text>
-                      <Text style={styles.tMeta}>
+                      <Text style={[styles.tMeta, { color: colors.textMuted }]}>
                         {t.category} • {formatDate(t.date)}
                       </Text>
                     </View>
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    <Text style={[styles.tAmount, { color: isInflow ? theme.colors.success : theme.colors.error }]}>
+                    <Text style={[styles.tAmount, { color: isInflow ? colors.success : colors.error }]}>
                       {isInflow ? '+' : '-'}{formatCurrency(t.amount)}
                     </Text>
                     <TouchableOpacity
                       style={styles.deleteTransBtn}
                       onPress={() => handleRemoveTransaction(t.id)}
                     >
-                      <Trash2 size={12} color={theme.colors.error} />
+                      <Trash2 size={12} color={colors.error} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -314,14 +315,14 @@ export default function FinanceFlowScreen() {
         </ScrollView>
       ) : (
         <View style={{ flex: 1 }}>
-          <View style={styles.searchBarWrapper}>
+          <View style={[styles.searchBarWrapper, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }]}>
             <Search size={16} color="#64748b" style={{ marginRight: 8 }} />
             <TextInput
               placeholder="Buscar por OS ou cliente..."
-              placeholderTextColor="#475569"
+              placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
               value={billingSearch}
               onChangeText={setBillingSearch}
-              style={styles.searchBarInput}
+              style={[styles.searchBarInput, { color: colors.text }]}
             />
             {billingSearch !== '' && (
               <TouchableOpacity onPress={() => setBillingSearch('')}>
@@ -338,9 +339,17 @@ export default function FinanceFlowScreen() {
                   <TouchableOpacity
                     key={st}
                     onPress={() => setBillingStatusFilter(st)}
-                    style={[styles.statusFilterTab, isActive ? styles.statusFilterTabActive : null]}
+                    style={[
+                      styles.statusFilterTab,
+                      { backgroundColor: colors.card, borderColor: colors.border },
+                      isActive && { backgroundColor: colors.primary, borderColor: colors.primary }
+                    ]}
                   >
-                    <Text style={[styles.statusFilterTabText, isActive ? styles.statusFilterTabTextActive : null]}>
+                    <Text style={[
+                      styles.statusFilterTabText,
+                      { color: colors.textMuted },
+                      isActive && { color: '#fff' }
+                    ]}>
                       {st}
                     </Text>
                   </TouchableOpacity>
@@ -351,8 +360,8 @@ export default function FinanceFlowScreen() {
 
           <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
             {filteredBillings.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>Nenhuma cobrança encontrada.</Text>
+              <View style={[styles.emptyContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Text style={[styles.emptyText, { color: colors.textMuted }]}>Nenhuma cobrança encontrada.</Text>
               </View>
             ) : (
               filteredBillings.map(b => {
@@ -361,20 +370,20 @@ export default function FinanceFlowScreen() {
                 const paidCount = b.installments.filter(i => i.status === 'Pago').length;
                 
                 let badgeColor = 'rgba(59, 102, 255, 0.1)';
-                let badgeTextColor = theme.colors.primary;
-                let cardBorderColor = 'rgba(59, 102, 255, 0.2)';
+                let badgeTextColor = colors.primary;
+                let cardBorderColor = colors.border;
                 if (b.status === 'Pago') {
                   badgeColor = 'rgba(34, 197, 94, 0.1)';
-                  badgeTextColor = theme.colors.success;
+                  badgeTextColor = colors.success;
                   cardBorderColor = 'rgba(34, 197, 94, 0.3)';
                 } else if (b.status === 'Parcialmente pago') {
                   badgeColor = 'rgba(234, 179, 8, 0.1)';
-                  badgeTextColor = theme.colors.warning;
+                  badgeTextColor = colors.warning;
                   cardBorderColor = 'rgba(234, 179, 8, 0.3)';
                 } else if (b.status === 'Cancelado') {
                   badgeColor = 'rgba(100, 116, 139, 0.1)';
-                  badgeTextColor = '#64748b';
-                  cardBorderColor = '#272e3f';
+                  badgeTextColor = colors.textMuted;
+                  cardBorderColor = colors.border;
                 }
 
                 return (
@@ -383,23 +392,23 @@ export default function FinanceFlowScreen() {
                     onPress={() => {
                       navigation.navigate('BillingDetail', { billingId: b.id });
                     }}
-                    style={[styles.billingCard, { borderColor: cardBorderColor }]}
+                    style={[styles.billingCard, { backgroundColor: colors.card, borderColor: cardBorderColor }]}
                   >
                     <View style={{ flex: 1, paddingRight: 10, gap: 4 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                        <Text style={styles.billingCardOS}>{os?.osNumber || 'S/N'}</Text>
+                        <Text style={[styles.billingCardOS, { color: colors.text }]}>{os?.osNumber || 'S/N'}</Text>
                         <View style={[styles.billingStatusBadge, { backgroundColor: badgeColor }]}>
                           <Text style={[styles.billingStatusBadgeText, { color: badgeTextColor }]}>{b.status.toUpperCase()}</Text>
                         </View>
                       </View>
-                      <Text style={styles.billingCardClientName} numberOfLines={1}>{client?.name}</Text>
-                      <Text style={styles.billingCardMeta}>
-                        Método: {b.paymentMethod} • Parcelas: <Text style={{ color: theme.colors.primary, fontWeight: 'bold' }}>{paidCount}/{b.installments.length}</Text>
+                      <Text style={[styles.billingCardClientName, { color: colors.text }]} numberOfLines={1}>{client?.name}</Text>
+                      <Text style={[styles.billingCardMeta, { color: colors.textDim }]}>
+                        Método: {b.paymentMethod} • Parcelas: <Text style={{ color: colors.primary, fontWeight: 'bold' }}>{paidCount}/{b.installments.length}</Text>
                       </Text>
                     </View>
                     <View style={{ alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
-                      <Text style={styles.billingCardAmt}>{formatCurrency(b.amount)}</Text>
-                      <Text style={styles.billingCardDate}>Venc: {formatDate(b.dueDate)}</Text>
+                      <Text style={[styles.billingCardAmt, { color: colors.text }]}>{formatCurrency(b.amount)}</Text>
+                      <Text style={[styles.billingCardDate, { color: colors.textMuted }]}>Venc: {formatDate(b.dueDate)}</Text>
                     </View>
                   </TouchableOpacity>
                 );

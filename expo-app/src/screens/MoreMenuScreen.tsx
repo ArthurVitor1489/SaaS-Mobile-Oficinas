@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Linking } from 'react-native';
 import { ChevronRight, Tag, Settings, Wifi, LogOut, TrendingUp, MessageCircle, Shield } from 'lucide-react-native';
 import { useDatabase } from '../context/DatabaseContext';
-import { theme } from '../styles/theme';
+import { theme, useTheme } from '../styles/theme';
 import { useNavigation } from '@react-navigation/native';
 import TermsPrivacyModal from '../components/TermsPrivacyModal';
 
 export default function MoreMenuScreen() {
   const navigation = useNavigation<any>();
+  const { colors } = useTheme();
   const { settings, signOut, online } = useDatabase();
   const [showTermsModal, setShowTermsModal] = useState(false);
 
@@ -17,9 +18,9 @@ export default function MoreMenuScreen() {
   };
 
   return (
-    <View style={styles.screenContainer}>
+    <View style={[styles.screenContainer, { backgroundColor: colors.background }]}>
       <View style={styles.screenHeader}>
-        <Text style={styles.tabTitle}>Mais Opções</Text>
+        <Text style={[styles.tabTitle, { color: colors.text }]}>Mais Opções</Text>
         <View style={[
           styles.networkBadge,
           { backgroundColor: online ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)' }
@@ -31,18 +32,18 @@ export default function MoreMenuScreen() {
         </View>
       </View>
 
-      <View style={styles.menuContainer}>
+      <View style={[styles.menuContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <TouchableOpacity
           onPress={() => navigation.navigate('CashFlow')}
-          style={styles.menuItem}
+          style={[styles.menuItem, { borderBottomColor: colors.border }]}
         >
           <View style={styles.menuItemLeft}>
             <View style={[styles.iconBg, { backgroundColor: 'rgba(34, 197, 94, 0.12)' }]}>
               <TrendingUp size={18} color="#22c55e" />
             </View>
             <View>
-              <Text style={styles.menuItemTitle}>Fluxo de Caixa & Despesas</Text>
-              <Text style={styles.menuItemSubtitle}>Entradas, saídas e lançamentos</Text>
+              <Text style={[styles.menuItemTitle, { color: colors.text }]}>Fluxo de Caixa & Despesas</Text>
+              <Text style={[styles.menuItemSubtitle, { color: colors.textMuted }]}>Entradas, saídas e lançamentos</Text>
             </View>
           </View>
           <ChevronRight size={18} color="#64748b" />
@@ -50,15 +51,15 @@ export default function MoreMenuScreen() {
 
         <TouchableOpacity
           onPress={() => navigation.navigate('Catalog')}
-          style={styles.menuItem}
+          style={[styles.menuItem, { borderBottomColor: colors.border }]}
         >
           <View style={styles.menuItemLeft}>
             <View style={[styles.iconBg, { backgroundColor: 'rgba(59, 102, 255, 0.1)' }]}>
-              <Tag size={18} color={theme.colors.primary} />
+              <Tag size={18} color={colors.primary} />
             </View>
             <View>
-              <Text style={styles.menuItemTitle}>Catálogo da Oficina</Text>
-              <Text style={styles.menuItemSubtitle}>Serviços e peças cadastrados</Text>
+              <Text style={[styles.menuItemTitle, { color: colors.text }]}>Catálogo da Oficina</Text>
+              <Text style={[styles.menuItemSubtitle, { color: colors.textMuted }]}>Serviços e peças cadastrados</Text>
             </View>
           </View>
           <ChevronRight size={18} color="#64748b" />
@@ -66,15 +67,15 @@ export default function MoreMenuScreen() {
 
         <TouchableOpacity
           onPress={() => navigation.navigate('Settings')}
-          style={styles.menuItem}
+          style={[styles.menuItem, { borderBottomColor: colors.border }]}
         >
           <View style={styles.menuItemLeft}>
             <View style={[styles.iconBg, { backgroundColor: 'rgba(100, 116, 139, 0.1)' }]}>
               <Settings size={18} color="#94a3b8" />
             </View>
             <View>
-              <Text style={styles.menuItemTitle}>Configurações da Oficina</Text>
-              <Text style={styles.menuItemSubtitle}>Ajustes e exportação de backups</Text>
+              <Text style={[styles.menuItemTitle, { color: colors.text }]}>Configurações da Oficina</Text>
+              <Text style={[styles.menuItemSubtitle, { color: colors.textMuted }]}>Ajustes e exportação de backups</Text>
             </View>
           </View>
           <ChevronRight size={18} color="#64748b" />
@@ -82,7 +83,7 @@ export default function MoreMenuScreen() {
 
         <TouchableOpacity
           onPress={handleOpenSupport}
-          style={styles.menuItem}
+          style={[styles.menuItem, { borderBottomColor: colors.border }]}
         >
           <View style={styles.menuItemLeft}>
             <View style={[styles.iconBg, { backgroundColor: 'rgba(34, 197, 94, 0.12)' }]}>
@@ -90,7 +91,7 @@ export default function MoreMenuScreen() {
             </View>
             <View>
               <Text style={[styles.menuItemTitle, { color: '#22c55e' }]}>Suporte via WhatsApp</Text>
-              <Text style={styles.menuItemSubtitle}>Atendimento direto e suporte técnico</Text>
+              <Text style={[styles.menuItemSubtitle, { color: colors.textMuted }]}>Atendimento direto e suporte técnico</Text>
             </View>
           </View>
           <ChevronRight size={18} color="#22c55e" />
@@ -98,15 +99,15 @@ export default function MoreMenuScreen() {
 
         <TouchableOpacity
           onPress={() => setShowTermsModal(true)}
-          style={styles.menuItem}
+          style={[styles.menuItem, { borderBottomColor: colors.border }]}
         >
           <View style={styles.menuItemLeft}>
             <View style={[styles.iconBg, { backgroundColor: 'rgba(59, 102, 255, 0.1)' }]}>
-              <Shield size={18} color={theme.colors.primary} />
+              <Shield size={18} color={colors.primary} />
             </View>
             <View>
-              <Text style={styles.menuItemTitle}>Termos & Privacidade</Text>
-              <Text style={styles.menuItemSubtitle}>Políticas de uso e proteção de dados</Text>
+              <Text style={[styles.menuItemTitle, { color: colors.text }]}>Termos & Privacidade</Text>
+              <Text style={[styles.menuItemSubtitle, { color: colors.textMuted }]}>Políticas de uso e proteção de dados</Text>
             </View>
           </View>
           <ChevronRight size={18} color="#64748b" />
@@ -122,14 +123,14 @@ export default function MoreMenuScreen() {
             </View>
             <View>
               <Text style={[styles.menuItemTitle, { color: '#ef4444' }]}>Sair da Conta</Text>
-              <Text style={styles.menuItemSubtitle}>Desconectar do painel da oficina</Text>
+              <Text style={[styles.menuItemSubtitle, { color: colors.textMuted }]}>Desconectar do painel da oficina</Text>
             </View>
           </View>
           <ChevronRight size={18} color="#ef4444" />
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.versionText}>MecânicaPro v1.0.0 • Gestão de Oficinas</Text>
+      <Text style={[styles.versionText, { color: colors.textMuted }]}>MecânicaPro v1.0.0 • Gestão de Oficinas</Text>
 
       <TermsPrivacyModal
         visible={showTermsModal}

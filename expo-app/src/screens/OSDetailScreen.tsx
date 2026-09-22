@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, Modal, Alert, StyleSheet, Pla
 import { ArrowLeft, Edit2, PenTool, FileText, DollarSign, X, Check, Trash2, ChevronRight, MessageSquare } from 'lucide-react-native';
 import { SvgXml } from 'react-native-svg';
 import { useDatabase } from '../context/DatabaseContext';
-import { theme } from '../styles/theme';
+import { theme, useTheme } from '../styles/theme';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as Print from 'expo-print';
@@ -16,6 +16,7 @@ import { WorkOrder, OSStatus, PaymentMethod } from '../types';
 export default function OSDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
+  const { colors, isDark } = useTheme();
   const { osId } = route.params;
 
   const {
@@ -556,7 +557,7 @@ export default function OSDetailScreen() {
   };
 
   return (
-    <View style={styles.screenContainer}>
+    <View style={[styles.screenContainer, { backgroundColor: colors.background }]}>
       <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
         <View style={styles.screenHeaderOS}>
         <TouchableOpacity
@@ -568,24 +569,24 @@ export default function OSDetailScreen() {
           }}
           style={styles.backButton}
         >
-          <ArrowLeft size={20} color={theme.colors.primary} style={styles.backButtonIcon} />
-          <Text style={styles.backButtonText}>Voltar</Text>
+          <ArrowLeft size={20} color={colors.primary} style={styles.backButtonIcon} />
+          <Text style={[styles.backButtonText, { color: colors.primary }]}>Voltar</Text>
         </TouchableOpacity>
         
         <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
           <TouchableOpacity
             onPress={handleOpenOSWizardForEdit}
-            style={styles.editOSButton}
+            style={[styles.editOSButton, { backgroundColor: isDark ? 'rgba(59, 102, 255, 0.1)' : 'rgba(59, 102, 255, 0.12)' }]}
           >
-            <Edit2 size={14} color={theme.colors.primary} style={styles.editButtonIcon} />
-            <Text style={styles.editOSButtonText}>Editar</Text>
+            <Edit2 size={14} color={colors.primary} style={styles.editButtonIcon} />
+            <Text style={[styles.editOSButtonText, { color: colors.primary }]}>Editar</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={handleDeleteOS}
             style={styles.deleteOSButton}
           >
-            <Trash2 size={14} color={theme.colors.error} style={styles.deleteButtonIcon} />
-            <Text style={styles.deleteOSButtonText}>Excluir</Text>
+            <Trash2 size={14} color={colors.error} style={styles.deleteButtonIcon} />
+            <Text style={[styles.deleteOSButtonText, { color: colors.error }]}>Excluir</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -600,16 +601,16 @@ export default function OSDetailScreen() {
             <View style={styles.billingBadgeRow}>
               <View style={[
                 styles.billingStatusDot,
-                { backgroundColor: billing.status === 'Pago' ? theme.colors.success : theme.colors.warning }
+                { backgroundColor: billing.status === 'Pago' ? colors.success : colors.warning }
               ]} />
               <View>
                 <Text style={[
                   styles.billingStatusTitle,
-                  { color: billing.status === 'Pago' ? theme.colors.success : theme.colors.warning }
+                  { color: billing.status === 'Pago' ? colors.success : colors.warning }
                 ]}>
                   {billing.status === 'Pago' ? 'FATURADA • PAGA' : 'FATURADA • AGUARDANDO PAGAMENTO'}
                 </Text>
-                <Text style={styles.billingStatusSubtitle}>
+                <Text style={[styles.billingStatusSubtitle, { color: colors.textMuted }]}>
                   {billing.paymentMethod.toUpperCase()} {billing.installments.length > 1 ? `• ${billing.installments.length}x` : '• À vista'} • Total: {formatCurrency(billing.amount)}
                 </Text>
               </View>
@@ -618,8 +619,8 @@ export default function OSDetailScreen() {
               onPress={() => navigation.navigate('FinanceTab', { screen: 'BillingDetail', params: { billingId: billing.id } })}
               style={styles.billingViewLinkBtn}
             >
-              <Text style={styles.billingViewLinkText}>Ver</Text>
-              <ChevronRight size={14} color={theme.colors.primary} />
+              <Text style={[styles.billingViewLinkText, { color: colors.primary }]}>Ver</Text>
+              <ChevronRight size={14} color={colors.primary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -635,7 +636,7 @@ export default function OSDetailScreen() {
             </View>
             <TouchableOpacity
               onPress={() => setCreateBillingModalVisible(true)}
-              style={styles.billingQuickActionBtn}
+              style={[styles.billingQuickActionBtn, { backgroundColor: colors.primary }]}
             >
               <DollarSign size={14} color="#fff" />
               <Text style={styles.billingQuickActionBtnText}>Faturar</Text>
@@ -644,19 +645,19 @@ export default function OSDetailScreen() {
         </View>
       )}
 
-      <View style={styles.osInfoCard}>
+      <View style={[styles.osInfoCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.cardRowSpaceBetween}>
-          <Text style={styles.detailedOSNum}>{os.osNumber}</Text>
-          <Text style={styles.detailedOSDate}>Data: {formatDate(os.date)}</Text>
+          <Text style={[styles.detailedOSNum, { color: colors.primary }]}>{os.osNumber}</Text>
+          <Text style={[styles.detailedOSDate, { color: colors.textDim }]}>Data: {formatDate(os.date)}</Text>
         </View>
-        <View style={styles.detailedOSClientInfo}>
+        <View style={[styles.detailedOSClientInfo, { borderTopColor: colors.border }]}>
           <View>
-            <Text style={styles.cardLabelText}>Cliente</Text>
-            <Text style={styles.detailedClientName}>{client?.name}</Text>
+            <Text style={[styles.cardLabelText, { color: colors.textMuted }]}>Cliente</Text>
+            <Text style={[styles.detailedClientName, { color: colors.text }]}>{client?.name}</Text>
           </View>
           <View>
-            <Text style={styles.cardLabelText}>Veículo</Text>
-            <Text style={styles.detailedClientVehicle}>
+            <Text style={[styles.cardLabelText, { color: colors.textMuted }]}>Veículo</Text>
+            <Text style={[styles.detailedClientVehicle, { color: colors.text }]}>
               {vehicle ? `${vehicle.brand} ${vehicle.model} (${vehicle.plate})` : 'N/A'}
             </Text>
           </View>
@@ -665,18 +666,18 @@ export default function OSDetailScreen() {
 
       {os.services.length > 0 && (
         <View style={styles.sectionWrapper}>
-          <Text style={styles.sectionTitle}>Serviços Executados</Text>
-          <View style={styles.itemsWrapperCard}>
+          <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Serviços Executados</Text>
+          <View style={[styles.itemsWrapperCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             {os.services.map((s, idx) => (
-              <View key={idx} style={[styles.detailItemRow, idx === os.services.length - 1 ? { borderBottomWidth: 0 } : null]}>
+              <View key={idx} style={[styles.detailItemRow, { borderBottomColor: colors.border }, idx === os.services.length - 1 ? { borderBottomWidth: 0 } : null]}>
                 <View style={styles.detailItemLeft}>
-                  <Text style={styles.detailItemName}>{s.name}</Text>
-                  {s.code ? <Text style={styles.detailItemCode}>CÓD: {s.code}</Text> : null}
+                  <Text style={[styles.detailItemName, { color: colors.text }]}>{s.name}</Text>
+                  {s.code ? <Text style={[styles.detailItemCode, { color: colors.textMuted }]}>CÓD: {s.code}</Text> : null}
                 </View>
                 <View style={styles.detailItemRight}>
-                  <Text style={styles.detailItemPrice}>{formatCurrency(s.price * s.quantity)}</Text>
+                  <Text style={[styles.detailItemPrice, { color: colors.text }]}>{formatCurrency(s.price * s.quantity)}</Text>
                   {s.quantity > 1 ? (
-                    <Text style={styles.detailItemQtyMeta}>{s.quantity}x {formatCurrency(s.price)}</Text>
+                    <Text style={[styles.detailItemQtyMeta, { color: colors.textMuted }]}>{s.quantity}x {formatCurrency(s.price)}</Text>
                   ) : null}
                 </View>
               </View>
@@ -687,18 +688,18 @@ export default function OSDetailScreen() {
 
       {os.parts.length > 0 && (
         <View style={styles.sectionWrapper}>
-          <Text style={styles.sectionTitle}>Peças Substituídas</Text>
-          <View style={styles.itemsWrapperCard}>
+          <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Peças Substituídas</Text>
+          <View style={[styles.itemsWrapperCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             {os.parts.map((p, idx) => (
-              <View key={idx} style={[styles.detailItemRow, idx === os.parts.length - 1 ? { borderBottomWidth: 0 } : null]}>
+              <View key={idx} style={[styles.detailItemRow, { borderBottomColor: colors.border }, idx === os.parts.length - 1 ? { borderBottomWidth: 0 } : null]}>
                 <View style={styles.detailItemLeft}>
-                  <Text style={styles.detailItemName}>{p.name}</Text>
-                  {p.code ? <Text style={styles.detailItemCode}>SKU: {p.code}</Text> : null}
+                  <Text style={[styles.detailItemName, { color: colors.text }]}>{p.name}</Text>
+                  {p.code ? <Text style={[styles.detailItemCode, { color: colors.textMuted }]}>SKU: {p.code}</Text> : null}
                 </View>
                 <View style={styles.detailItemRight}>
-                  <Text style={styles.detailItemPrice}>{formatCurrency(p.salePrice * p.quantity)}</Text>
+                  <Text style={[styles.detailItemPrice, { color: colors.text }]}>{formatCurrency(p.salePrice * p.quantity)}</Text>
                   {p.quantity > 1 ? (
-                    <Text style={styles.detailItemQtyMeta}>{p.quantity}x {formatCurrency(p.salePrice)}</Text>
+                    <Text style={[styles.detailItemQtyMeta, { color: colors.textMuted }]}>{p.quantity}x {formatCurrency(p.salePrice)}</Text>
                   ) : null}
                 </View>
               </View>
@@ -707,46 +708,46 @@ export default function OSDetailScreen() {
         </View>
       )}
 
-      <View style={styles.totalsCard}>
+      <View style={[styles.totalsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.summaryTotalsRow}>
-          <Text style={styles.summaryTotalsLabel}>Mão de Obra:</Text>
-          <Text style={styles.summaryTotalsVal}>{formatCurrency(os.servicesTotal)}</Text>
+          <Text style={[styles.summaryTotalsLabel, { color: colors.textDim }]}>Mão de Obra:</Text>
+          <Text style={[styles.summaryTotalsVal, { color: colors.text }]}>{formatCurrency(os.servicesTotal)}</Text>
         </View>
         <View style={styles.summaryTotalsRow}>
-          <Text style={styles.summaryTotalsLabel}>Peças:</Text>
-          <Text style={styles.summaryTotalsVal}>{formatCurrency(os.partsTotal)}</Text>
+          <Text style={[styles.summaryTotalsLabel, { color: colors.textDim }]}>Peças:</Text>
+          <Text style={[styles.summaryTotalsVal, { color: colors.text }]}>{formatCurrency(os.partsTotal)}</Text>
         </View>
-        <View style={styles.summaryTotalsDivider} />
+        <View style={[styles.summaryTotalsDivider, { backgroundColor: colors.border }]} />
         <View style={styles.summaryTotalsRowGrand}>
-          <Text style={styles.summaryTotalsGrandLabel}>TOTAL GERAL:</Text>
-          <Text style={styles.summaryTotalsGrandValue}>{formatCurrency(os.grandTotal)}</Text>
+          <Text style={[styles.summaryTotalsGrandLabel, { color: colors.primary }]}>TOTAL GERAL:</Text>
+          <Text style={[styles.summaryTotalsGrandValue, { color: colors.success }]}>{formatCurrency(os.grandTotal)}</Text>
         </View>
       </View>
 
       {os.notes ? (
         <View style={styles.sectionWrapper}>
-          <Text style={styles.sectionTitle}>Observações</Text>
-          <View style={styles.detailedNotesBox}>
-            <Text style={styles.detailedNotesText}>{os.notes}</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Observações</Text>
+          <View style={[styles.detailedNotesBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.detailedNotesText, { color: colors.text }]}>{os.notes}</Text>
           </View>
         </View>
       ) : null}
 
       <View style={styles.sectionWrapper}>
-        <Text style={styles.sectionTitle}>Assinatura Digital do Cliente</Text>
+        <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Assinatura Digital do Cliente</Text>
         <View style={styles.signatureWrapper}>
           {os.signature ? (
-            <View style={styles.signatureDisplayCard}>
+            <View style={[styles.signatureDisplayCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <SvgXml xml={os.signature} width="220" height="90" />
               <Text style={styles.signatureDisplayLabel}>ASSINADO DIGITALMENTE</Text>
             </View>
           ) : (
             <TouchableOpacity
               onPress={() => setSigningOS(true)}
-              style={styles.signatureCollectButton}
+              style={[styles.signatureCollectButton, { borderColor: colors.border }]}
             >
-              <PenTool size={16} color="#64748b" />
-              <Text style={styles.signatureCollectText}>Coletar Assinatura do Cliente</Text>
+              <PenTool size={16} color={colors.textDim} />
+              <Text style={[styles.signatureCollectText, { color: colors.textDim }]}>Coletar Assinatura do Cliente</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -755,7 +756,7 @@ export default function OSDetailScreen() {
       <View style={styles.actionsPanelRow}>
         <TouchableOpacity
           onPress={handleShareOS}
-          style={styles.shareOSButton}
+          style={[styles.shareOSButton, { backgroundColor: isDark ? '#475569' : '#64748b' }]}
         >
           <FileText size={15} color="#fff" />
           <Text style={styles.shareOSButtonText}>PDF</Text>
@@ -779,7 +780,7 @@ export default function OSDetailScreen() {
         ) : (
           <TouchableOpacity
             onPress={() => setCreateBillingModalVisible(true)}
-            style={styles.billOSButton}
+            style={[styles.billOSButton, { backgroundColor: colors.primary }]}
           >
             <DollarSign size={15} color="#fff" />
             <Text style={styles.billOSButtonText}>Faturar</Text>

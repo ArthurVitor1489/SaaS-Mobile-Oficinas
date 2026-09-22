@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { Search, X, Plus } from 'lucide-react-native';
 import { useDatabase } from '../context/DatabaseContext';
-import { theme } from '../styles/theme';
+import { theme, useTheme } from '../styles/theme';
 import { formatDate, formatCurrency } from '../utils/formatters';
 import { useNavigation } from '@react-navigation/native';
 import OSWizardModal from '../components/OSWizardModal';
@@ -10,6 +10,7 @@ import { OSStatus } from '../types';
 
 export default function OSListScreen() {
   const navigation = useNavigation<any>();
+  const { colors, isDark } = useTheme();
   const { workOrders, clients, vehicles, billings, addWorkOrder, services, parts } = useDatabase();
 
   const [osSearch, setOsSearch] = useState('');
@@ -73,9 +74,9 @@ export default function OSListScreen() {
   };
 
   return (
-    <View style={styles.screenContainer}>
+    <View style={[styles.screenContainer, { backgroundColor: colors.background }]}>
       <View style={styles.screenHeader}>
-        <Text style={styles.tabTitle}>Ordens de Serviço</Text>
+        <Text style={[styles.tabTitle, { color: colors.text }]}>Ordens de Serviço</Text>
         <TouchableOpacity style={styles.actionButton} onPress={handleOpenOSWizardForCreate}>
           <Plus size={16} color="#fff" />
           <Text style={styles.actionButtonText}>Nova OS</Text>
@@ -83,14 +84,14 @@ export default function OSListScreen() {
       </View>
 
       <View style={{ flex: 1 }}>
-        <View style={styles.searchBarWrapper}>
+        <View style={[styles.searchBarWrapper, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }]}>
           <Search size={14} color="#64748b" style={{ marginRight: 6 }} />
           <TextInput
             placeholder="Buscar por OS, cliente, placa..."
-            placeholderTextColor="#475569"
+            placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
             value={osSearch}
             onChangeText={setOsSearch}
-            style={styles.searchBarInput}
+            style={[styles.searchBarInput, { color: colors.text }]}
           />
           {osSearch !== '' && (
             <TouchableOpacity onPress={() => setOsSearch('')}>
@@ -107,9 +108,17 @@ export default function OSListScreen() {
                 <TouchableOpacity
                   key={tab}
                   onPress={() => setOsBillingFilter(tab)}
-                  style={[styles.statusFilterTab, isActive ? styles.statusFilterTabActive : null]}
+                  style={[
+                    styles.statusFilterTab,
+                    { backgroundColor: colors.card, borderColor: colors.border },
+                    isActive && { backgroundColor: colors.primary, borderColor: colors.primary }
+                  ]}
                 >
-                  <Text style={[styles.statusFilterTabText, isActive ? styles.statusFilterTabTextActive : null]}>
+                  <Text style={[
+                    styles.statusFilterTabText,
+                    { color: colors.textMuted },
+                    isActive && { color: '#fff' }
+                  ]}>
                     {tab}
                   </Text>
                 </TouchableOpacity>
@@ -120,8 +129,8 @@ export default function OSListScreen() {
 
         <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
           {filteredWorkOrders.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>Nenhuma OS encontrada.</Text>
+            <View style={[styles.emptyContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.emptyText, { color: colors.textMuted }]}>Nenhuma OS encontrada.</Text>
             </View>
           ) : (
             filteredWorkOrders.map(os => {
@@ -142,11 +151,11 @@ export default function OSListScreen() {
                   onPress={() => {
                     navigation.navigate('OSDetail', { osId: os.id });
                   }}
-                  style={[styles.card, cardStyle, { padding: 18, marginBottom: 12 }]}
+                  style={[styles.card, cardStyle, { backgroundColor: colors.card, borderColor: colors.border, padding: 18, marginBottom: 12 }]}
                 >
                   <View style={styles.cardHeaderRow}>
                     <View style={styles.cardHeaderLeft}>
-                      <Text style={styles.osNum}>{os.osNumber}</Text>
+                      <Text style={[styles.osNum, { color: colors.primary }]}>{os.osNumber}</Text>
                       {billing ? (
                         <View style={[
                           styles.statusBadge,
@@ -157,7 +166,7 @@ export default function OSListScreen() {
                         ]}>
                           <Text style={[
                             styles.statusBadgeText,
-                            { color: billing.status === 'Pago' ? theme.colors.success : theme.colors.warning }
+                            { color: billing.status === 'Pago' ? colors.success : colors.warning }
                           ]}>
                             {billing.status === 'Pago' ? 'PAGO' : 'FATURADA'}
                           </Text>
@@ -176,24 +185,24 @@ export default function OSListScreen() {
                         </View>
                       )}
                     </View>
-                    <Text style={styles.osDate}>{formatDate(os.date)}</Text>
+                    <Text style={[styles.osDate, { color: colors.textMuted }]}>{formatDate(os.date)}</Text>
                   </View>
                   
                   <View style={{ marginVertical: 4 }}>
-                    <Text style={styles.cardLabelText}>Cliente</Text>
-                    <Text style={styles.cardValueTextBold}>{client?.name}</Text>
+                    <Text style={[styles.cardLabelText, { color: colors.textMuted }]}>Cliente</Text>
+                    <Text style={[styles.cardValueTextBold, { color: colors.text }]}>{client?.name}</Text>
                     
                     {vehicle && (
                       <>
-                        <Text style={styles.cardLabelText}>Veículo</Text>
-                        <Text style={styles.cardValueText}>
-                          {vehicle.brand} {vehicle.model} • Placa: <Text style={styles.plateText}>{vehicle.plate}</Text>
+                        <Text style={[styles.cardLabelText, { color: colors.textMuted }]}>Veículo</Text>
+                        <Text style={[styles.cardValueText, { color: colors.textDim }]}>
+                          {vehicle.brand} {vehicle.model} • Placa: <Text style={[styles.plateText, { color: colors.text }]}>{vehicle.plate}</Text>
                         </Text>
                       </>
                     )}
                   </View>
 
-                  <View style={styles.cardFooterRow}>
+                  <View style={[styles.cardFooterRow, { borderTopColor: colors.border }]}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       {billing ? (
                         <View style={[
@@ -202,7 +211,7 @@ export default function OSListScreen() {
                         ]}>
                           <Text style={[
                             styles.billingStatusBadgeText,
-                            { color: billing.status === 'Pago' ? theme.colors.success : theme.colors.warning }
+                            { color: billing.status === 'Pago' ? colors.success : colors.warning }
                           ]}>
                             💳 {billing.paymentMethod.toUpperCase()} {billing.installments.length > 1 ? `(${billing.installments.length}x)` : '• À VISTA'}
                           </Text>
@@ -215,7 +224,7 @@ export default function OSListScreen() {
                         </View>
                       )}
                     </View>
-                    <Text style={styles.osTotalVal}>{formatCurrency(os.grandTotal)}</Text>
+                    <Text style={[styles.osTotalVal, { color: colors.text }]}>{formatCurrency(os.grandTotal)}</Text>
                   </View>
                 </TouchableOpacity>
               );

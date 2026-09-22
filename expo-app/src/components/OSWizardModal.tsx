@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { X, Search, Check, ClipboardList, Play, CheckCircle } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { theme } from '../styles/theme';
+import { theme, useTheme } from '../styles/theme';
 import { formatCurrency, containsInjection } from '../utils/formatters';
 import { Client, Vehicle, ServiceItem, PartItem, OSItemService, OSItemPart, OSStatus } from '../types';
 
@@ -50,6 +50,7 @@ export default function OSWizardModal({
   onClose,
   onSubmit,
 }: OSWizardModalProps) {
+  const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const [wizardStep, setWizardStep] = useState(1);
   const [form, setForm] = useState<OSForm>(emptyForm());
@@ -188,16 +189,16 @@ export default function OSWizardModal({
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.modalBg}
       >
-        <View style={[styles.modalContent, { paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : theme.spacing.xxl }]}>
+        <View style={[styles.modalContent, { backgroundColor: colors.card, paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : theme.spacing.xxl }]}>
           <View style={styles.modalHeader}>
             <View>
-              <Text style={styles.modalTitle}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
                 {editingOSId ? 'Editar OS' : 'Gerar Nova OS'}
               </Text>
-              <Text style={styles.modalStepText}>Passo {wizardStep} de 4</Text>
+              <Text style={[styles.modalStepText, { color: colors.textMuted }]}>Passo {wizardStep} de 4</Text>
             </View>
             <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-              <X size={20} color="#94a3b8" />
+              <X size={20} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
 

@@ -583,6 +583,7 @@ const styles = StyleSheet.create({
     borderColor: '#272e3f',
     padding: 14,
     gap: 10,
+    marginBottom: 14,
   },
   cardHeader: {
     flexDirection: 'row',

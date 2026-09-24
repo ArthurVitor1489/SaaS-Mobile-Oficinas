@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1.5,
     borderColor: theme.colors.border,
-    marginBottom: theme.spacing.sm,
+    marginBottom: 12,
   },
   cardOpen: {
     borderLeftWidth: 4,

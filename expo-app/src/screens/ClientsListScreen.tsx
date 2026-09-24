@@ -91,9 +91,20 @@ export default function ClientsListScreen() {
                     {totalCars > 0 && (
                       <View style={styles.platesRow}>
                         {cars.map(c => (
-                          <Text key={c.id} style={[styles.plateItemBadge, { color: colors.text, backgroundColor: isDark ? '#272e3f' : '#e2e8f0' }]}>
-                            {c.plate}
-                          </Text>
+                          <View
+                            key={c.id}
+                            style={[
+                              styles.plateItemBadge,
+                              { backgroundColor: isDark ? '#272e3f' : '#e2e8f0' }
+                            ]}
+                          >
+                            <Text
+                              style={[styles.plateItemBadgeText, { color: colors.text }]}
+                              numberOfLines={1}
+                            >
+                              {c.plate?.trim()}
+                            </Text>
+                          </View>
                         ))}
                       </View>
                     )}
@@ -239,13 +250,17 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   plateItemBadge: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    color: '#cbd5e1',
-    backgroundColor: '#272e3f',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
+    alignSelf: 'flex-start',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  plateItemBadgeText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#cbd5e1',
     includeFontPadding: false,
   },
 });

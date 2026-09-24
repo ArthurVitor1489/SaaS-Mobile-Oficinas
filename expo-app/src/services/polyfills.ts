@@ -40,13 +40,17 @@ if (Platform.OS === 'android') {
           ? [androidBaseStyle, style]
           : androidBaseStyle;
 
-        // Helper to add a trailing space to prevent BoringLayout / MiSans font glyph truncation
+        // Helper to add a non-breaking space (\u00A0) to prevent BoringLayout / MiSans font glyph truncation
+        // Using \u00A0 ensures the space can NEVER break into a second line
         const sanitizeChild = (val: any): any => {
           if (typeof val === 'string') {
-            return val.endsWith(' ') ? val : val + ' ';
+            if (val.length === 0 || val.endsWith(' ') || val.endsWith('\u00A0')) {
+              return val;
+            }
+            return val + '\u00A0';
           }
           if (typeof val === 'number') {
-            return String(val) + ' ';
+            return String(val) + '\u00A0';
           }
           return val;
         };

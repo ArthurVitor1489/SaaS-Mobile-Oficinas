@@ -76,7 +76,7 @@ export default function OSListScreen() {
   return (
     <View style={[styles.screenContainer, { backgroundColor: colors.background }]}>
       <View style={styles.screenHeader}>
-        <Text style={[styles.tabTitle, { color: colors.text }]}>Ordens de Serviço</Text>
+        <Text style={[styles.tabTitle, { color: colors.text }]} numberOfLines={1}>Ordens de Serviço</Text>
         <TouchableOpacity style={styles.actionButton} onPress={handleOpenOSWizardForCreate}>
           <Plus size={16} color="#fff" />
           <Text style={styles.actionButtonText}>Nova OS</Text>
@@ -264,6 +264,9 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: theme.colors.text,
+    flex: 1,
+    marginRight: 8,
+    includeFontPadding: false,
   },
   actionButton: {
     backgroundColor: theme.colors.primary,
@@ -275,11 +278,13 @@ const styles = StyleSheet.create({
     borderRadius: theme.roundness.sm,
     minHeight: 48,
     justifyContent: 'center',
+    flexShrink: 0,
   },
   actionButtonText: {
     color: theme.colors.white,
     fontWeight: 'bold',
     fontSize: 13,
+    includeFontPadding: false,
   },
   searchBarWrapper: {
     flexDirection: 'row',
@@ -300,7 +305,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statusFilterTab: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: theme.roundness.sm,
     borderWidth: 1,
@@ -309,16 +314,17 @@ const styles = StyleSheet.create({
     marginRight: 6,
     minHeight: 34,
     justifyContent: 'center',
+    flexShrink: 0,
   },
   statusFilterTabActive: {
     borderColor: theme.colors.primary,
     backgroundColor: theme.colors.primary,
   },
   statusFilterTabText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: 'bold',
-    textTransform: 'uppercase',
     color: theme.colors.textMuted,
+    includeFontPadding: false,
   },
   statusFilterTabTextActive: {
     color: theme.colors.white,
@@ -374,7 +380,8 @@ const styles = StyleSheet.create({
   osNum: {
     fontSize: 14,
     color: theme.colors.primary,
-    fontWeight: '900',
+    fontWeight: 'bold',
+    includeFontPadding: false,
   },
   statusBadge: {
     paddingHorizontal: 8,
@@ -383,14 +390,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   statusBadgeText: {
-    fontSize: 9,
-    fontWeight: '900',
+    fontSize: 10,
+    fontWeight: 'bold',
     textTransform: 'uppercase',
+    includeFontPadding: false,
   },
   osDate: {
     fontSize: 11,
     color: theme.colors.textMuted,
     fontWeight: 'bold',
+    includeFontPadding: false,
   },
   cardLabelText: {
     fontSize: 11,
@@ -398,21 +407,25 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textTransform: 'uppercase',
     marginTop: 4,
+    includeFontPadding: false,
   },
   cardValueTextBold: {
     fontSize: 13,
     color: theme.colors.text,
     fontWeight: 'bold',
     marginTop: 1,
+    includeFontPadding: false,
   },
   cardValueText: {
     fontSize: 12,
     color: theme.colors.textDim,
     marginTop: 1,
+    includeFontPadding: false,
   },
   plateText: {
     fontWeight: 'bold',
     color: '#cbd5e1',
+    includeFontPadding: false,
   },
   cardFooterRow: {
     flexDirection: 'row',
@@ -429,12 +442,14 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   billingStatusBadgeText: {
-    fontSize: 9,
-    fontWeight: '900',
+    fontSize: 10,
+    fontWeight: 'bold',
+    includeFontPadding: false,
   },
   osTotalVal: {
     fontSize: 15,
     color: theme.colors.white,
-    fontWeight: '900',
+    fontWeight: 'bold',
+    includeFontPadding: false,
   },
 });

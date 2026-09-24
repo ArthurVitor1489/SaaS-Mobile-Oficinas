@@ -34,7 +34,7 @@ export default function ClientsListScreen() {
   return (
     <View style={[styles.screenContainer, { backgroundColor: colors.background }]}>
       <View style={styles.screenHeader}>
-        <Text style={[styles.tabTitle, { color: colors.text }]}>Clientes e Veículos</Text>
+        <Text style={[styles.tabTitle, { color: colors.text }]} numberOfLines={1}>Clientes</Text>
         <TouchableOpacity style={styles.actionButton} onPress={handleOpenClientModalForCreate}>
           <UserPlus size={16} color="#fff" />
           <Text style={styles.actionButtonText}>Novo Cliente</Text>
@@ -133,6 +133,9 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: theme.colors.text,
+    flex: 1,
+    marginRight: 8,
+    includeFontPadding: false,
   },
   actionButton: {
     backgroundColor: theme.colors.primary,
@@ -144,11 +147,13 @@ const styles = StyleSheet.create({
     borderRadius: theme.roundness.sm,
     minHeight: 48,
     justifyContent: 'center',
+    flexShrink: 0,
   },
   actionButtonText: {
     color: theme.colors.white,
     fontWeight: 'bold',
     fontSize: 13,
+    includeFontPadding: false,
   },
   searchBarWrapper: {
     flexDirection: 'row',
@@ -193,6 +198,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: 'bold',
     color: theme.colors.text,
+    includeFontPadding: false,
   },
   clientListItemMeta: {
     flexDirection: 'row',
@@ -203,6 +209,7 @@ const styles = StyleSheet.create({
   clientListItemPhone: {
     fontSize: 12,
     color: theme.colors.textDim,
+    includeFontPadding: false,
   },
   dotSeparator: {
     width: 4,
@@ -213,15 +220,17 @@ const styles = StyleSheet.create({
   carsBadge: {
     backgroundColor: 'rgba(59, 102, 255, 0.1)',
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 3,
     borderRadius: 8,
     borderWidth: 0.5,
     borderColor: 'rgba(59, 102, 255, 0.3)',
+    flexShrink: 0,
   },
   carsBadgeText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: 'bold',
     color: theme.colors.primary,
+    includeFontPadding: false,
   },
   platesRow: {
     flexDirection: 'row',
@@ -230,12 +239,13 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   plateItemBadge: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: 'bold',
     color: '#cbd5e1',
     backgroundColor: '#272e3f',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
+    includeFontPadding: false,
   },
 });

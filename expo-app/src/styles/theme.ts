@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { useAppStore } from '../store/useAppStore';
 
 export interface ThemeColors {
@@ -89,19 +90,27 @@ export const theme = {
     caption: {
       fontSize: 10,
       fontWeight: 'bold' as const,
+      fontFamily: Platform.OS === 'android' ? 'Roboto' : undefined,
+      includeFontPadding: false,
     },
     body: {
       fontSize: 14,
       color: '#ffffff',
+      fontFamily: Platform.OS === 'android' ? 'Roboto' : undefined,
+      includeFontPadding: false,
     },
     title: {
       fontSize: 18,
       fontWeight: 'bold' as const,
       color: '#ffffff',
+      fontFamily: Platform.OS === 'android' ? 'Roboto' : undefined,
+      includeFontPadding: false,
     },
     subtitle: {
       fontSize: 14,
       color: '#64748b',
+      fontFamily: Platform.OS === 'android' ? 'Roboto' : undefined,
+      includeFontPadding: false,
     },
   },
 };

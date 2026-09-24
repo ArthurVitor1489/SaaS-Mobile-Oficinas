@@ -41,7 +41,7 @@ export default function MoreMenuScreen() {
             <View style={[styles.iconBg, { backgroundColor: 'rgba(34, 197, 94, 0.12)' }]}>
               <TrendingUp size={18} color="#22c55e" />
             </View>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={[styles.menuItemTitle, { color: colors.text }]}>Fluxo de Caixa & Despesas</Text>
               <Text style={[styles.menuItemSubtitle, { color: colors.textMuted }]}>Entradas, saídas e lançamentos</Text>
             </View>
@@ -57,7 +57,7 @@ export default function MoreMenuScreen() {
             <View style={[styles.iconBg, { backgroundColor: 'rgba(59, 102, 255, 0.1)' }]}>
               <Tag size={18} color={colors.primary} />
             </View>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={[styles.menuItemTitle, { color: colors.text }]}>Catálogo da Oficina</Text>
               <Text style={[styles.menuItemSubtitle, { color: colors.textMuted }]}>Serviços e peças cadastrados</Text>
             </View>
@@ -73,7 +73,7 @@ export default function MoreMenuScreen() {
             <View style={[styles.iconBg, { backgroundColor: 'rgba(100, 116, 139, 0.1)' }]}>
               <Settings size={18} color="#94a3b8" />
             </View>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={[styles.menuItemTitle, { color: colors.text }]}>Configurações da Oficina</Text>
               <Text style={[styles.menuItemSubtitle, { color: colors.textMuted }]}>Ajustes e exportação de backups</Text>
             </View>
@@ -89,7 +89,7 @@ export default function MoreMenuScreen() {
             <View style={[styles.iconBg, { backgroundColor: 'rgba(34, 197, 94, 0.12)' }]}>
               <MessageCircle size={18} color="#22c55e" />
             </View>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={[styles.menuItemTitle, { color: '#22c55e' }]}>Suporte via WhatsApp</Text>
               <Text style={[styles.menuItemSubtitle, { color: colors.textMuted }]}>Atendimento direto e suporte técnico</Text>
             </View>
@@ -105,7 +105,7 @@ export default function MoreMenuScreen() {
             <View style={[styles.iconBg, { backgroundColor: 'rgba(59, 102, 255, 0.1)' }]}>
               <Shield size={18} color={colors.primary} />
             </View>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={[styles.menuItemTitle, { color: colors.text }]}>Termos & Privacidade</Text>
               <Text style={[styles.menuItemSubtitle, { color: colors.textMuted }]}>Políticas de uso e proteção de dados</Text>
             </View>
@@ -121,7 +121,7 @@ export default function MoreMenuScreen() {
             <View style={[styles.iconBg, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
               <LogOut size={18} color="#ef4444" />
             </View>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={[styles.menuItemTitle, { color: '#ef4444' }]}>Sair da Conta</Text>
               <Text style={[styles.menuItemSubtitle, { color: colors.textMuted }]}>Desconectar do painel da oficina</Text>
             </View>
@@ -188,6 +188,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
+    flex: 1,
+    marginRight: 8,
   },
   iconBg: {
     padding: 10,
@@ -197,16 +199,19 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: 'bold',
     color: theme.colors.text,
+    includeFontPadding: false,
   },
   menuItemSubtitle: {
     fontSize: 12,
     color: theme.colors.textMuted,
     marginTop: 2,
+    includeFontPadding: false,
   },
   versionText: {
     textAlign: 'center',
     fontSize: 11,
     color: theme.colors.textMuted,
     marginTop: 24,
+    includeFontPadding: false,
   },
 });

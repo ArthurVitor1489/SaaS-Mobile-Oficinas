@@ -371,15 +371,17 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   metricTitle: {
-    fontSize: 9,
-    fontWeight: '900',
+    fontSize: 10,
+    fontWeight: 'bold',
     color: theme.colors.textMuted,
     letterSpacing: 0.8,
+    includeFontPadding: false,
   },
   metricValue: {
     fontSize: 18,
-    fontWeight: '900',
+    fontWeight: 'bold',
     color: theme.colors.text,
+    includeFontPadding: false,
   },
   quickCountsRow: {
     flexDirection: 'row',
@@ -420,10 +422,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   chartPreTitle: {
-    fontSize: 7,
-    fontWeight: '900',
+    fontSize: 9,
+    fontWeight: 'bold',
     color: theme.colors.textMuted,
     letterSpacing: 0.8,
+    includeFontPadding: false,
   },
   chartTitle: {
     fontSize: 11,
@@ -587,13 +590,15 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   billingStatusBadgeText: {
-    fontSize: 9,
-    fontWeight: '900',
+    fontSize: 10,
+    fontWeight: 'bold',
+    includeFontPadding: false,
   },
   osTotal: {
     fontSize: 15,
     color: theme.colors.white,
-    fontWeight: '900',
+    fontWeight: 'bold',
+    includeFontPadding: false,
   },
   cardInflow: {
     borderColor: 'rgba(34, 197, 94, 0.15)',
@@ -635,8 +640,9 @@ const styles = StyleSheet.create({
   },
   metricValuePrimary: {
     fontSize: 18,
-    fontWeight: '900',
+    fontWeight: 'bold',
     color: theme.colors.primary,
+    includeFontPadding: false,
   },
   listItemCol: {
     flexDirection: 'column',

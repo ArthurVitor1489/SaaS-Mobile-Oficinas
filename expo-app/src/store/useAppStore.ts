@@ -237,7 +237,7 @@ export const useAppStore = create<AppState>()(
         offlineQueue: state.offlineQueue.filter((item) => item.id !== id)
       })),
       clearLocalData: () => {
-        set({
+        set((state) => ({
           clients: [],
           vehicles: [],
           services: [],
@@ -246,7 +246,11 @@ export const useAppStore = create<AppState>()(
           billings: [],
           transactions: [],
           offlineQueue: [],
-        });
+          settings: {
+            ...state.settings,
+            nextOSNumber: 1,
+          },
+        }));
       },
       deleteAccount: async () => {
         try {

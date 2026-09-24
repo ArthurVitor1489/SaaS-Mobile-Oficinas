@@ -134,6 +134,24 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleResetData = () => {
+    Alert.alert(
+      '⚠️ Limpar Todos os Registros',
+      'Deseja apagar todos os clientes, veículos, ordens de serviço, peças e faturamentos salvos neste dispositivo? O aplicativo ficará totalmente limpo e zerado.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Sim, Limpar Tudo', 
+          style: 'destructive',
+          onPress: async () => {
+            await resetDatabase();
+            Alert.alert('Sucesso', 'Todos os registros foram limpos. O aplicativo está 100% zerado.');
+          }
+        }
+      ]
+    );
+  };
+
   const handleDeleteAccount = () => {
     Alert.alert(
       '⚠️ Excluir Minha Conta e Dados',
@@ -321,6 +339,11 @@ export default function SettingsScreen() {
           <TouchableOpacity style={[styles.actionGridBtn, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={handleExportCsv}>
             <Text style={[styles.actionGridBtnTitle, { color: colors.text }]}>Relatório Excel (.CSV)</Text>
             <Text style={[styles.actionGridBtnDesc, { color: colors.textMuted }]}>Exportar lista completa de ordens</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[styles.actionGridBtn, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={handleResetData}>
+            <Text style={[styles.actionGridBtnTitle, { color: '#f59e0b' }]}>Limpar Todos os Registros</Text>
+            <Text style={[styles.actionGridBtnDesc, { color: colors.textMuted }]}>Zerar clientes, veículos, OS e dados de teste</Text>
           </TouchableOpacity>
         </View>
 

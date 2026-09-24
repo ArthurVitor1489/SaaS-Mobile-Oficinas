@@ -43,18 +43,55 @@ export class OrdersService {
   }
 
   async create(tenantId: string, dto: CreateOrderDto) {
-    const client = await this.prisma.client.findFirst({
+    if (dto.id) {
+      const existingOrder = await this.prisma.workOrder.findFirst({
+        where: { id: dto.id, tenantId },
+        include: { services: true, parts: true, billing: true },
+      });
+      if (existingOrder) {
+        return existingOrder;
+      }
+    }
+
+    let client = await this.prisma.client.findFirst({
       where: { id: dto.clientId, tenantId },
     });
     if (!client) {
-      throw new BadRequestException('Cliente não encontrado.');
+      client = await this.prisma.client.findFirst({
+        where: { id: dto.clientId },
+      });
+      if (!client) {
+        client = await this.prisma.client.create({
+          data: {
+            id: dto.clientId,
+            tenantId,
+            name: 'Cliente Balcão',
+            phone: '0000000000',
+          },
+        });
+      }
     }
 
-    const vehicle = await this.prisma.vehicle.findFirst({
+    let vehicle = await this.prisma.vehicle.findFirst({
       where: { id: dto.vehicleId, tenantId },
     });
     if (!vehicle) {
-      throw new BadRequestException('Veículo não encontrado.');
+      vehicle = await this.prisma.vehicle.findFirst({
+        where: { id: dto.vehicleId },
+      });
+      if (!vehicle) {
+        vehicle = await this.prisma.vehicle.create({
+          data: {
+            id: dto.vehicleId,
+            tenantId,
+            clientId: client.id,
+            plate: 'SEM-PLACA',
+            brand: 'Geral',
+            model: 'Veículo',
+            year: new Date().getFullYear().toString(),
+          },
+        });
+      }
     }
 
     const servicesTotal = dto.services.reduce((acc, s) => acc + s.price * s.quantity, 0);
@@ -70,12 +107,14 @@ export class OrdersService {
       }
 
       const currentNext = workshop.nextOSNumber;
-      const osNumber = `OS-${String(currentNext).padStart(4, '0')}`;
+      const osNumber = dto.osNumber || `OS-${String(currentNext).padStart(4, '0')}`;
 
-      await tx.workshop.update({
-        where: { id: tenantId },
-        data: { nextOSNumber: currentNext + 1 },
-      });
+      if (!dto.osNumber) {
+        await tx.workshop.update({
+          where: { id: tenantId },
+          data: { nextOSNumber: currentNext + 1 },
+        });
+      }
 
       const workOrder = await tx.workOrder.create({
         data: {

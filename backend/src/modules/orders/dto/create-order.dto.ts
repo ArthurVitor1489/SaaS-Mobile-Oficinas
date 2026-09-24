@@ -39,6 +39,10 @@ export class CreateOrderDto {
   id?: string;
 
   @IsString()
+  @IsOptional()
+  osNumber?: string;
+
+  @IsString()
   @IsNotEmpty()
   date: string;
 

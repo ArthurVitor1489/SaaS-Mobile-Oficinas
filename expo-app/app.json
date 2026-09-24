@@ -17,9 +17,15 @@
     },
     "android": {
       "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.jpg",
         "backgroundColor": "#0f1115"
       },
-      "package": "com.mecanicapro.app"
+      "package": "com.mecanicapro.app",
+      "versionCode": 1,
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ]
     },
     "web": {
       "bundler": "metro"

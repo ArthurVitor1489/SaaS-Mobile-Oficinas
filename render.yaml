@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: mecanicapro-api
+    runtime: node
+    rootDir: backend
+    region: ohio
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: node dist/main.js
+    envVars:
+      - key: DATABASE_URL
+        value: file:./dev.db
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false
+      - key: JWT_SECRET
+        value: voltruck-saas-super-secret-access-key-2026
+      - key: JWT_REFRESH_SECRET
+        value: voltruck-saas-super-secret-refresh-key-2026
+      - key: JWT_EXPIRES_IN
+        value: 1d
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d

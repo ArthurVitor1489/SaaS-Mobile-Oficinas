@@ -58,17 +58,17 @@ export default function CatalogPartModal({
   };
 
   const handleSave = async () => {
-    if (!form.name.trim() || !form.code.trim() || !form.salePrice.trim() || !form.stock.trim()) {
+    if (!form.name.trim() || !form.salePrice.trim()) {
       Alert.alert('Erro', 'Por favor, preencha os campos obrigatórios (*).');
       return;
     }
 
     const salePriceVal = parseFloat(form.salePrice.replace(',', '.'));
     const purchasePriceVal = parseFloat(form.purchasePrice.replace(',', '.')) || 0;
-    const stockVal = parseFloat(form.stock) || 0;
+    const stockVal = form.stock.trim() ? (parseInt(form.stock) || 0) : 0;
 
-    if (isNaN(salePriceVal) || salePriceVal < 0) {
-      Alert.alert('Erro', 'Por favor, informe um preço de venda numérico válido.');
+    if (isNaN(salePriceVal) || salePriceVal <= 0) {
+      Alert.alert('Erro', 'Por favor, informe um preço de venda numérico válido maior que zero.');
       return;
     }
 
@@ -77,8 +77,8 @@ export default function CatalogPartModal({
       return;
     }
 
-    if (isNaN(stockVal) || stockVal < 0 || !Number.isInteger(stockVal)) {
-      Alert.alert('Erro', 'Por favor, informe uma quantidade em estoque inteira e válida.');
+    if (stockVal < 0) {
+      Alert.alert('Erro', 'Por favor, informe uma quantidade em estoque válida.');
       return;
     }
 
@@ -122,10 +122,10 @@ export default function CatalogPartModal({
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.modalBg}
       >
-        <View style={[styles.modalContent, { backgroundColor: colors.card, paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : theme.spacing.xxl }]}>
+        <View style={[styles.modalContent, { backgroundColor: colors.card, paddingBottom: Math.max(theme.spacing.xxl, insets.bottom + 16) }]}>
           <View style={styles.modalHeader}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>
               {editingPartId ? 'Editar Peça' : 'Adicionar Peça ao Catálogo'}
@@ -146,7 +146,7 @@ export default function CatalogPartModal({
               style={inputStyle}
             />
 
-            <Text style={labelStyle}>Código / Referência SKU *</Text>
+            <Text style={labelStyle}>Código / Referência SKU (Opcional)</Text>
             <TextInput
               placeholder="Ex: 20565617"
               placeholderTextColor={placeholderColor}
@@ -189,7 +189,7 @@ export default function CatalogPartModal({
               style={inputStyle}
             />
 
-            <Text style={labelStyle}>Quantidade em Estoque *</Text>
+            <Text style={labelStyle}>Quantidade em Estoque (Opcional)</Text>
             <TextInput
               placeholder="Ex: 15"
               placeholderTextColor={placeholderColor}

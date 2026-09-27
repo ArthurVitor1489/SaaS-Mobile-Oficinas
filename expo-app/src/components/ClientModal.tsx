@@ -6,7 +6,7 @@ import {
 import { X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme, useTheme } from '../styles/theme';
-import { validateEmail, validateCpfCnpj, validatePhone, containsInjection } from '../utils/formatters';
+import { validateEmail, validateCpfCnpj, validatePhone, containsInjection, maskCpfCnpj, maskPhone } from '../utils/formatters';
 
 interface ClientForm {
   name: string;
@@ -119,10 +119,10 @@ export default function ClientModal({
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.modalBg}
       >
-        <View style={[styles.modalContent, { backgroundColor: colors.card, paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : theme.spacing.xxl }]}>
+        <View style={[styles.modalContent, { backgroundColor: colors.card, paddingBottom: Math.max(theme.spacing.xxl, insets.bottom + 16) }]}>
           <View style={styles.modalHeader}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>
               {editingClientId ? 'Editar Cliente' : 'Cadastrar Novo Cliente'}
@@ -145,33 +145,34 @@ export default function ClientModal({
 
             <Text style={labelStyle}>CPF / CNPJ</Text>
             <TextInput
-              placeholder="Ex: 123.456.789-00"
+              placeholder="000.000.000-00 ou 00.000.000/0000-00"
               placeholderTextColor={placeholderColor}
+              keyboardType="numeric"
               value={form.cpfCnpj}
-              onChangeText={t => setForm(prev => ({ ...prev, cpfCnpj: t }))}
-              maxLength={20}
+              onChangeText={t => setForm(prev => ({ ...prev, cpfCnpj: maskCpfCnpj(t) }))}
+              maxLength={18}
               style={inputStyle}
             />
 
             <Text style={labelStyle}>Telefone *</Text>
             <TextInput
-              placeholder="Ex: (11) 4500-0000"
+              placeholder="(00) 0000-0000"
               placeholderTextColor={placeholderColor}
               keyboardType="phone-pad"
               value={form.phone}
-              onChangeText={t => setForm(prev => ({ ...prev, phone: t }))}
-              maxLength={20}
+              onChangeText={t => setForm(prev => ({ ...prev, phone: maskPhone(t) }))}
+              maxLength={15}
               style={inputStyle}
             />
 
             <Text style={labelStyle}>WhatsApp / Celular</Text>
             <TextInput
-              placeholder="Ex: (11) 99999-9999"
+              placeholder="(00) 00000-0000"
               placeholderTextColor={placeholderColor}
               keyboardType="phone-pad"
               value={form.whatsapp}
-              onChangeText={t => setForm(prev => ({ ...prev, whatsapp: t }))}
-              maxLength={20}
+              onChangeText={t => setForm(prev => ({ ...prev, whatsapp: maskPhone(t) }))}
+              maxLength={15}
               style={inputStyle}
             />
 

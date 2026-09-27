@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, Modal, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { X, Shield, FileText } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme, useTheme } from '../styles/theme';
 
 interface TermsPrivacyModalProps {
@@ -11,6 +12,7 @@ interface TermsPrivacyModalProps {
 
 export default function TermsPrivacyModal({ visible, onClose, initialTab = 'terms' }: TermsPrivacyModalProps) {
   const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<'terms' | 'privacy'>(initialTab);
 
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
@@ -18,7 +20,7 @@ export default function TermsPrivacyModal({ visible, onClose, initialTab = 'term
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.modalBg}>
-        <View style={styles.modalCard}>
+        <View style={[styles.modalCard, { paddingBottom: Math.max(20, insets.bottom + 16) }]}>
           <View style={styles.header}>
             <View style={styles.headerTitleRow}>
               <Shield size={20} color={colors.primary} style={{ marginRight: 8 }} />

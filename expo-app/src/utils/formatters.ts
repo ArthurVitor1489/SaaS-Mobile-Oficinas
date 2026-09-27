@@ -118,6 +118,40 @@ export const formatPhone = (phone: string) => {
   return cleaned.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
 };
 
+/**
+ * Máscara dinâmica em tempo real para CPF (11 dígitos) e CNPJ (14 dígitos)
+ */
+export const maskCpfCnpj = (val: string): string => {
+  const digits = val.replace(/\D/g, '').slice(0, 14);
+  if (digits.length <= 11) {
+    // CPF: 000.000.000-00
+    return digits
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+  }
+  // CNPJ: 00.000.000/0000-00
+  return digits
+    .replace(/^(\d{2})(\d)/, '$1.$2')
+    .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+    .replace(/\.(\d{3})(\d)/, '.$1/$2')
+    .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+};
+
+/**
+ * Máscara dinâmica em tempo real para Telefone / WhatsApp
+ */
+export const maskPhone = (val: string): string => {
+  const digits = val.replace(/\D/g, '').slice(0, 11);
+  if (!digits) return '';
+  if (digits.length <= 2) return `(${digits}`;
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+};
+
 export const validateEmail = (email: string) => {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return re.test(email);

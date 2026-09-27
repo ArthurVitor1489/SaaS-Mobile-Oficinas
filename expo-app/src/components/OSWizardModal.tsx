@@ -3,11 +3,14 @@ import {
   Modal, View, Text, TextInput, TouchableOpacity, ScrollView,
   KeyboardAvoidingView, Platform, StyleSheet, Alert
 } from 'react-native';
-import { X, Search, Check, ClipboardList, Play, CheckCircle } from 'lucide-react-native';
+import { X, Search, Check, ClipboardList, Play, CheckCircle, Plus } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme, useTheme } from '../styles/theme';
 import { formatCurrency, containsInjection } from '../utils/formatters';
 import { Client, Vehicle, ServiceItem, PartItem, OSItemService, OSItemPart, OSStatus } from '../types';
+import { useDatabase } from '../context/DatabaseContext';
+import CatalogServiceModal from './CatalogServiceModal';
+import CatalogPartModal from './CatalogPartModal';
 
 interface OSForm {
   clientId: string;
@@ -53,12 +56,18 @@ export default function OSWizardModal({
   const { colors, isDark } = useTheme();
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const insets = useSafeAreaInsets();
+  const { addService, addPart, services: dbServices, parts: dbParts } = useDatabase();
   const [wizardStep, setWizardStep] = useState(1);
   const [form, setForm] = useState<OSForm>(emptyForm());
   const [clientSearch, setClientSearch] = useState('');
   const [serviceSearch, setServiceSearch] = useState('');
   const [partSearch, setPartSearch] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [quickServiceModalVisible, setQuickServiceModalVisible] = useState(false);
+  const [quickPartModalVisible, setQuickPartModalVisible] = useState(false);
+
+  const availableServices = (dbServices && dbServices.length > 0) ? dbServices : services;
+  const availableParts = (dbParts && dbParts.length > 0) ? dbParts : parts;
 
   useEffect(() => {
     if (visible) {
@@ -131,6 +140,44 @@ export default function OSWizardModal({
     }
   };
 
+  const handleQuickServiceSubmit = async (serviceForm: any) => {
+    const priceVal = parseFloat(serviceForm.price.replace(',', '.')) || 0;
+    const res = await addService({
+      name: serviceForm.name.trim(),
+      code: serviceForm.code ? serviceForm.code.trim().toUpperCase() : '',
+      description: serviceForm.description ? serviceForm.description.trim() : '',
+      price: priceVal,
+    });
+    if (res) {
+      handleUpdateServiceQty(res, 1);
+      setQuickServiceModalVisible(false);
+      Alert.alert('Sucesso', `"${res.name}" foi cadastrado no catálogo e adicionado à OS!`);
+      return true;
+    }
+    return false;
+  };
+
+  const handleQuickPartSubmit = async (partForm: any) => {
+    const salePriceVal = parseFloat(partForm.salePrice.replace(',', '.')) || 0;
+    const purchasePriceVal = parseFloat(partForm.purchasePrice.replace(',', '.')) || 0;
+    const stockVal = partForm.stock ? (parseInt(partForm.stock) || 0) : 0;
+    const res = await addPart({
+      name: partForm.name.trim(),
+      code: partForm.code ? partForm.code.trim().toUpperCase() : '',
+      supplier: partForm.supplier ? partForm.supplier.trim() : '',
+      purchasePrice: purchasePriceVal,
+      salePrice: salePriceVal,
+      stock: stockVal,
+    });
+    if (res) {
+      handleUpdatePartQty(res, 1);
+      setQuickPartModalVisible(false);
+      Alert.alert('Sucesso', `"${res.name}" foi cadastrada no estoque e adicionada à OS!`);
+      return true;
+    }
+    return false;
+  };
+
   const handleSave = async () => {
     if (!form.clientId || !form.vehicleId) {
       Alert.alert('Erro', 'Por favor, selecione um cliente e um veículo.');
@@ -168,16 +215,16 @@ export default function OSWizardModal({
   }, [clients, clientSearch]);
 
   const filteredServices = useMemo(() => {
-    return services.filter(s =>
+    return availableServices.filter(s =>
       s.name.toLowerCase().includes(serviceSearch.toLowerCase())
     );
-  }, [services, serviceSearch]);
+  }, [availableServices, serviceSearch]);
 
   const filteredParts = useMemo(() => {
-    return parts.filter(p =>
+    return availableParts.filter(p =>
       p.name.toLowerCase().includes(partSearch.toLowerCase())
     );
-  }, [parts, partSearch]);
+  }, [availableParts, partSearch]);
 
   const clientCars = useMemo(() => {
     if (!form.clientId) return [];
@@ -185,12 +232,13 @@ export default function OSWizardModal({
   }, [vehicles, form.clientId]);
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
+    <>
+      <Modal visible={visible} animationType="slide" transparent>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.modalBg}
       >
-        <View style={[styles.modalContent, { backgroundColor: colors.card, paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : theme.spacing.xxl }]}>
+        <View style={[styles.modalContent, { backgroundColor: colors.card, paddingBottom: Math.max(theme.spacing.xxl, insets.bottom + 16) }]}>
           <View style={styles.modalHeader}>
             <View>
               <Text style={[styles.modalTitle, { color: colors.text }]}>
@@ -326,7 +374,17 @@ export default function OSWizardModal({
           {/* STEP 2: ADD SERVICES */}
           {wizardStep === 2 && (
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16 }}>
-              <Text style={styles.inputLabel}>Adicionar Serviços ao Orçamento</Text>
+              <View style={styles.stepHeaderRow}>
+                <Text style={styles.inputLabel}>Adicionar Serviços ao Orçamento</Text>
+                <TouchableOpacity
+                  style={[styles.quickAddHeaderBtn, { borderColor: colors.primary, backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#eff6ff' }]}
+                  onPress={() => setQuickServiceModalVisible(true)}
+                  activeOpacity={0.7}
+                >
+                  <Plus size={14} color={colors.primary} style={{ marginRight: 4 }} />
+                  <Text style={[styles.quickAddHeaderBtnText, { color: colors.primary }]}>+ Novo Serviço</Text>
+                </TouchableOpacity>
+              </View>
 
               <View style={styles.searchWrapper}>
                 <Search size={18} color={colors.textMuted} style={styles.searchIcon} />
@@ -350,6 +408,14 @@ export default function OSWizardModal({
                   {filteredServices.length === 0 ? (
                     <View style={styles.emptySearchWrapper}>
                       <Text style={styles.emptySearchText}>Nenhum serviço disponível</Text>
+                      <TouchableOpacity
+                        style={[styles.quickAddEmptyBtn, { backgroundColor: colors.primary }]}
+                        onPress={() => setQuickServiceModalVisible(true)}
+                        activeOpacity={0.8}
+                      >
+                        <Plus size={16} color="#ffffff" style={{ marginRight: 6 }} />
+                        <Text style={styles.quickAddEmptyBtnText}>Cadastrar Serviço Agora</Text>
+                      </TouchableOpacity>
                     </View>
                   ) : (
                     filteredServices.map(s => {
@@ -426,7 +492,17 @@ export default function OSWizardModal({
           {/* STEP 3: ADD PARTS */}
           {wizardStep === 3 && (
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16 }}>
-              <Text style={styles.inputLabel}>Adicionar Peças ao Orçamento</Text>
+              <View style={styles.stepHeaderRow}>
+                <Text style={styles.inputLabel}>Adicionar Peças ao Orçamento</Text>
+                <TouchableOpacity
+                  style={[styles.quickAddHeaderBtn, { borderColor: colors.primary, backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#eff6ff' }]}
+                  onPress={() => setQuickPartModalVisible(true)}
+                  activeOpacity={0.7}
+                >
+                  <Plus size={14} color={colors.primary} style={{ marginRight: 4 }} />
+                  <Text style={[styles.quickAddHeaderBtnText, { color: colors.primary }]}>+ Nova Peça</Text>
+                </TouchableOpacity>
+              </View>
 
               <View style={styles.searchWrapper}>
                 <Search size={18} color={colors.textMuted} style={styles.searchIcon} />
@@ -450,6 +526,14 @@ export default function OSWizardModal({
                   {filteredParts.length === 0 ? (
                     <View style={styles.emptySearchWrapper}>
                       <Text style={styles.emptySearchText}>Nenhuma peça disponível</Text>
+                      <TouchableOpacity
+                        style={[styles.quickAddEmptyBtn, { backgroundColor: colors.primary }]}
+                        onPress={() => setQuickPartModalVisible(true)}
+                        activeOpacity={0.8}
+                      >
+                        <Plus size={16} color="#ffffff" style={{ marginRight: 6 }} />
+                        <Text style={styles.quickAddEmptyBtnText}>Cadastrar Peça Agora</Text>
+                      </TouchableOpacity>
                     </View>
                   ) : (
                     filteredParts.map(p => {
@@ -581,6 +665,23 @@ export default function OSWizardModal({
         </View>
       </KeyboardAvoidingView>
     </Modal>
+
+    <CatalogServiceModal
+      visible={quickServiceModalVisible}
+      editingServiceId={null}
+      initialForm={null}
+      onClose={() => setQuickServiceModalVisible(false)}
+      onSubmit={handleQuickServiceSubmit}
+    />
+
+    <CatalogPartModal
+      visible={quickPartModalVisible}
+      editingPartId={null}
+      initialForm={null}
+      onClose={() => setQuickPartModalVisible(false)}
+      onSubmit={handleQuickPartSubmit}
+    />
+  </>
   );
 }
 
@@ -969,5 +1070,36 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     height: 1,
     backgroundColor: colors.border,
     marginVertical: 4,
+  },
+  stepHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  quickAddHeaderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: theme.roundness.sm,
+    borderWidth: 1,
+  },
+  quickAddHeaderBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  quickAddEmptyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: theme.roundness.md,
+    marginTop: 12,
+  },
+  quickAddEmptyBtnText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

@@ -185,8 +185,8 @@ export default function CreateBillingModal({
       setIsPaidNow(true);
       setInstallmentsCount(1);
     } else if (paymentMethod === 'Crédito') {
-      // No cartão de crédito, a adquirente repassa o valor total da venda para a oficina (venda quitada)
-      setIsPaidNow(true);
+      // Se parcelado (> 1x), as parcelas ficam pendentes para controle mensal a receber por padrão
+      setIsPaidNow(installmentsCount === 1);
     } else if (paymentMethod === 'Boleto') {
       setIsPaidNow(false);
       applyBoletoPreset(boletoPreset || '30d', finalAmount);
@@ -807,7 +807,10 @@ export default function CreateBillingModal({
                       <TouchableOpacity
                         key={num}
                         style={[styles.instNumBtn, installmentsCount === num && styles.instNumBtnActive]}
-                        onPress={() => setInstallmentsCount(num)}
+                        onPress={() => {
+                          setInstallmentsCount(num);
+                          setIsPaidNow(num === 1);
+                        }}
                       >
                         <Text style={[styles.instNumText, installmentsCount === num && styles.instNumTextActive]}>
                           {num}x

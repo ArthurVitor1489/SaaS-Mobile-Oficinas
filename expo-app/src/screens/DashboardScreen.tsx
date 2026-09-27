@@ -1,12 +1,12 @@
-import React, { useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useMemo, useCallback } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, BackHandler, Alert } from 'react-native';
 import { ClipboardList, Play, CheckCircle, Wallet, ArrowUpRight, ArrowDownRight, Clock, Sparkles, ChevronRight } from 'lucide-react-native';
 import { useDatabase } from '../context/DatabaseContext';
 import { theme, useTheme } from '../styles/theme';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { WorkOrder } from '../types';
 
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { MainTabParamList } from '../types/navigation';
 
@@ -14,6 +14,30 @@ export default function DashboardScreen() {
   const navigation = useNavigation<any>();
   const { colors, isDark } = useTheme();
   const { clients, vehicles, workOrders, billings, transactions } = useDatabase();
+
+  // Intercepta o botão voltar do Android apenas quando o usuário está na tela inicial
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        Alert.alert(
+          'Sair do MecânicaPro',
+          'Deseja realmente fechar o aplicativo?',
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            {
+              text: 'Sim, Sair',
+              style: 'destructive',
+              onPress: () => BackHandler.exitApp(),
+            },
+          ]
+        );
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [])
+  );
 
   // Metrics using useMemo to optimize re-renders
   const metrics = useMemo(() => {

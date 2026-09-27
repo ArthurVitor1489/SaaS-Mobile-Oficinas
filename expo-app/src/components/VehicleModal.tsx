@@ -121,10 +121,10 @@ export default function VehicleModal({
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.modalBg}
       >
-        <View style={[styles.modalContent, { backgroundColor: colors.card, paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : theme.spacing.xxl }]}>
+        <View style={[styles.modalContent, { backgroundColor: colors.card, paddingBottom: Math.max(theme.spacing.xxl, insets.bottom + 16) }]}>
           <View style={styles.modalHeader}>
             <View>
               <Text style={[styles.modalTitle, { color: colors.text }]}>
@@ -164,8 +164,8 @@ export default function VehicleModal({
               placeholderTextColor={placeholderColor}
               autoCapitalize="characters"
               value={form.plate}
-              onChangeText={t => setForm(prev => ({ ...prev, plate: t }))}
-              maxLength={10}
+              onChangeText={t => setForm(prev => ({ ...prev, plate: t.toUpperCase() }))}
+              maxLength={8}
               style={inputStyle}
             />
 

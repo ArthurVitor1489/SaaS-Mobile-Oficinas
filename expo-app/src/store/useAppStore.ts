@@ -302,9 +302,15 @@ export const useAppStore = create<AppState>()(
           await get().pullAll();
           return true;
         } catch (e: any) {
-          console.warn('Backend login falhou ou offline. Ativando autenticação resiliente local...', e?.message || e);
+          // Se o servidor respondeu com 401 ou 400, é uma rejeição explícita de credenciais incorretas!
+          if (e.response && (e.response.status === 401 || e.response.status === 400)) {
+            set({ loading: false });
+            return false;
+          }
+
+          console.warn('Backend offline ou erro de rede. Ativando autenticação resiliente local...', e?.message || e);
           
-          // Local/offline login fallback: allows admin@oficina.com / 123456 or any provided credentials
+          // Local/offline login fallback: allows admin@oficina.com / 123456 or any provided credentials ONLY when offline
           if (dto.email && dto.password) {
             const userName = dto.email.split('@')[0].replace(/[._-]/g, ' ');
             const formattedName = userName.charAt(0).toUpperCase() + userName.slice(1);
@@ -345,10 +351,16 @@ export const useAppStore = create<AppState>()(
         set({ loading: true });
         try {
           await api.post('/auth/signup', dto);
-          set({ loading: false });
-          return true;
+          // Efetua login imediatamente com a nova conta criada para receber o token e perfil da oficina
+          return await get().login({ email: dto.email, password: dto.password });
         } catch (e: any) {
-          console.warn('Backend signup falhou ou offline. Criando conta local...', e?.message || e);
+          // Se o servidor rejeitou (ex: e-mail duplicado), não mascara como offline
+          if (e.response && (e.response.status === 400 || e.response.status === 409)) {
+            set({ loading: false });
+            return false;
+          }
+
+          console.warn('Backend offline ou erro de rede. Criando conta local...', e?.message || e);
           const localUser: UserProfile = {
             id: 'local-user-' + Date.now(),
             name: dto.name || 'Gestor',

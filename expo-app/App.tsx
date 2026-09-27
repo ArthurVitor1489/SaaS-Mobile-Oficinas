@@ -18,6 +18,7 @@ import { useAppStore } from './src/store/useAppStore';
 import { startSyncEngine, stopSyncEngine, processOfflineQueue } from './src/services/syncEngine';
 import { theme, useTheme } from './src/styles/theme';
 import { DatabaseProvider } from './src/context/DatabaseContext';
+import { maskCpfCnpj, maskPhone } from './src/utils/formatters';
 
 // Screen Stacks
 import DashboardScreen from './src/screens/DashboardScreen';
@@ -356,20 +357,22 @@ function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
             <TextInput 
               style={[styles.modalInput, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]} 
               value={cnpj} 
-              onChangeText={setCnpj} 
+              onChangeText={(text) => setCnpj(maskCpfCnpj(text))} 
               placeholder="00.000.000/0001-00"
               placeholderTextColor={colors.textMuted}
               keyboardType="numeric"
+              maxLength={18}
             />
 
             <Text style={[styles.inputLabel, { color: colors.textDim }]}>Telefone / WhatsApp</Text>
             <TextInput 
               style={[styles.modalInput, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]} 
               value={phone} 
-              onChangeText={setPhone} 
+              onChangeText={(text) => setPhone(maskPhone(text))} 
               placeholder="(11) 99999-9999"
               placeholderTextColor={colors.textMuted}
               keyboardType="phone-pad"
+              maxLength={15}
             />
           </>
         )}

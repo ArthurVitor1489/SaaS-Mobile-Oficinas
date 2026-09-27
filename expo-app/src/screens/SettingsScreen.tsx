@@ -8,7 +8,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as DocumentPicker from 'expo-document-picker';
-import { formatCurrency, formatDate } from '../utils/formatters';
+import { formatCurrency, formatDate, maskCpfCnpj, maskPhone } from '../utils/formatters';
 import TermsPrivacyModal from '../components/TermsPrivacyModal';
 
 export default function SettingsScreen() {
@@ -249,30 +249,33 @@ export default function SettingsScreen() {
           <Text style={[styles.inputLabel, { color: colors.textMuted }]}>CNPJ da Empresa</Text>
           <TextInput
             value={cnpj}
-            onChangeText={setCnpj}
-            placeholder="Ex: 00.000.000/0001-00"
+            onChangeText={t => setCnpj(maskCpfCnpj(t))}
+            placeholder="00.000.000/0001-00"
             placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
-            maxLength={20}
+            keyboardType="numeric"
+            maxLength={18}
             style={[styles.formInput, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
           />
 
           <Text style={[styles.inputLabel, { color: colors.textMuted }]}>Telefone Comercial</Text>
           <TextInput
             value={phone}
-            onChangeText={setPhone}
-            placeholder="Ex: (11) 5555-5555"
+            onChangeText={t => setPhone(maskPhone(t))}
+            placeholder="(00) 0000-0000"
             placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
-            maxLength={20}
+            keyboardType="phone-pad"
+            maxLength={15}
             style={[styles.formInput, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
           />
 
           <Text style={[styles.inputLabel, { color: colors.textMuted }]}>WhatsApp Comercial</Text>
           <TextInput
             value={whatsapp}
-            onChangeText={setWhatsapp}
-            placeholder="Ex: (11) 99999-9999"
+            onChangeText={t => setWhatsapp(maskPhone(t))}
+            placeholder="(00) 00000-0000"
             placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
-            maxLength={20}
+            keyboardType="phone-pad"
+            maxLength={15}
             style={[styles.formInput, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
           />
 

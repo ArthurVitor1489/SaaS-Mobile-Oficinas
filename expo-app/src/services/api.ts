@@ -8,6 +8,11 @@ const getBaseUrl = () => {
     return process.env.EXPO_PUBLIC_API_URL;
   }
   
+  // Produção definitiva para nuvem pública (Render + Turso Cloud DB)
+  if (!__DEV__) {
+    return 'https://saas-mobile-oficinas.onrender.com';
+  }
+
   const debuggerHost = Constants.expoConfig?.hostUri;
   if (debuggerHost) {
     const ip = debuggerHost.split(':')[0];

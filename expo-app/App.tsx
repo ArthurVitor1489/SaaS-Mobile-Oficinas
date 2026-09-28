@@ -115,7 +115,18 @@ function MainTabNavigator() {
       } else {
         Alert.alert(
           'Status: Online ✅',
-          'Conectado aos servidores em nuvem (Render + Turso DB). Todos os dados estão sincronizados em tempo real.'
+          'Conectado aos servidores em nuvem (Render + Turso DB). Todos os dados estão sincronizados em tempo real.',
+          [
+            { text: 'Fechar', style: 'cancel' },
+            {
+              text: 'Sincronizar Agora',
+              onPress: async () => {
+                await processOfflineQueue();
+                await useAppStore.getState().pullAll();
+                Alert.alert('Sincronizado', 'Dados sincronizados com a nuvem com sucesso!');
+              }
+            }
+          ]
         );
       }
     } else {
@@ -133,7 +144,8 @@ function MainTabNavigator() {
               const isUp = await checkConnection();
               if (isUp) {
                 await processOfflineQueue();
-                Alert.alert('Sucesso', 'Conexão restabelecida com a nuvem!');
+                await useAppStore.getState().pullAll();
+                Alert.alert('Sucesso', 'Conexão restabelecida e dados sincronizados com a nuvem!');
               } else {
                 Alert.alert('Sem conexão', 'Não foi possível alcançar o servidor no momento. Verifique sua conexão à internet.');
               }

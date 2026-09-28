@@ -36,7 +36,11 @@ export const processOfflineQueue = async () => {
 
   const queue = [...store.offlineQueue];
   
-  if (queue.length === 0) return;
+  if (queue.length === 0) {
+    // Sincroniza e puxa todos os dados atualizados da nuvem mesmo quando a fila de envio estiver vazia
+    await store.pullAll();
+    return;
+  }
 
   isSyncing = true;
   console.log(`Starting synchronization of ${queue.length} offline actions...`);

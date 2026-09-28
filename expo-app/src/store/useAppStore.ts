@@ -291,6 +291,7 @@ export const useAppStore = create<AppState>()(
             accessToken,
             refreshToken,
             user: profile,
+            isOnline: true,
             settings: {
               ...get().settings,
               name: profile.workshop?.name || get().settings.name,
@@ -409,7 +410,7 @@ export const useAppStore = create<AppState>()(
       // DATA FETCHING WITH SMART MERGE
       pullAll: async () => {
         const state = get();
-        if (!state.isOnline || !state.accessToken || state.accessToken.startsWith('local-')) return;
+        if (!state.accessToken || state.accessToken.startsWith('local-')) return;
         try {
           const [
             clientsRes, vehiclesRes, servicesRes, partsRes, 
@@ -467,6 +468,7 @@ export const useAppStore = create<AppState>()(
           };
 
           set({
+            isOnline: true,
             clients: mergeEntities(clientsRes.data, current.clients),
             vehicles: mergeEntities(vehiclesRes.data, current.vehicles),
             services: mergeEntities(services, current.services),
@@ -474,7 +476,10 @@ export const useAppStore = create<AppState>()(
             workOrders: mergeEntities(workOrders, current.workOrders),
             billings: mergeEntities(billings, current.billings),
             transactions: mergeEntities(transactions, current.transactions),
-            settings: settingsRes.data || current.settings,
+            settings: settingsRes.data ? {
+              ...current.settings,
+              ...settingsRes.data,
+            } : current.settings,
           });
         } catch (e) {
           console.error('Failed to pull remote database', e);
@@ -492,9 +497,10 @@ export const useAppStore = create<AppState>()(
 
         set((state) => ({ clients: [newClient, ...state.clients] }));
 
-        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
+        if (get().accessToken && !get().accessToken?.startsWith('local-')) {
           try {
             await api.post('/clients', { id: newId, ...dto });
+            set({ isOnline: true });
           } catch (e: any) {
             enqueueOfflineAction(set, 'CREATE', 'clients', { id: newId, ...dto });
           }
@@ -509,9 +515,10 @@ export const useAppStore = create<AppState>()(
           clients: state.clients.map((c) => (c.id === id ? { ...c, ...dto } : c)),
         }));
 
-        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
+        if (get().accessToken && !get().accessToken?.startsWith('local-')) {
           try {
             await api.patch(`/clients/${id}`, dto);
+            set({ isOnline: true });
           } catch (e: any) {
             enqueueOfflineAction(set, 'UPDATE', 'clients', { id, dto });
           }
@@ -527,9 +534,10 @@ export const useAppStore = create<AppState>()(
           vehicles: state.vehicles.filter((v) => v.clientId !== id),
         }));
 
-        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
+        if (get().accessToken && !get().accessToken?.startsWith('local-')) {
           try {
             await api.delete(`/clients/${id}`);
+            set({ isOnline: true });
           } catch (e: any) {
             enqueueOfflineAction(set, 'DELETE', 'clients', { id });
           }
@@ -550,9 +558,10 @@ export const useAppStore = create<AppState>()(
 
         set((state) => ({ vehicles: [newVehicle, ...state.vehicles] }));
 
-        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
+        if (get().accessToken && !get().accessToken?.startsWith('local-')) {
           try {
             await api.post('/vehicles', { id: newId, ...dto });
+            set({ isOnline: true });
           } catch (e: any) {
             enqueueOfflineAction(set, 'CREATE', 'vehicles', { id: newId, ...dto });
           }
@@ -567,9 +576,10 @@ export const useAppStore = create<AppState>()(
           vehicles: state.vehicles.map((v) => (v.id === id ? { ...v, ...dto } : v)),
         }));
 
-        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
+        if (get().accessToken && !get().accessToken?.startsWith('local-')) {
           try {
             await api.patch(`/vehicles/${id}`, dto);
+            set({ isOnline: true });
           } catch (e: any) {
             enqueueOfflineAction(set, 'UPDATE', 'vehicles', { id, dto });
           }
@@ -584,9 +594,10 @@ export const useAppStore = create<AppState>()(
           vehicles: state.vehicles.filter((v) => v.id !== id),
         }));
 
-        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
+        if (get().accessToken && !get().accessToken?.startsWith('local-')) {
           try {
             await api.delete(`/vehicles/${id}`);
+            set({ isOnline: true });
           } catch (e: any) {
             enqueueOfflineAction(set, 'DELETE', 'vehicles', { id });
           }
@@ -606,9 +617,10 @@ export const useAppStore = create<AppState>()(
 
         set((state) => ({ services: [newService, ...state.services] }));
 
-        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
+        if (get().accessToken && !get().accessToken?.startsWith('local-')) {
           try {
             await api.post('/services', { id: newId, ...dto });
+            set({ isOnline: true });
           } catch (e: any) {
             enqueueOfflineAction(set, 'CREATE', 'services', { id: newId, ...dto });
           }
@@ -623,9 +635,10 @@ export const useAppStore = create<AppState>()(
           services: state.services.map((s) => (s.id === id ? { ...s, ...dto } : s)),
         }));
 
-        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
+        if (get().accessToken && !get().accessToken?.startsWith('local-')) {
           try {
             await api.patch(`/services/${id}`, dto);
+            set({ isOnline: true });
           } catch (e: any) {
             enqueueOfflineAction(set, 'UPDATE', 'services', { id, dto });
           }
@@ -640,9 +653,10 @@ export const useAppStore = create<AppState>()(
           services: state.services.filter((s) => s.id !== id),
         }));
 
-        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
+        if (get().accessToken && !get().accessToken?.startsWith('local-')) {
           try {
             await api.delete(`/services/${id}`);
+            set({ isOnline: true });
           } catch (e: any) {
             enqueueOfflineAction(set, 'DELETE', 'services', { id });
           }
@@ -662,9 +676,10 @@ export const useAppStore = create<AppState>()(
 
         set((state) => ({ parts: [newPart, ...state.parts] }));
 
-        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
+        if (get().accessToken && !get().accessToken?.startsWith('local-')) {
           try {
             await api.post('/parts', { id: newId, ...dto });
+            set({ isOnline: true });
           } catch (e: any) {
             enqueueOfflineAction(set, 'CREATE', 'parts', { id: newId, ...dto });
           }
@@ -679,9 +694,10 @@ export const useAppStore = create<AppState>()(
           parts: state.parts.map((p) => (p.id === id ? { ...p, ...dto } : p)),
         }));
 
-        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
+        if (get().accessToken && !get().accessToken?.startsWith('local-')) {
           try {
             await api.patch(`/parts/${id}`, dto);
+            set({ isOnline: true });
           } catch (e: any) {
             enqueueOfflineAction(set, 'UPDATE', 'parts', { id, dto });
           }
@@ -696,9 +712,10 @@ export const useAppStore = create<AppState>()(
           parts: state.parts.filter((p) => p.id !== id),
         }));
 
-        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
+        if (get().accessToken && !get().accessToken?.startsWith('local-')) {
           try {
             await api.delete(`/parts/${id}`);
+            set({ isOnline: true });
           } catch (e: any) {
             enqueueOfflineAction(set, 'DELETE', 'parts', { id });
           }
@@ -773,9 +790,10 @@ export const useAppStore = create<AppState>()(
           status: mapOSStatusLocalToApi(dto.status),
         };
 
-        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
+        if (get().accessToken && !get().accessToken?.startsWith('local-')) {
           try {
             await api.post('/orders', mappedPayload);
+            set({ isOnline: true });
           } catch (e: any) {
             enqueueOfflineAction(set, 'CREATE', 'workOrders', mappedPayload);
           }
@@ -843,9 +861,10 @@ export const useAppStore = create<AppState>()(
           status: dto.status ? mapOSStatusLocalToApi(dto.status) : undefined,
         };
 
-        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
+        if (get().accessToken && !get().accessToken?.startsWith('local-')) {
           try {
             await api.patch(`/orders/${id}`, mappedDto);
+            set({ isOnline: true });
           } catch (e: any) {
             enqueueOfflineAction(set, 'UPDATE', 'workOrders', { id, dto: mappedDto });
           }
@@ -869,9 +888,10 @@ export const useAppStore = create<AppState>()(
           billings: state.billings.filter((b) => b.osId !== id),
         }));
 
-        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
+        if (get().accessToken && !get().accessToken?.startsWith('local-')) {
           try {
             await api.delete(`/orders/${id}`);
+            set({ isOnline: true });
           } catch (e: any) {
             enqueueOfflineAction(set, 'DELETE', 'workOrders', { id });
           }
@@ -892,9 +912,10 @@ export const useAppStore = create<AppState>()(
 
         set((state) => ({ billings: [newBilling, ...state.billings] }));
 
-        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
+        if (get().accessToken && !get().accessToken?.startsWith('local-')) {
           try {
             await api.post('/finance/billings', newBilling);
+            set({ isOnline: true });
           } catch (e: any) {
             enqueueOfflineAction(set, 'CREATE', 'billings', newBilling);
           }
@@ -909,9 +930,10 @@ export const useAppStore = create<AppState>()(
           billings: state.billings.filter((b) => b.id !== id),
         }));
 
-        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
+        if (get().accessToken && !get().accessToken?.startsWith('local-')) {
           try {
             await api.delete(`/finance/billings/${id}`);
+            set({ isOnline: true });
           } catch (e: any) {
             enqueueOfflineAction(set, 'DELETE', 'billings', { id });
           }
@@ -963,9 +985,10 @@ export const useAppStore = create<AppState>()(
           transactions: [newTrans, ...state.transactions],
         }));
 
-        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
+        if (get().accessToken && !get().accessToken?.startsWith('local-')) {
           try {
             await api.post(`/finance/billings/${billingId}/pay`, { installmentNumber });
+            set({ isOnline: true });
           } catch (e: any) {
             enqueueOfflineAction(set, 'UPDATE', 'billings', { id: billingId, installmentNumber });
           }
@@ -994,11 +1017,12 @@ export const useAppStore = create<AppState>()(
           ),
         }));
 
-        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
+        if (get().accessToken && !get().accessToken?.startsWith('local-')) {
           try {
             await api.patch(`/finance/billings/${billingId}/installments/${installmentNumber}`, {
               dueDate: newDueDate,
             });
+            set({ isOnline: true });
           } catch (e: any) {
             enqueueOfflineAction(set, 'UPDATE', 'billings', { billingId, installmentNumber, newDueDate, actionType: 'UPDATE_DUE_DATE' });
           }
@@ -1025,9 +1049,10 @@ export const useAppStore = create<AppState>()(
           type: mapTransactionTypeLocalToApi(dto.type),
         };
 
-        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
+        if (get().accessToken && !get().accessToken?.startsWith('local-')) {
           try {
             await api.post('/finance/transactions', mappedPayload);
+            set({ isOnline: true });
           } catch (e: any) {
             enqueueOfflineAction(set, 'CREATE', 'transactions', mappedPayload);
           }
@@ -1042,9 +1067,10 @@ export const useAppStore = create<AppState>()(
           transactions: state.transactions.filter((t) => t.id !== id),
         }));
 
-        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
+        if (get().accessToken && !get().accessToken?.startsWith('local-')) {
           try {
             await api.delete(`/finance/transactions/${id}`);
+            set({ isOnline: true });
           } catch (e: any) {
             enqueueOfflineAction(set, 'DELETE', 'transactions', { id });
           }
@@ -1058,9 +1084,10 @@ export const useAppStore = create<AppState>()(
       updateSettings: async (dto) => {
         set((state) => ({ settings: { ...state.settings, ...dto } }));
 
-        if (get().isOnline && !get().accessToken?.startsWith('local-')) {
+        if (get().accessToken && !get().accessToken?.startsWith('local-')) {
           try {
             await api.patch('/tenant/settings', dto);
+            set({ isOnline: true });
           } catch (e: any) {
             enqueueOfflineAction(set, 'UPDATE', 'parts', { settings: dto });
           }

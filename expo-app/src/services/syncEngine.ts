@@ -8,18 +8,18 @@ let checkInterval: NodeJS.Timeout | null = null;
 export const checkConnection = async (): Promise<boolean> => {
   const store = useAppStore.getState();
   try {
-    // A simple HEAD or small GET request to verify server reachability
-    await axios.get(`${getBaseUrl()}/auth/logout`, { timeout: 3000 });
-    // If it throws anything other than a network error, the server is up (e.g. 401 is fine, it means the server responded!)
+    // Health check diretamente no endpoint raiz da API
+    const url = getBaseUrl();
+    await axios.get(`${url}/`, { timeout: 7000 });
     store.setOnlineStatus(true);
     return true;
   } catch (error: any) {
     if (error.response) {
-      // Server responded with some code (e.g. 401, 404), so server is ONLINE!
+      // O servidor respondeu com status HTTP (200, 401, 404, etc.), logo a nuvem está ONLINE!
       store.setOnlineStatus(true);
       return true;
     }
-    // Network error or timeout: server is OFFLINE
+    // Falha real de rede ou timeout
     store.setOnlineStatus(false);
     return false;
   }
@@ -159,12 +159,19 @@ export const startSyncEngine = () => {
   if (checkInterval) return;
 
   // Run initial check and sync immediately
-  processOfflineQueue();
+  checkConnection().then(async (online) => {
+    if (online) {
+      await processOfflineQueue();
+    }
+  });
 
-  // Poll connection and process queue every 25 seconds
-  checkInterval = setInterval(() => {
-    processOfflineQueue();
-  }, 25000);
+  // Poll connection and process queue every 15 seconds
+  checkInterval = setInterval(async () => {
+    const online = await checkConnection();
+    if (online) {
+      await processOfflineQueue();
+    }
+  }, 15000);
 };
 
 export const stopSyncEngine = () => {

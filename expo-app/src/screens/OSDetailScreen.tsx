@@ -603,14 +603,14 @@ export default function OSDetailScreen() {
                 styles.billingStatusDot,
                 { backgroundColor: billing.status === 'Pago' ? colors.success : colors.warning }
               ]} />
-              <View>
+              <View style={styles.billingTextCol}>
                 <Text style={[
                   styles.billingStatusTitle,
                   { color: billing.status === 'Pago' ? colors.success : colors.warning }
-                ]}>
+                ]} numberOfLines={1}>
                   {billing.status === 'Pago' ? 'FATURADA • PAGA' : 'FATURADA • AGUARDANDO PAGAMENTO'}
                 </Text>
-                <Text style={[styles.billingStatusSubtitle, { color: colors.textMuted }]}>
+                <Text style={[styles.billingStatusSubtitle, { color: colors.textMuted }]} numberOfLines={1}>
                   {billing.paymentMethod.toUpperCase()} {billing.installments.length > 1 ? `• ${billing.installments.length}x` : '• À vista'} • Total: {formatCurrency(billing.amount)}
                 </Text>
               </View>
@@ -629,9 +629,9 @@ export default function OSDetailScreen() {
           <View style={styles.billingStatusHeader}>
             <View style={styles.billingBadgeRow}>
               <View style={[styles.billingStatusDot, { backgroundColor: '#f59e0b' }]} />
-              <View>
-                <Text style={styles.billingStatusTitleUnbilled}>AGUARDANDO FATURAMENTO</Text>
-                <Text style={styles.billingStatusSubtitleUnbilled}>Serviço em execução • Pronto para faturar</Text>
+              <View style={styles.billingTextCol}>
+                <Text style={styles.billingStatusTitleUnbilled} numberOfLines={1}>AGUARDANDO FATURAMENTO</Text>
+                <Text style={styles.billingStatusSubtitleUnbilled} numberOfLines={1}>Serviço em execução • Pronto para faturar</Text>
               </View>
             </View>
             <TouchableOpacity
@@ -921,6 +921,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     flex: 1,
+    marginRight: 8,
+  },
+  billingTextCol: {
+    flex: 1,
   },
   billingStatusDot: {
     width: 8,
@@ -933,7 +937,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   billingStatusSubtitle: {
-    fontSize: 11,
+    fontSize: 10.5,
     color: theme.colors.textMuted,
     marginTop: 2,
   },
@@ -944,7 +948,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   billingStatusSubtitleUnbilled: {
-    fontSize: 11,
+    fontSize: 10.5,
     color: theme.colors.textMuted,
     marginTop: 2,
   },
@@ -956,6 +960,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
+    flexShrink: 0,
   },
   billingViewLinkText: {
     fontSize: 12,
@@ -970,6 +975,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
+    flexShrink: 0,
   },
   billingQuickActionBtnText: {
     fontSize: 12,

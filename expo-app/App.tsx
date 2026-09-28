@@ -15,7 +15,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 
 // Store & Services
 import { useAppStore } from './src/store/useAppStore';
-import { startSyncEngine, stopSyncEngine, processOfflineQueue } from './src/services/syncEngine';
+import { startSyncEngine, stopSyncEngine, processOfflineQueue, checkConnection } from './src/services/syncEngine';
 import { theme, useTheme } from './src/styles/theme';
 import { DatabaseProvider } from './src/context/DatabaseContext';
 import { maskCpfCnpj, maskPhone } from './src/utils/formatters';
@@ -99,9 +99,50 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 function MainTabNavigator() {
   const settings = useAppStore((state) => state.settings);
   const online = useAppStore((state) => state.isOnline);
+  const accessToken = useAppStore((state) => state.accessToken);
   const queueLength = useAppStore((state) => state.offlineQueue.length);
   const navigation = useNavigation<any>();
   const { colors, isDark } = useTheme();
+
+  const handleNetworkBadgePress = async () => {
+    const isLocalSession = accessToken?.startsWith('local-');
+    if (online) {
+      if (isLocalSession) {
+        Alert.alert(
+          'Sessão Local Conectada',
+          'Você está conectado à internet, mas em uma sessão local de contingência.\n\nPara sincronizar as alterações com o banco de dados na nuvem da sua oficina, faça logout no menu "Mais" e entre com seu e-mail e senha cadastrados.'
+        );
+      } else {
+        Alert.alert(
+          'Status: Online ✅',
+          'Conectado aos servidores em nuvem (Render + Turso DB). Todos os dados estão sincronizados em tempo real.'
+        );
+      }
+    } else {
+      Alert.alert(
+        'Status: Offline',
+        `O aplicativo está funcionando em modo local resiliente.\n\n` +
+        (queueLength > 0 ? `Existem ${queueLength} ação(ões) pendente(s) de sincronização com a nuvem.\n\n` : '') +
+        (isLocalSession ? `Aviso: Você está em uma sessão local. Conecte-se com sua conta para salvar definitivamente na nuvem.\n\n` : '') +
+        `Deseja testar a conexão com o servidor agora?`,
+        [
+          { text: 'Fechar', style: 'cancel' },
+          {
+            text: 'Reconectar Agora',
+            onPress: async () => {
+              const isUp = await checkConnection();
+              if (isUp) {
+                await processOfflineQueue();
+                Alert.alert('Sucesso', 'Conexão restabelecida com a nuvem!');
+              } else {
+                Alert.alert('Sem conexão', 'Não foi possível alcançar o servidor no momento. Verifique sua conexão à internet.');
+              }
+            }
+          }
+        ]
+      );
+    }
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -115,7 +156,11 @@ function MainTabNavigator() {
           </Text>
           <View style={styles.headerSubRow}>
             <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>PAINEL OFICINA</Text>
-            <View style={online ? styles.statusBadgeOnline : styles.statusBadgeOffline}>
+            <TouchableOpacity 
+              activeOpacity={0.7}
+              onPress={handleNetworkBadgePress}
+              style={online ? styles.statusBadgeOnline : styles.statusBadgeOffline}
+            >
               {online ? (
                 <>
                   <Wifi size={10} color="#22c55e" />
@@ -127,7 +172,7 @@ function MainTabNavigator() {
                   <Text style={styles.badgeText}>Offline ({queueLength})</Text>
                 </>
               )}
-            </View>
+            </TouchableOpacity>
           </View>
         </View>
       </View>

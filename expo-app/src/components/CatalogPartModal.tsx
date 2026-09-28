@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Modal, View, Text, TextInput, TouchableOpacity, ScrollView,
-  KeyboardAvoidingView, Platform, StyleSheet, Alert
+  KeyboardAvoidingView, Platform, StyleSheet, Alert, Keyboard
 } from 'react-native';
 import { X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -43,8 +43,25 @@ export default function CatalogPartModal({
 }: CatalogPartModalProps) {
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef<ScrollView>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [form, setForm] = useState<PartForm>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => setKeyboardHeight(e.endCoordinates.height)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardHeight(0)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (visible) {
@@ -135,7 +152,14 @@ export default function CatalogPartModal({
             </TouchableOpacity>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+          <ScrollView 
+            ref={scrollRef}
+            showsVerticalScrollIndicator={false} 
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ 
+              paddingBottom: Platform.OS === 'android' && keyboardHeight > 0 ? keyboardHeight + 60 : 32 
+            }}
+          >
             <Text style={labelStyle}>Nome da Peça *</Text>
             <TextInput
               placeholder="Ex: Filtro de Óleo Volvo"
@@ -174,6 +198,7 @@ export default function CatalogPartModal({
               keyboardType="numeric"
               value={form.purchasePrice}
               onChangeText={t => setForm(prev => ({ ...prev, purchasePrice: t }))}
+              onFocus={() => setTimeout(() => scrollRef.current?.scrollTo({ y: 160, animated: true }), 120)}
               maxLength={10}
               style={inputStyle}
             />
@@ -185,6 +210,7 @@ export default function CatalogPartModal({
               keyboardType="numeric"
               value={form.salePrice}
               onChangeText={t => setForm(prev => ({ ...prev, salePrice: t }))}
+              onFocus={() => setTimeout(() => scrollRef.current?.scrollTo({ y: 240, animated: true }), 120)}
               maxLength={10}
               style={inputStyle}
             />
@@ -196,6 +222,7 @@ export default function CatalogPartModal({
               keyboardType="numeric"
               value={form.stock}
               onChangeText={t => setForm(prev => ({ ...prev, stock: t }))}
+              onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120)}
               maxLength={8}
               style={inputStyle}
             />

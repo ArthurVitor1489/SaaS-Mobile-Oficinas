@@ -2,7 +2,7 @@
   "expo": {
     "name": "MecânicaPro",
     "slug": "mecanicapro-mobile",
-    "icon": "./assets/icon.jpg",
+    "icon": "./assets/icon.png",
     "version": "1.0.3",
     "orientation": "portrait",
     "splash": {
@@ -17,7 +17,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.jpg",
+        "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#0f1115"
       },
       "package": "com.mecanicapro.app",

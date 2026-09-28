@@ -382,7 +382,7 @@ export default function OSWizardModal({
                   activeOpacity={0.7}
                 >
                   <Plus size={14} color={colors.primary} style={{ marginRight: 4 }} />
-                  <Text style={[styles.quickAddHeaderBtnText, { color: colors.primary }]}>+ Novo Serviço</Text>
+                  <Text style={[styles.quickAddHeaderBtnText, { color: colors.primary }]}>Novo Serviço</Text>
                 </TouchableOpacity>
               </View>
 
@@ -500,7 +500,7 @@ export default function OSWizardModal({
                   activeOpacity={0.7}
                 >
                   <Plus size={14} color={colors.primary} style={{ marginRight: 4 }} />
-                  <Text style={[styles.quickAddHeaderBtnText, { color: colors.primary }]}>+ Nova Peça</Text>
+                  <Text style={[styles.quickAddHeaderBtnText, { color: colors.primary }]}>Nova Peça</Text>
                 </TouchableOpacity>
               </View>
 

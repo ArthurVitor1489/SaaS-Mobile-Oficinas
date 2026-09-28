@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Linking } from 'react-native';
 import { ChevronRight, Tag, Settings, Wifi, LogOut, TrendingUp, MessageCircle, Shield } from 'lucide-react-native';
+import Constants from 'expo-constants';
 import { useDatabase } from '../context/DatabaseContext';
 import { theme, useTheme } from '../styles/theme';
 import { useNavigation } from '@react-navigation/native';
 import TermsPrivacyModal from '../components/TermsPrivacyModal';
+
+const SUPPORT_PHONE = '5583996448504';
+const SUPPORT_PHONE_DISPLAY = '+55 (83) 99644-8504';
 
 export default function MoreMenuScreen() {
   const navigation = useNavigation<any>();
@@ -13,8 +17,8 @@ export default function MoreMenuScreen() {
   const [showTermsModal, setShowTermsModal] = useState(false);
 
   const handleOpenSupport = () => {
-    const text = encodeURIComponent('Olá! Preciso de ajuda com o aplicativo MecânicaPro.');
-    Linking.openURL(`https://wa.me/5583999999999?text=${text}`);
+    const text = encodeURIComponent('Olá! Preciso de suporte com o aplicativo MecânicaPro.');
+    Linking.openURL(`https://wa.me/${SUPPORT_PHONE}?text=${text}`);
   };
 
   return (
@@ -91,7 +95,7 @@ export default function MoreMenuScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.menuItemTitle, { color: '#22c55e' }]}>Suporte via WhatsApp</Text>
-              <Text style={[styles.menuItemSubtitle, { color: colors.textMuted }]}>Atendimento direto e suporte técnico</Text>
+              <Text style={[styles.menuItemSubtitle, { color: colors.textMuted }]}>{SUPPORT_PHONE_DISPLAY} • Atendimento direto</Text>
             </View>
           </View>
           <ChevronRight size={18} color="#22c55e" />
@@ -130,7 +134,9 @@ export default function MoreMenuScreen() {
         </TouchableOpacity>
       </View>
 
-      <Text style={[styles.versionText, { color: colors.textMuted }]}>MecânicaPro v1.0.0 • Gestão de Oficinas</Text>
+      <Text style={[styles.versionText, { color: colors.textMuted }]}>
+        MecânicaPro v{Constants.expoConfig?.version || '1.0.2'} • Gestão de Oficinas
+      </Text>
 
       <TermsPrivacyModal
         visible={showTermsModal}

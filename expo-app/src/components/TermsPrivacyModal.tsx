@@ -117,7 +117,7 @@ export default function TermsPrivacyModal({ visible, onClose, initialTab = 'term
 
                 <Text style={styles.paragraphTitle}>5. Encarregado de Dados (DPO)</Text>
                 <Text style={styles.paragraph}>
-                  Dúvidas sobre o tratamento de dados pessoais podem ser encaminhadas diretamente para a nossa equipe pelo canal de suporte no aplicativo.
+                  Dúvidas sobre o tratamento de dados pessoais podem ser encaminhadas diretamente para a nossa equipe pelo canal de suporte no aplicativo ou via WhatsApp: +55 (83) 99644-8504.
                 </Text>
               </View>
             )}

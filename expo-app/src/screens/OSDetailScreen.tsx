@@ -1,11 +1,12 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Modal, Alert, StyleSheet, Platform, Linking } from 'react-native';
-import { ArrowLeft, Edit2, PenTool, FileText, DollarSign, X, Check, Trash2, ChevronRight, MessageSquare } from 'lucide-react-native';
+import React, { useMemo, useState, useCallback } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Modal, Alert, StyleSheet, Platform, Linking, BackHandler } from 'react-native';
+import { ArrowLeft, Edit2, PenTool, FileText, DollarSign, X, Check, Trash2, ChevronRight, MessageSquare, Lock } from 'lucide-react-native';
 import { SvgXml } from 'react-native-svg';
 import { useDatabase } from '../context/DatabaseContext';
+import { useToast } from '../context/ToastContext';
 import { theme, useTheme } from '../styles/theme';
 import { formatCurrency, formatDate } from '../utils/formatters';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import OSWizardModal from '../components/OSWizardModal';
@@ -17,6 +18,7 @@ export default function OSDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { colors, isDark } = useTheme();
+  const { showToast } = useToast();
   const { osId } = route.params;
 
   const {
@@ -44,18 +46,46 @@ export default function OSDetailScreen() {
   const billingMap = useMemo(() => new Map(billings.map(b => [b.osId, b])), [billings]);
 
   const os = useMemo(() => workOrders.find(o => o.id === osId), [workOrders, osId]);
+  const billing = billingMap.get(os?.id || '');
+  const isPaid = billing?.status === 'Pago';
+
+  const handleGoBack = useCallback(() => {
+    if (route.params?.fromScreen === 'ClientDetail' && route.params?.clientId) {
+      navigation.navigate('ClientsTab', {
+        screen: 'ClientDetail',
+        params: { clientId: route.params.clientId }
+      });
+      return true;
+    }
+    if (route.params?.fromScreen === 'Dashboard') {
+      navigation.navigate('DashboardTab');
+      return true;
+    }
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return true;
+    }
+    navigation.navigate('OSList');
+    return true;
+  }, [navigation, route.params]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        handleGoBack();
+        return true;
+      };
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [handleGoBack])
+  );
 
   if (!os) {
     return (
       <View style={[styles.screenContainer, { justifyContent: 'center', alignItems: 'center' }]}>
         <Text style={{ color: theme.colors.textMuted }}>Ordem de serviço não encontrada.</Text>
         <TouchableOpacity 
-          onPress={() => {
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'OSList' }],
-            });
-          }} 
+          onPress={handleGoBack} 
           style={[styles.backButton, { marginTop: 12 }]}
         >
           <Text style={styles.backButtonText}>Voltar</Text>
@@ -66,9 +96,17 @@ export default function OSDetailScreen() {
 
   const client = clientMap.get(os.clientId);
   const vehicle = vehicleMap.get(os.vehicleId);
-  const billing = billingMap.get(os.id);
 
   const handleDeleteOS = () => {
+    if (isPaid) {
+      Alert.alert(
+        'OS Bloqueada para Exclusão',
+        'Esta Ordem de Serviço já possui faturamento quitado (PAGA). Por motivos de integridade contábil e histórico financeiro, ordens de serviço pagas não podem ser excluídas.',
+        [{ text: 'Entendido', style: 'default' }]
+      );
+      return;
+    }
+
     Alert.alert(
       'Excluir Ordem de Serviço',
       'Tem certeza que deseja excluir permanentemente esta ordem de serviço? Esta ação não pode ser desfeita.',
@@ -80,8 +118,8 @@ export default function OSDetailScreen() {
           onPress: async () => {
             const success = await deleteWorkOrder(os.id);
             if (success) {
-              Alert.alert('Sucesso', 'Ordem de serviço excluída com sucesso!');
-              navigation.goBack();
+              showToast('Ordem de serviço excluída com sucesso!');
+              handleGoBack();
             } else {
               Alert.alert('Erro', 'Não foi possível excluir esta ordem de serviço.');
             }
@@ -92,6 +130,15 @@ export default function OSDetailScreen() {
   };
 
   const handleOpenOSWizardForEdit = () => {
+    if (isPaid) {
+      Alert.alert(
+        'OS Bloqueada para Edição',
+        'Esta Ordem de Serviço já está com o faturamento quitado (PAGA). Não é permitido alterar peças, serviços ou valores de uma OS já quitada.',
+        [{ text: 'Entendido', style: 'default' }]
+      );
+      return;
+    }
+
     setEditingOSForm({
       clientId: os.clientId,
       vehicleId: os.vehicleId,
@@ -122,7 +169,7 @@ export default function OSDetailScreen() {
 
     const success = await updateWorkOrder(os.id, dataToSave);
     if (success) {
-      Alert.alert('Sucesso', 'Ordem de serviço atualizada com sucesso!');
+      showToast('Ordem de serviço atualizada com sucesso!');
     }
     return success;
   };
@@ -560,36 +607,49 @@ export default function OSDetailScreen() {
     <View style={[styles.screenContainer, { backgroundColor: colors.background }]}>
       <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
         <View style={styles.screenHeaderOS}>
-        <TouchableOpacity
-          onPress={() => {
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'OSList' }],
-            });
-          }}
-          style={styles.backButton}
-        >
-          <ArrowLeft size={20} color={colors.primary} style={styles.backButtonIcon} />
-          <Text style={[styles.backButtonText, { color: colors.primary }]}>Voltar</Text>
-        </TouchableOpacity>
-        
-        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
           <TouchableOpacity
-            onPress={handleOpenOSWizardForEdit}
-            style={[styles.editOSButton, { backgroundColor: isDark ? 'rgba(59, 102, 255, 0.1)' : 'rgba(59, 102, 255, 0.12)' }]}
+            onPress={handleGoBack}
+            style={styles.backButton}
           >
-            <Edit2 size={14} color={colors.primary} style={styles.editButtonIcon} />
-            <Text style={[styles.editOSButtonText, { color: colors.primary }]}>Editar</Text>
+            <ArrowLeft size={20} color={colors.primary} style={styles.backButtonIcon} />
+            <Text style={[styles.backButtonText, { color: colors.primary }]}>Voltar</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleDeleteOS}
-            style={styles.deleteOSButton}
-          >
-            <Trash2 size={14} color={colors.error} style={styles.deleteButtonIcon} />
-            <Text style={[styles.deleteOSButtonText, { color: colors.error }]}>Excluir</Text>
-          </TouchableOpacity>
+          
+          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+            <TouchableOpacity
+              onPress={handleOpenOSWizardForEdit}
+              style={[
+                styles.editOSButton,
+                isPaid
+                  ? { backgroundColor: isDark ? '#1e293b' : '#f1f5f9', opacity: 0.6 }
+                  : { backgroundColor: isDark ? 'rgba(59, 102, 255, 0.1)' : 'rgba(59, 102, 255, 0.12)' }
+              ]}
+              activeOpacity={0.7}
+            >
+              {isPaid ? (
+                <Lock size={14} color={colors.textMuted} style={styles.editButtonIcon} />
+              ) : (
+                <Edit2 size={14} color={colors.primary} style={styles.editButtonIcon} />
+              )}
+              <Text style={[styles.editOSButtonText, { color: isPaid ? colors.textMuted : colors.primary }]}>
+                {isPaid ? 'Bloqueada' : 'Editar'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleDeleteOS}
+              style={[
+                styles.deleteOSButton,
+                isPaid && { backgroundColor: isDark ? '#1e293b' : '#f1f5f9', opacity: 0.5 }
+              ]}
+              activeOpacity={0.7}
+            >
+              <Trash2 size={14} color={isPaid ? colors.textMuted : colors.error} style={styles.deleteButtonIcon} />
+              <Text style={[styles.deleteOSButtonText, { color: isPaid ? colors.textMuted : colors.error }]}>
+                Excluir
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
 
       {/* BANNER DE FATURAMENTO / SITUAÇÃO DA OS */}
       {billing ? (
@@ -809,7 +869,7 @@ export default function OSDetailScreen() {
                 const success = await saveWorkOrderSignature(os.id, svg);
                 if (success) {
                   setSigningOS(false);
-                  Alert.alert('Sucesso', 'Assinatura registrada!');
+                  showToast('Assinatura registrada com sucesso!');
                 }
               }}
               onCancel={() => setSigningOS(false)}

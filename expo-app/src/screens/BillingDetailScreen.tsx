@@ -28,6 +28,7 @@ import {
   X
 } from 'lucide-react-native';
 import { useDatabase } from '../context/DatabaseContext';
+import { useToast } from '../context/ToastContext';
 import { theme, useTheme } from '../styles/theme';
 import {
   formatCurrency,
@@ -43,6 +44,7 @@ import { Billing } from '../types';
 
 export default function BillingDetailScreen() {
   const { colors, isDark } = useTheme();
+  const { showToast } = useToast();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const billingId = route.params?.billingId;
@@ -105,7 +107,7 @@ export default function BillingDetailScreen() {
                   installments: updatedInstallments
                 });
               }
-              Alert.alert('Sucesso', 'Baixa registrada e entrada no caixa confirmada!');
+              showToast('Baixa registrada e entrada no caixa confirmada!');
             }
           }
         }
@@ -145,7 +147,7 @@ export default function BillingDetailScreen() {
         installments: updatedInstallments,
       });
       setEditingModalVisible(false);
-      Alert.alert('Sucesso', `Data de vencimento da parcela ${editingInstallmentNum} atualizada para ${formatDate(isoDate)}!`);
+      showToast(`Vencimento da parcela ${editingInstallmentNum} atualizado!`);
     } else {
       Alert.alert('Erro', 'Não foi possível atualizar o vencimento.');
     }

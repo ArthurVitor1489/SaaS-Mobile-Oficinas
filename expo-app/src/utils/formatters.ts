@@ -3,6 +3,32 @@ export const formatCurrency = (val: number | string) => {
   return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 };
 
+/**
+ * Aplica máscara monetária em tempo real (R$) baseada em centavos (padrão brasileiro).
+ * Ex: '1' -> '0,01', '15' -> '0,15', '150' -> '1,50', '15000' -> '150,00'
+ */
+export const maskCurrencyInput = (val: string): string => {
+  const digits = val.replace(/\D/g, '');
+  if (!digits) return '';
+  const num = parseInt(digits, 10) / 100;
+  return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
+/**
+ * Converte valor em formato monetário (ex: '150,00', '1.250,50' ou '0,30') para número float
+ */
+export const parseCurrencyToNumber = (val: string): number => {
+  if (!val) return 0;
+  const cleaned = val
+    .replace(/\s/g, '')
+    .replace(/R\$/g, '')
+    .replace(/\./g, '')
+    .replace(',', '.');
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? 0 : num;
+};
+
+
 export const formatDate = (dateStr: string) => {
   if (!dateStr) return '';
   // Se já for DD/MM/AAAA

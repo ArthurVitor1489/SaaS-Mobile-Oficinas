@@ -18,6 +18,7 @@ import { useAppStore } from './src/store/useAppStore';
 import { startSyncEngine, stopSyncEngine, processOfflineQueue, checkConnection } from './src/services/syncEngine';
 import { theme, useTheme } from './src/styles/theme';
 import { DatabaseProvider } from './src/context/DatabaseContext';
+import { ToastProvider } from './src/context/ToastContext';
 import { maskCpfCnpj, maskPhone } from './src/utils/formatters';
 
 // Screen Stacks
@@ -190,6 +191,7 @@ function MainTabNavigator() {
       </View>
 
       <Tab.Navigator
+        backBehavior="history"
         screenOptions={({ route }) => ({
           headerShown: false,
           unmountOnBlur: true,
@@ -575,7 +577,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <DatabaseProvider>
-        <AppContent />
+        <ToastProvider>
+          <AppContent />
+        </ToastProvider>
       </DatabaseProvider>
     </SafeAreaProvider>
   );

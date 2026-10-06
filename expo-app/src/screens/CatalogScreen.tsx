@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 import { ArrowLeft, Search, X, Plus, Edit2, Trash2 } from 'lucide-react-native';
 import { useDatabase } from '../context/DatabaseContext';
+import { useToast } from '../context/ToastContext';
 import { theme, useTheme } from '../styles/theme';
 import { formatCurrency } from '../utils/formatters';
 import { useNavigation } from '@react-navigation/native';
@@ -12,6 +13,7 @@ import { ServiceItem, PartItem } from '../types';
 export default function CatalogScreen() {
   const navigation = useNavigation<any>();
   const { colors, isDark } = useTheme();
+  const { showToast } = useToast();
   const {
     services,
     parts,
@@ -77,7 +79,7 @@ export default function CatalogScreen() {
         price: parseFloat(form.price) || 0
       });
       if (success) {
-        Alert.alert('Sucesso', 'Serviço atualizado!');
+        showToast('Serviço atualizado com sucesso!');
       }
     } else {
       const res = await addService({
@@ -88,7 +90,7 @@ export default function CatalogScreen() {
       });
       success = !!res;
       if (success) {
-        Alert.alert('Sucesso', 'Serviço catalogado!');
+        showToast('Serviço cadastrado com sucesso!');
       }
     }
     return success;
@@ -125,7 +127,7 @@ export default function CatalogScreen() {
         stock: parseInt(form.stock) || 0
       });
       if (success) {
-        Alert.alert('Sucesso', 'Peça atualizada no catálogo!');
+        showToast('Peça atualizada no catálogo!');
       }
     } else {
       const res = await addPart({
@@ -138,7 +140,7 @@ export default function CatalogScreen() {
       });
       success = !!res;
       if (success) {
-        Alert.alert('Sucesso', 'Peça adicionada ao catálogo!');
+        showToast('Peça adicionada ao catálogo!');
       }
     }
     return success;

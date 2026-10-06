@@ -277,7 +277,7 @@ export default function ClientDetailScreen() {
                     onPress={() => {
                       navigation.navigate('OSTab', {
                         screen: 'OSDetail',
-                        params: { osId: os.id }
+                        params: { osId: os.id, fromScreen: 'ClientDetail', clientId: client.id }
                       });
                     }}
                   >

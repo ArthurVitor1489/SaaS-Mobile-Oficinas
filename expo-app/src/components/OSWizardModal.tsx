@@ -375,7 +375,9 @@ export default function OSWizardModal({
           {wizardStep === 2 && (
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16 }}>
               <View style={styles.stepHeaderRow}>
-                <Text style={styles.inputLabel}>Adicionar Serviços ao Orçamento</Text>
+                <Text style={[styles.inputLabel, styles.stepHeaderTitle]} numberOfLines={1}>
+                  Serviços no Orçamento
+                </Text>
                 <TouchableOpacity
                   style={[styles.quickAddHeaderBtn, { borderColor: colors.primary, backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#eff6ff' }]}
                   onPress={() => setQuickServiceModalVisible(true)}
@@ -493,7 +495,9 @@ export default function OSWizardModal({
           {wizardStep === 3 && (
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16 }}>
               <View style={styles.stepHeaderRow}>
-                <Text style={styles.inputLabel}>Adicionar Peças ao Orçamento</Text>
+                <Text style={[styles.inputLabel, styles.stepHeaderTitle]} numberOfLines={1}>
+                  Peças no Orçamento
+                </Text>
                 <TouchableOpacity
                   style={[styles.quickAddHeaderBtn, { borderColor: colors.primary, backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#eff6ff' }]}
                   onPress={() => setQuickPartModalVisible(true)}
@@ -1075,15 +1079,22 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
+    gap: 8,
+  },
+  stepHeaderTitle: {
+    flex: 1,
+    marginRight: 6,
+    marginBottom: 0,
   },
   quickAddHeaderBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     borderRadius: theme.roundness.sm,
     borderWidth: 1,
+    flexShrink: 0,
   },
   quickAddHeaderBtnText: {
     fontSize: 12,

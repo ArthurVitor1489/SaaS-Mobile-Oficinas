@@ -213,7 +213,7 @@ export default function DashboardScreen() {
                 onPress={() => {
                   navigation.navigate('OSTab', {
                     screen: 'OSDetail',
-                    params: { osId: os.id }
+                    params: { osId: os.id, fromScreen: 'Dashboard' }
                   });
                 }}
               >

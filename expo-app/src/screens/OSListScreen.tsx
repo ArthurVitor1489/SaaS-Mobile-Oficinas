@@ -203,28 +203,31 @@ export default function OSListScreen() {
                   </View>
 
                   <View style={[styles.cardFooterRow, { borderTopColor: colors.border }]}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, marginRight: 8 }}>
                       {billing ? (
                         <View style={[
                           styles.billingStatusBadge,
                           { backgroundColor: billing.status === 'Pago' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(234, 179, 8, 0.1)' }
                         ]}>
-                          <Text style={[
-                            styles.billingStatusBadgeText,
-                            { color: billing.status === 'Pago' ? colors.success : colors.warning }
-                          ]}>
+                          <Text
+                            numberOfLines={1}
+                            style={[
+                              styles.billingStatusBadgeText,
+                              { color: billing.status === 'Pago' ? colors.success : colors.warning }
+                            ]}
+                          >
                             💳 {billing.paymentMethod.toUpperCase()} {billing.installments.length > 1 ? `(${billing.installments.length}x)` : '• À VISTA'}
                           </Text>
                         </View>
                       ) : (
                         <View style={[styles.billingStatusBadge, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
-                          <Text style={[styles.billingStatusBadgeText, { color: '#f59e0b' }]}>
+                          <Text numberOfLines={1} style={[styles.billingStatusBadgeText, { color: '#f59e0b' }]}>
                             ⚙️ EM EXECUÇÃO
                           </Text>
                         </View>
                       )}
                     </View>
-                    <Text style={[styles.osTotalVal, { color: colors.text }]}>{formatCurrency(os.grandTotal)}</Text>
+                    <Text style={[styles.osTotalVal, { color: colors.text, flexShrink: 0 }]}>{formatCurrency(os.grandTotal)}</Text>
                   </View>
                 </TouchableOpacity>
               );
@@ -440,16 +443,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
   },
   billingStatusBadgeText: {
     fontSize: 10,
     fontWeight: 'bold',
     includeFontPadding: false,
+    flexShrink: 0,
   },
   osTotalVal: {
     fontSize: 15,
     color: theme.colors.white,
     fontWeight: 'bold',
     includeFontPadding: false,
+    flexShrink: 0,
   },
 });

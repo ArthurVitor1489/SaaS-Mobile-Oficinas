@@ -9,6 +9,7 @@ import {
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDatabase } from '../context/DatabaseContext';
+import { useToast } from '../context/ToastContext';
 import { theme, useTheme } from '../styles/theme';
 import { PaymentMethod, Installment, BillingStatus } from '../types';
 import {
@@ -38,6 +39,7 @@ export default function CreateBillingModal({
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const insets = useSafeAreaInsets();
   const { workOrders, clients, vehicles, billings, addBilling, addTransaction } = useDatabase();
+  const { showToast } = useToast();
 
   const [billingMode, setBillingMode] = useState<'os' | 'custom'>('os');
   const [selectedOsId, setSelectedOsId] = useState<string>('');
@@ -417,15 +419,9 @@ export default function CreateBillingModal({
       }
 
       setLoading(false);
-      Alert.alert('Sucesso', 'Cobrança gerada com sucesso!', [
-        {
-          text: 'OK',
-          onPress: () => {
-            onClose();
-            onSuccess(newBilling?.id);
-          }
-        }
-      ]);
+      showToast('Cobrança gerada com sucesso!');
+      onClose();
+      onSuccess(newBilling?.id);
     } catch (err) {
       console.error(err);
       setLoading(false);

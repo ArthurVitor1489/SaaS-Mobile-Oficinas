@@ -7,7 +7,7 @@ import { X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme, useTheme } from '../styles/theme';
 import { TransactionCategory } from '../types';
-import { containsInjection, getTodayBR, maskDate, parseDateToISO, isValidDateBR } from '../utils/formatters';
+import { containsInjection, getTodayBR, maskDate, parseDateToISO, isValidDateBR, maskCurrencyInput, parseCurrencyToNumber } from '../utils/formatters';
 
 interface ExpenseForm {
   description: string;
@@ -58,8 +58,8 @@ export default function ExpenseModal({
       return;
     }
 
-    const value = parseFloat(form.amount.replace(',', '.'));
-    if (isNaN(value) || value <= 0) {
+    const value = parseCurrencyToNumber(form.amount);
+    if (value <= 0) {
       Alert.alert('Erro', 'Por favor, informe um valor numérico válido maior que zero.');
       return;
     }
@@ -128,12 +128,12 @@ export default function ExpenseModal({
 
             <Text style={labelStyle}>Valor Pago (R$) *</Text>
             <TextInput
-              placeholder="Ex: 150.00"
+              placeholder="0,00"
               placeholderTextColor={placeholderColor}
               keyboardType="numeric"
               value={form.amount}
-              onChangeText={t => setForm(prev => ({ ...prev, amount: t }))}
-              maxLength={10}
+              onChangeText={t => setForm(prev => ({ ...prev, amount: maskCurrencyInput(t) }))}
+              maxLength={14}
               style={inputStyle}
             />
 

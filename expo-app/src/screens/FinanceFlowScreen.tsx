@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 import { Plus, Search, X, ArrowUpRight, ArrowDownRight, Trash2 } from 'lucide-react-native';
 import { useDatabase } from '../context/DatabaseContext';
+import { useToast } from '../context/ToastContext';
 import { theme, useTheme } from '../styles/theme';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { useNavigation } from '@react-navigation/native';
@@ -11,6 +12,7 @@ import { Billing, BillingStatus } from '../types';
 export default function FinanceFlowScreen() {
   const navigation = useNavigation<any>();
   const { colors, isDark } = useTheme();
+  const { showToast } = useToast();
   const { transactions, billings, workOrders, clients, deleteTransaction, addTransaction } = useDatabase();
   const [activeFinanceTab, setActiveFinanceTab] = useState<'flow' | 'billings'>('flow');
   const [summaryPeriod, setSummaryPeriod] = useState<'diario' | 'semanal' | 'mensal'>('mensal');
@@ -131,6 +133,9 @@ export default function FinanceFlowScreen() {
       date: form.date,
       description: form.description
     });
+    if (res) {
+      showToast('Despesa registrada com sucesso no caixa!');
+    }
     return !!res;
   };
 

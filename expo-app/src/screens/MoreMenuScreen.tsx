@@ -135,7 +135,7 @@ export default function MoreMenuScreen() {
       </View>
 
       <Text style={[styles.versionText, { color: colors.textMuted }]}>
-        MecânicaPro v{Constants.expoConfig?.version || '1.0.2'} • Gestão de Oficinas
+        MecânicaPro v{Constants.expoConfig?.version || '1.0.5'} • Gestão de Oficinas
       </Text>
 
       <TermsPrivacyModal

@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet } from 
 import { Search, X, Plus } from 'lucide-react-native';
 import { useDatabase } from '../context/DatabaseContext';
 import { theme, useTheme } from '../styles/theme';
-import { formatDate, formatCurrency } from '../utils/formatters';
+import { formatDate, formatCurrency, getTodayISO } from '../utils/formatters';
 import { useNavigation } from '@react-navigation/native';
 import OSWizardModal from '../components/OSWizardModal';
 import { OSStatus } from '../types';
@@ -68,7 +68,7 @@ export default function OSListScreen() {
 
     const res = await addWorkOrder({
       ...dataToSave,
-      date: new Date().toISOString().split('T')[0],
+      date: getTodayISO(),
     });
     return !!res;
   };

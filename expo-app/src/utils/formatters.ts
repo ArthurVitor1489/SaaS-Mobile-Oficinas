@@ -44,7 +44,7 @@ export const formatDate = (dateStr: string) => {
 };
 
 /**
- * Retorna a data de hoje no formato brasileiro DD/MM/AAAA
+ * Retorna a data local de hoje no formato brasileiro DD/MM/AAAA
  */
 export const getTodayBR = (): string => {
   const d = new Date();
@@ -52,6 +52,28 @@ export const getTodayBR = (): string => {
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const year = d.getFullYear();
   return `${day}/${month}/${year}`;
+};
+
+/**
+ * Retorna a data local de hoje no formato ISO AAAA-MM-DD (sem desvio de fuso horário UTC).
+ * Ex: Às 22h no Brasil, retorna a data de hoje e não o dia seguinte em UTC.
+ */
+export const getTodayISO = (): string => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+/**
+ * Retorna o mês local atual no formato AAAA-MM (sem desvio de fuso horário UTC).
+ */
+export const getCurrentMonthISO = (): string => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
 };
 
 /**
@@ -65,19 +87,75 @@ export const maskDate = (val: string): string => {
 };
 
 /**
- * Converte data DD/MM/AAAA ou ISO para ISO AAAA-MM-DD para armazenamento
+ * Converte data DD/MM/AAAA ou ISO para ISO AAAA-MM-DD para armazenamento,
+ * respeitando o horário local.
  */
 export const parseDateToISO = (dateStr: string): string => {
-  if (!dateStr) return new Date().toISOString().split('T')[0];
+  if (!dateStr) return getTodayISO();
   const trimmed = dateStr.trim();
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(trimmed)) {
     const [day, month, year] = trimmed.split('/');
     return `${year}-${month}-${day}`;
   }
-  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+  if (trimmed.includes('T')) {
+    // Converte timestamp ISO para data local do dispositivo
+    try {
+      const parsed = new Date(trimmed);
+      if (!isNaN(parsed.getTime())) {
+        const y = parsed.getFullYear();
+        const m = String(parsed.getMonth() + 1).padStart(2, '0');
+        const d = String(parsed.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+    } catch {}
     return trimmed.split('T')[0];
   }
+  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+    return trimmed.substring(0, 10);
+  }
   return trimmed;
+};
+
+/**
+ * Normaliza qualquer formato de data para YYYY-MM-DD puro local
+ */
+export const normalizeDateToISO = (dateStr: string): string => {
+  return parseDateToISO(dateStr);
+};
+
+/**
+ * Verifica se uma data corresponde ao dia de hoje (no horário local)
+ */
+export const isDateToday = (dateStr: string): boolean => {
+  if (!dateStr) return false;
+  return parseDateToISO(dateStr) === getTodayISO();
+};
+
+/**
+ * Verifica se uma data pertence à semana corrente (domingo a sábado, horário local)
+ */
+export const isDateThisWeek = (dateStr: string): boolean => {
+  if (!dateStr) return false;
+  const iso = parseDateToISO(dateStr);
+  const parts = iso.split('-').map(Number);
+  if (parts.length !== 3) return false;
+  const [y, m, d] = parts;
+  if (!y || !m || !d) return false;
+
+  const targetDate = new Date(y, m - 1, d, 12, 0, 0);
+  const now = new Date();
+  const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay(), 0, 0, 0, 0);
+  const endOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay() + 6, 23, 59, 59, 999);
+
+  return targetDate >= startOfWeek && targetDate <= endOfWeek;
+};
+
+/**
+ * Verifica se uma data pertence ao mês corrente (no horário local)
+ */
+export const isDateThisMonth = (dateStr: string): boolean => {
+  if (!dateStr) return false;
+  return parseDateToISO(dateStr).startsWith(getCurrentMonthISO());
 };
 
 /**

@@ -34,6 +34,7 @@ import {
   formatCurrency,
   formatDate,
   getTodayBR,
+  getTodayISO,
   maskDate,
   parseDateToISO,
   isValidDateBR,
@@ -336,7 +337,7 @@ export default function BillingDetailScreen() {
         {/* Installment cards */}
         {billing.installments.map((inst, index) => {
           const isPaid = inst.status === 'Pago';
-          const isOverdue = !isPaid && inst.dueDate < new Date().toISOString().split('T')[0];
+          const isOverdue = !isPaid && inst.dueDate < getTodayISO();
           const isBoleto = billing.paymentMethod === 'Boleto';
 
           return (

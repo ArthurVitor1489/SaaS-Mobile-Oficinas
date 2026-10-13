@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, BackHandler, Aler
 import { ClipboardList, Play, CheckCircle, Wallet, ArrowUpRight, ArrowDownRight, Clock, Sparkles, ChevronRight } from 'lucide-react-native';
 import { useDatabase } from '../context/DatabaseContext';
 import { theme, useTheme } from '../styles/theme';
-import { formatCurrency, formatDate } from '../utils/formatters';
+import { formatCurrency, formatDate, isDateThisMonth } from '../utils/formatters';
 import { WorkOrder } from '../types';
 
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -50,13 +50,12 @@ export default function DashboardScreen() {
       return acc + b.installments.filter(i => i.status === 'Pendente').reduce((s, i) => s + i.amount, 0);
     }, 0);
 
-    const currentMonthStr = new Date().toISOString().substring(0, 7); // "YYYY-MM"
     const faturamentoMes = workOrders
-      .filter(o => o.date.startsWith(currentMonthStr))
+      .filter(o => isDateThisMonth(o.date))
       .reduce((acc, o) => acc + o.grandTotal, 0);
 
     // Monthly transactions for entries sum
-    const transactionsMes = transactions.filter(t => t.date.startsWith(currentMonthStr));
+    const transactionsMes = transactions.filter(t => isDateThisMonth(t.date));
     const entradasMes = transactionsMes.filter(t => t.type === 'Entrada').reduce((sum, t) => sum + t.amount, 0);
 
     return {

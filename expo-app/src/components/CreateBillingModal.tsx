@@ -16,6 +16,7 @@ import {
   formatCurrency,
   formatDate,
   getTodayBR,
+  getTodayISO,
   maskDate,
   parseDateToISO,
   isValidDateBR,
@@ -313,15 +314,19 @@ export default function CreateBillingModal({
     for (let i = 1; i <= count; i++) {
       const d = new Date(startDate);
       d.setMonth(d.getMonth() + (i - 1));
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const dayStr = String(d.getDate()).padStart(2, '0');
+      const instDueDate = `${y}-${m}-${dayStr}`;
       const instAmount = i === count ? (baseVal + diff) : baseVal;
-      
+
       // No Cartão de Crédito com repasse total marcado, todas as parcelas são dadas como pagas (adquirente liquida integralmente)
       const isCardFullPaid = paymentMethod === 'Crédito' && isPaidNow;
       const isPaid = isCardFullPaid || (i === 1 && isPaidNow);
       list.push({
         number: i,
         amount: instAmount,
-        dueDate: d.toISOString().split('T')[0],
+        dueDate: instDueDate,
         status: isPaid ? 'Pago' : 'Pendente',
         paidAt: isPaid ? new Date().toISOString() : undefined,
       });
@@ -413,7 +418,7 @@ export default function CreateBillingModal({
           type: 'Entrada',
           category: 'Pagamento OS',
           amount: paidAmount,
-          date: new Date().toISOString().split('T')[0],
+          date: getTodayISO(),
           description: `Recebimento ${osLabel} (${methodDesc})`,
         });
       }
@@ -661,7 +666,7 @@ export default function CreateBillingModal({
                   {/* LISTA DE BOLETOS PERSONALIZADOS */}
                   <View style={styles.boletosList}>
                     {customInstallments.map((inst, index) => {
-                      const todayStr = new Date().toISOString().split('T')[0];
+                      const todayStr = getTodayISO();
                       return (
                         <View key={inst.number} style={styles.boletoCard}>
                           {/* Top row: Boleto index and remove button */}

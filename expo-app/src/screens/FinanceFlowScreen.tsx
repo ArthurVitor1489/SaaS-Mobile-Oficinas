@@ -1,11 +1,12 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 import { Plus, Search, X, ArrowUpRight, ArrowDownRight, Trash2 } from 'lucide-react-native';
 import { useDatabase } from '../context/DatabaseContext';
 import { useToast } from '../context/ToastContext';
 import { theme, useTheme } from '../styles/theme';
-import { formatCurrency, formatDate } from '../utils/formatters';
-import { useNavigation } from '@react-navigation/native';
+import { formatCurrency, formatDate, isDateToday, isDateThisWeek, isDateThisMonth } from '../utils/formatters';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useAppStore } from '../store/useAppStore';
 import ExpenseModal from '../components/ExpenseModal';
 import { Billing, BillingStatus } from '../types';
 
@@ -24,6 +25,13 @@ export default function FinanceFlowScreen() {
   const clientMap = useMemo(() => new Map(clients.map(c => [c.id, c])), [clients]);
   const osMap = useMemo(() => new Map(workOrders.map(o => [o.id, o])), [workOrders]);
 
+  useFocusEffect(
+    useCallback(() => {
+      // Sincroniza em background ao focar na tela de fluxo de caixa
+      useAppStore.getState().pullAll().catch(() => {});
+    }, [])
+  );
+
   const financeMetrics = useMemo(() => {
     const totalRecebido = transactions.filter(t => t.type === 'Entrada').reduce((sum, t) => sum + t.amount, 0);
     const totalDespesas = transactions.filter(t => t.type === 'Saída').reduce((sum, t) => sum + t.amount, 0);
@@ -34,39 +42,24 @@ export default function FinanceFlowScreen() {
       return acc + b.installments.filter(i => i.status === 'Pendente').reduce((s, i) => s + i.amount, 0);
     }, 0);
 
-    const currentMonthStr = new Date().toISOString().substring(0, 7);
     const faturamentoMes = workOrders
-      .filter(o => o.date.startsWith(currentMonthStr))
+      .filter(o => isDateThisMonth(o.date))
       .reduce((acc, o) => acc + o.grandTotal, 0);
 
-    const todayStr = new Date().toISOString().split('T')[0];
-
-    const transactionsHoje = transactions.filter(t => t.date === todayStr);
+    // Diário (Hoje - fuso local do aparelho)
+    const transactionsHoje = transactions.filter(t => isDateToday(t.date));
     const entradasHoje = transactionsHoje.filter(t => t.type === 'Entrada').reduce((sum, t) => sum + t.amount, 0);
     const saidasHoje = transactionsHoje.filter(t => t.type === 'Saída').reduce((sum, t) => sum + t.amount, 0);
     const saldoHoje = entradasHoje - saidasHoje;
 
-    const today = new Date();
-    const startOfWeek = new Date(today);
-    const dayIndex = today.getDay();
-    startOfWeek.setDate(today.getDate() - dayIndex);
-    startOfWeek.setHours(0, 0, 0, 0);
-
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6);
-    endOfWeek.setHours(23, 59, 59, 999);
-
-    const isThisWeek = (dateStr: string) => {
-      const tDate = new Date(dateStr + 'T00:00:00');
-      return tDate >= startOfWeek && tDate <= endOfWeek;
-    };
-
-    const transactionsSemana = transactions.filter(t => isThisWeek(t.date));
+    // Semanal (Esta semana - domingo a sábado, fuso local)
+    const transactionsSemana = transactions.filter(t => isDateThisWeek(t.date));
     const entradasSemana = transactionsSemana.filter(t => t.type === 'Entrada').reduce((sum, t) => sum + t.amount, 0);
     const saidasSemana = transactionsSemana.filter(t => t.type === 'Saída').reduce((sum, t) => sum + t.amount, 0);
     const saldoSemana = entradasSemana - saidasSemana;
 
-    const transactionsMes = transactions.filter(t => t.date.startsWith(currentMonthStr));
+    // Mensal (Este mês - fuso local)
+    const transactionsMes = transactions.filter(t => isDateThisMonth(t.date));
     const entradasMes = transactionsMes.filter(t => t.type === 'Entrada').reduce((sum, t) => sum + t.amount, 0);
     const saidasMes = transactionsMes.filter(t => t.type === 'Saída').reduce((sum, t) => sum + t.amount, 0);
     const saldoMes = entradasMes - saidasMes;
@@ -199,7 +192,9 @@ export default function FinanceFlowScreen() {
             <View style={styles.periodHeaderRow}>
               <View>
                 <Text style={[styles.periodCardTitle, { color: colors.text }]}>RESUMO POR PERÍODO</Text>
-                <Text style={[styles.periodCardSubtitle, { color: colors.textMuted }]}>Entradas, saídas e resultado líquido</Text>
+                <Text style={[styles.periodCardSubtitle, { color: colors.textMuted }]}>
+                  {summaryPeriod === 'diario' ? 'Lançamentos de hoje' : summaryPeriod === 'semanal' ? 'Lançamentos desta semana' : 'Lançamentos deste mês'}
+                </Text>
               </View>
               
               <View style={[styles.periodSelectWrapper, { backgroundColor: colors.surface }]}>

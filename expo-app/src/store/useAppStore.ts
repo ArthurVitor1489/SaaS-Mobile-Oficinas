@@ -8,6 +8,7 @@ import {
   OSStatus, WorkOrder, Billing, FinancialTransaction, 
   CompanySettings, BillingStatus, TransactionType, TransactionCategory
 } from '../types';
+import { getTodayISO } from '../utils/formatters';
 
 export interface OfflineQueueItem {
   id: string;
@@ -753,7 +754,7 @@ export const useAppStore = create<AppState>()(
         let newBillings = [...get().billings];
         if (dto.status === 'Concluída' || dto.status === 'Entregue') {
           const billingId = 'b-' + generateUUID().substring(0, 8);
-          const todayStr = new Date().toISOString().split('T')[0];
+          const todayStr = getTodayISO();
           const newBilling: Billing = {
             id: billingId,
             osId: newId,
@@ -829,7 +830,7 @@ export const useAppStore = create<AppState>()(
           const hasBilling = get().billings.some((b) => b.osId === id);
           if (!hasBilling) {
             const billingId = 'b-' + generateUUID().substring(0, 8);
-            const todayStr = new Date().toISOString().split('T')[0];
+            const todayStr = getTodayISO();
             const newBilling: Billing = {
               id: billingId,
               osId: id,
@@ -975,7 +976,7 @@ export const useAppStore = create<AppState>()(
           type: 'Entrada',
           category: 'Pagamento OS',
           amount: paidAmount,
-          date: paidAtStr.split('T')[0],
+          date: getTodayISO(),
           description: transactionDescription,
           createdAt: paidAtStr,
         };

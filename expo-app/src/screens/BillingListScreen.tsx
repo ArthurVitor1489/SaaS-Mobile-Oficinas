@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -25,8 +25,9 @@ import {
 } from 'lucide-react-native';
 import { useDatabase } from '../context/DatabaseContext';
 import { theme, useTheme } from '../styles/theme';
-import { formatCurrency, formatDate } from '../utils/formatters';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { formatCurrency, formatDate, isDateToday, isDateThisMonth, getTodayISO } from '../utils/formatters';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
+import { useAppStore } from '../store/useAppStore';
 import { Billing } from '../types';
 import CreateBillingModal from '../components/CreateBillingModal';
 
@@ -41,6 +42,12 @@ export default function BillingListScreen() {
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [preselectedOsId, setPreselectedOsId] = useState<string | undefined>(undefined);
 
+  useFocusEffect(
+    useCallback(() => {
+      useAppStore.getState().pullAll().catch(() => {});
+    }, [])
+  );
+
   useEffect(() => {
     if (route.params?.preselectedOsId) {
       setPreselectedOsId(route.params.preselectedOsId);
@@ -52,8 +59,7 @@ export default function BillingListScreen() {
   const osMap = useMemo(() => new Map(workOrders.map(o => [o.id, o])), [workOrders]);
   const vehicleMap = useMemo(() => new Map(vehicles.map(v => [v.id, v])), [vehicles]);
 
-  const todayStr = new Date().toISOString().split('T')[0];
-  const currentMonthStr = new Date().toISOString().substring(0, 7);
+  const todayStr = getTodayISO();
 
   // Metrics calculation
   const metrics = useMemo(() => {
@@ -67,18 +73,19 @@ export default function BillingListScreen() {
 
       b.installments.forEach(inst => {
         if (inst.status === 'Pago') {
-          if (inst.paidAt && inst.paidAt.startsWith(currentMonthStr)) {
+          if (inst.paidAt && isDateThisMonth(inst.paidAt)) {
             recebidoMes += inst.amount;
           }
         } else {
           // Pendente
-          if (inst.dueDate === todayStr) {
+          if (isDateToday(inst.dueDate)) {
             aReceberHoje += inst.amount;
           }
-          if (inst.dueDate.startsWith(currentMonthStr)) {
+          if (isDateThisMonth(inst.dueDate)) {
             aReceberMes += inst.amount;
           }
-          if (inst.dueDate < todayStr) {
+          const dueISO = inst.dueDate ? inst.dueDate.slice(0, 10) : '';
+          if (dueISO && dueISO < todayStr) {
             atrasadoTotal += inst.amount;
           }
         }
@@ -91,7 +98,7 @@ export default function BillingListScreen() {
       recebidoMes,
       atrasadoTotal
     };
-  }, [billings, todayStr, currentMonthStr]);
+  }, [billings, todayStr]);
 
   // Filter billings
   const filteredBillings = useMemo(() => {

@@ -25,7 +25,7 @@ import {
 } from 'lucide-react-native';
 import { useDatabase } from '../context/DatabaseContext';
 import { theme, useTheme } from '../styles/theme';
-import { formatCurrency, formatDate, isDateToday, isDateThisMonth, getTodayISO } from '../utils/formatters';
+import { formatCurrency, formatDate, isDateToday, isDateThisMonth, getTodayISO, matchesSearch } from '../utils/formatters';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useAppStore } from '../store/useAppStore';
 import { Billing } from '../types';
@@ -116,23 +116,18 @@ export default function BillingListScreen() {
       if (statusFilter === 'Atrasadas' && (!hasOverdue || b.status === 'Pago' || b.status === 'Cancelado')) return false;
 
       // Search filter
-      if (!search.trim()) return true;
-      const term = search.toLowerCase();
-
-      const osNum = os?.osNumber ? os.osNumber.toLowerCase() : '';
-      const clientName = (client?.name || b.customClientName || '').toLowerCase();
-      const customDesc = (b.customDescription || '').toLowerCase();
-      const vehiclePlate = vehicle?.plate ? vehicle.plate.toLowerCase() : '';
-      const vehicleModel = vehicle?.model ? vehicle.model.toLowerCase() : '';
-      const paymentMethod = b.paymentMethod.toLowerCase();
-
-      return (
-        osNum.includes(term) ||
-        clientName.includes(term) ||
-        customDesc.includes(term) ||
-        vehiclePlate.includes(term) ||
-        vehicleModel.includes(term) ||
-        paymentMethod.includes(term)
+      return matchesSearch(
+        [
+          os?.osNumber,
+          client?.name,
+          b.customClientName,
+          b.customDescription,
+          vehicle?.plate,
+          vehicle?.model,
+          vehicle?.brand,
+          b.paymentMethod
+        ],
+        search
       );
     });
   }, [billings, osMap, clientMap, vehicleMap, statusFilter, search, todayStr]);

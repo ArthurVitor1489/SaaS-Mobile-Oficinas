@@ -6,7 +6,7 @@ import {
 import { X, Search, Check, ClipboardList, Play, CheckCircle, Plus } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme, useTheme } from '../styles/theme';
-import { formatCurrency, containsInjection } from '../utils/formatters';
+import { formatCurrency, containsInjection, matchesSearch } from '../utils/formatters';
 import { Client, Vehicle, ServiceItem, PartItem, OSItemService, OSItemPart, OSStatus } from '../types';
 import { useDatabase } from '../context/DatabaseContext';
 import CatalogServiceModal from './CatalogServiceModal';
@@ -208,21 +208,26 @@ export default function OSWizardModal({
   };
 
   const filteredClients = useMemo(() => {
-    return clients.filter(c =>
-      c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
-      (c.cpfCnpj && c.cpfCnpj.includes(clientSearch))
-    );
-  }, [clients, clientSearch]);
+    return clients.filter(c => {
+      const clientVehicles = vehicles.filter(v => v.clientId === c.id);
+      const vehiclePlates = clientVehicles.map(v => v.plate);
+      const vehicleModels = clientVehicles.map(v => `${v.brand || ''} ${v.model || ''}`);
+      return matchesSearch(
+        [c.name, c.phone, c.cpfCnpj, ...vehiclePlates, ...vehicleModels],
+        clientSearch
+      );
+    });
+  }, [clients, vehicles, clientSearch]);
 
   const filteredServices = useMemo(() => {
     return availableServices.filter(s =>
-      s.name.toLowerCase().includes(serviceSearch.toLowerCase())
+      matchesSearch([s.name, s.code, s.description], serviceSearch)
     );
   }, [availableServices, serviceSearch]);
 
   const filteredParts = useMemo(() => {
     return availableParts.filter(p =>
-      p.name.toLowerCase().includes(partSearch.toLowerCase())
+      matchesSearch([p.name, p.code, p.supplier], partSearch)
     );
   }, [availableParts, partSearch]);
 

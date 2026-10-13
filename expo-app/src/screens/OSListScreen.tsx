@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet } from 
 import { Search, X, Plus } from 'lucide-react-native';
 import { useDatabase } from '../context/DatabaseContext';
 import { theme, useTheme } from '../styles/theme';
-import { formatDate, formatCurrency, getTodayISO } from '../utils/formatters';
+import { formatDate, formatCurrency, getTodayISO, matchesSearch } from '../utils/formatters';
 import { useNavigation } from '@react-navigation/native';
 import OSWizardModal from '../components/OSWizardModal';
 import { OSStatus } from '../types';
@@ -27,10 +27,18 @@ export default function OSListScreen() {
       const vehicle = vehicleMap.get(os.vehicleId);
       const billing = billingMap.get(os.id);
       
-      const matchesSearch =
-        os.osNumber.toLowerCase().includes(osSearch.toLowerCase()) ||
-        (client?.name || '').toLowerCase().includes(osSearch.toLowerCase()) ||
-        (vehicle?.plate || '').toLowerCase().includes(osSearch.toLowerCase());
+      const matchesSearchTerm = matchesSearch(
+        [
+          os.osNumber,
+          client?.name,
+          client?.phone,
+          vehicle?.plate,
+          vehicle?.model,
+          vehicle?.brand,
+          os.notes
+        ],
+        osSearch
+      );
 
       let matchesBilling = true;
       if (osBillingFilter === 'A Faturar') {
@@ -41,7 +49,7 @@ export default function OSListScreen() {
         matchesBilling = billing?.status === 'Pago';
       }
 
-      return matchesSearch && matchesBilling;
+      return matchesSearchTerm && matchesBilling;
     });
   }, [workOrders, osSearch, osBillingFilter, clientMap, vehicleMap, billingMap]);
 

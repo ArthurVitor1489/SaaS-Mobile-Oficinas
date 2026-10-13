@@ -4,7 +4,7 @@ import { Plus, Search, X, ArrowUpRight, ArrowDownRight, Trash2 } from 'lucide-re
 import { useDatabase } from '../context/DatabaseContext';
 import { useToast } from '../context/ToastContext';
 import { theme, useTheme } from '../styles/theme';
-import { formatCurrency, formatDate, isDateToday, isDateThisWeek, isDateThisMonth } from '../utils/formatters';
+import { formatCurrency, formatDate, isDateToday, isDateThisWeek, isDateThisMonth, matchesSearch } from '../utils/formatters';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAppStore } from '../store/useAppStore';
 import ExpenseModal from '../components/ExpenseModal';
@@ -93,11 +93,12 @@ export default function FinanceFlowScreen() {
     return billings.filter(b => {
       const os = osMap.get(b.osId);
       const client = os ? clientMap.get(os.clientId) : null;
-      const matchesSearch =
-        (os?.osNumber || '').toLowerCase().includes(billingSearch.toLowerCase()) ||
-        (client?.name || '').toLowerCase().includes(billingSearch.toLowerCase());
+      const matchesSearchTerm = matchesSearch(
+        [os?.osNumber, client?.name, b.customClientName, b.customDescription],
+        billingSearch
+      );
       const matchesStatus = billingStatusFilter === 'Todos' || b.status === billingStatusFilter;
-      return matchesSearch && matchesStatus;
+      return matchesSearchTerm && matchesStatus;
     });
   }, [billings, billingSearch, billingStatusFilter, clientMap, osMap]);
 

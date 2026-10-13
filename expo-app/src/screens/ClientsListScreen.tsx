@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet } from 
 import { Search, X, UserPlus, ChevronRight } from 'lucide-react-native';
 import { useDatabase } from '../context/DatabaseContext';
 import { theme, useTheme } from '../styles/theme';
+import { matchesSearch } from '../utils/formatters';
 import { useNavigation } from '@react-navigation/native';
 import ClientModal from '../components/ClientModal';
 
@@ -14,13 +15,19 @@ export default function ClientsListScreen() {
   const [clientModalVisible, setClientModalVisible] = useState(false);
 
   const filteredClients = useMemo(() => {
-    return clients.filter(c =>
-      c.name.toLowerCase().includes(clientTabSearch.toLowerCase()) ||
-      (c.phone && c.phone.toLowerCase().includes(clientTabSearch.toLowerCase())) ||
-      (c.email && c.email.toLowerCase().includes(clientTabSearch.toLowerCase())) ||
-      (c.cpfCnpj && c.cpfCnpj.includes(clientTabSearch))
-    );
-  }, [clients, clientTabSearch]);
+    if (!clientTabSearch.trim()) return clients;
+
+    return clients.filter(c => {
+      const clientVehicles = vehicles.filter(v => v.clientId === c.id);
+      const vehiclePlates = clientVehicles.map(v => v.plate);
+      const vehicleModels = clientVehicles.map(v => `${v.brand || ''} ${v.model || ''}`);
+
+      return matchesSearch(
+        [c.name, c.phone, c.email, c.cpfCnpj, ...vehiclePlates, ...vehicleModels],
+        clientTabSearch
+      );
+    });
+  }, [clients, vehicles, clientTabSearch]);
 
   const handleOpenClientModalForCreate = () => {
     setClientModalVisible(true);

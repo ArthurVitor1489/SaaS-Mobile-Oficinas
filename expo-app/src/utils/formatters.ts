@@ -288,3 +288,73 @@ export const containsInjection = (str: string): boolean => {
   const pattern = /(<script|javascript:|UNION\s+SELECT|xp_cmdshell|--|\/\*|\*\/)/i;
   return pattern.test(str);
 };
+
+/**
+ * Normaliza um texto para busca:
+ * - Remove acentos / diacríticos (ex: "João" -> "joao", "óleo" -> "oleo", "Mecânica" -> "mecanica")
+ * - Converte para minúsculo
+ * - Remove espaços duplicados nas extremidades
+ */
+export const normalizeSearchText = (text: string | null | undefined): string => {
+  if (!text) return '';
+  try {
+    return text
+      .toString()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  } catch {
+    return text.toString().toLowerCase().trim();
+  }
+};
+
+/**
+ * Remove qualquer caractere que não seja letra ou número.
+ * Essencial para buscar placas com/sem hífen e telefones com/sem máscara.
+ */
+export const cleanAlphaNumeric = (text: string | null | undefined): string => {
+  if (!text) return '';
+  return text.toString().replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+};
+
+/**
+ * Compara se um termo de busca corresponde a uma lista de campos alvos.
+ * Suporta:
+ * 1. Insensibilidade a acentos (ex: "joa" encontra "João", "oleo" encontra "Óleo")
+ * 2. Case-insensitive
+ * 3. Busca por múltiplos termos/palavras (ex: "joao palio" encontra João que tem Palio)
+ * 4. Correspondência alfanumérica limpa para placas, telefones e CPF/CNPJ
+ */
+export const matchesSearch = (
+  targets: (string | null | undefined)[],
+  query: string | null | undefined
+): boolean => {
+  if (!query || !query.trim()) return true;
+
+  const normalizedQuery = normalizeSearchText(query);
+  const queryTokens = normalizedQuery.split(/\s+/).filter(Boolean);
+  const cleanQuery = cleanAlphaNumeric(query);
+
+  const normalizedTargets = targets
+    .filter(Boolean)
+    .map(t => normalizeSearchText(t));
+  const fullTargetString = normalizedTargets.join(' ');
+
+  // 1. Verifica se todos os tokens da busca estão presentes nos campos consolidados
+  const allTokensMatch = queryTokens.length > 0 && queryTokens.every(token => fullTargetString.includes(token));
+  if (allTokensMatch) return true;
+
+  // 2. Busca alfanumérica limpa (placas ex: "ABC-1234" com "abc12", fones sem máscara, etc)
+  if (cleanQuery.length >= 2) {
+    const cleanTargets = targets
+      .filter(Boolean)
+      .map(t => cleanAlphaNumeric(t))
+      .join(' ');
+    if (cleanTargets.includes(cleanQuery)) {
+      return true;
+    }
+  }
+
+  return false;
+};

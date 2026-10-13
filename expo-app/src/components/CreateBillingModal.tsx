@@ -20,7 +20,8 @@ import {
   maskDate,
   parseDateToISO,
   isValidDateBR,
-  addDaysToBRDate
+  addDaysToBRDate,
+  matchesSearch
 } from '../utils/formatters';
 
 interface CreateBillingModalProps {
@@ -82,12 +83,20 @@ export default function CreateBillingModal({
   // Filtered orders for selector
   const filteredOrders = useMemo(() => {
     if (!osSearch.trim()) return availableOrders;
-    const term = osSearch.toLowerCase();
     return availableOrders.filter(os => {
-      const client = clientMap.get(os.clientId)?.name?.toLowerCase() || '';
-      const plate = vehicleMap.get(os.vehicleId)?.plate?.toLowerCase() || '';
-      const osNum = os.osNumber.toLowerCase();
-      return osNum.includes(term) || client.includes(term) || plate.includes(term);
+      const client = clientMap.get(os.clientId);
+      const vehicle = vehicleMap.get(os.vehicleId);
+      return matchesSearch(
+        [
+          os.osNumber,
+          client?.name,
+          client?.phone,
+          vehicle?.plate,
+          vehicle?.model,
+          vehicle?.brand
+        ],
+        osSearch
+      );
     });
   }, [availableOrders, osSearch, clientMap, vehicleMap]);
 

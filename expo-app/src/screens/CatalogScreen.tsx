@@ -4,7 +4,7 @@ import { ArrowLeft, Search, X, Plus, Edit2, Trash2 } from 'lucide-react-native';
 import { useDatabase } from '../context/DatabaseContext';
 import { useToast } from '../context/ToastContext';
 import { theme, useTheme } from '../styles/theme';
-import { formatCurrency } from '../utils/formatters';
+import { formatCurrency, matchesSearch } from '../utils/formatters';
 import { useNavigation } from '@react-navigation/native';
 import CatalogServiceModal from '../components/CatalogServiceModal';
 import CatalogPartModal from '../components/CatalogPartModal';
@@ -39,16 +39,13 @@ export default function CatalogScreen() {
 
   const filteredServices = useMemo(() => {
     return services.filter(s =>
-      s.name.toLowerCase().includes(catalogSearch.toLowerCase()) ||
-      (s.code && s.code.toLowerCase().includes(catalogSearch.toLowerCase()))
+      matchesSearch([s.name, s.code, s.description], catalogSearch)
     );
   }, [services, catalogSearch]);
 
   const filteredParts = useMemo(() => {
     return parts.filter(p =>
-      p.name.toLowerCase().includes(catalogSearch.toLowerCase()) ||
-      (p.code && p.code.toLowerCase().includes(catalogSearch.toLowerCase())) ||
-      (p.supplier && p.supplier.toLowerCase().includes(catalogSearch.toLowerCase()))
+      matchesSearch([p.name, p.code, p.supplier], catalogSearch)
     );
   }, [parts, catalogSearch]);
 

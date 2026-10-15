@@ -52,12 +52,15 @@ interface AppState {
   settings: CompanySettings;
   themeMode: 'dark' | 'light';
   _hasHydrated: boolean;
+  isSubscribed: boolean;
+  subscriptionPlan: string;
 
   // Actions
   setHasHydrated: (hasHydrated: boolean) => void;
   setThemeMode: (mode: 'dark' | 'light') => void;
   setAccessToken: (token: string | null) => void;
   setOnlineStatus: (status: boolean) => void;
+  setSubscription: (isSubscribed: boolean, plan?: string) => void;
   clearQueue: () => void;
   popQueueItem: (id: string) => void;
   
@@ -228,11 +231,14 @@ export const useAppStore = create<AppState>()(
       transactions: [],
       settings: defaultSettings,
       themeMode: 'dark',
+      isSubscribed: false,
+      subscriptionPlan: 'free',
 
       setHasHydrated: (_hasHydrated) => set({ _hasHydrated }),
       setThemeMode: (themeMode) => set({ themeMode }),
       setAccessToken: (accessToken) => set({ accessToken }),
       setOnlineStatus: (isOnline) => set({ isOnline }),
+      setSubscription: (isSubscribed, plan = 'pro') => set({ isSubscribed, subscriptionPlan: plan }),
       clearQueue: () => set({ offlineQueue: [] }),
       popQueueItem: (id) => set((state) => ({
         offlineQueue: state.offlineQueue.filter((item) => item.id !== id)

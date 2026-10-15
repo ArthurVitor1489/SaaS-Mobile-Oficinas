@@ -16,6 +16,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 // Store & Services
 import { useAppStore } from './src/store/useAppStore';
 import { startSyncEngine, stopSyncEngine, processOfflineQueue, checkConnection } from './src/services/syncEngine';
+import { initPurchases, checkGoogleSubscriptionStatus } from './src/services/purchaseService';
 import { theme, useTheme } from './src/styles/theme';
 import { DatabaseProvider } from './src/context/DatabaseContext';
 import { ToastProvider } from './src/context/ToastContext';
@@ -544,6 +545,10 @@ function AppContent() {
     startSyncEngine();
     if (accessToken && user && !accessToken.startsWith('local-')) {
       pullAll();
+      initPurchases(user.id);
+      checkGoogleSubscriptionStatus().then(active => {
+        if (active) useAppStore.getState().setSubscription(true, 'pro');
+      }).catch(() => {});
     }
     return () => {
       stopSyncEngine();

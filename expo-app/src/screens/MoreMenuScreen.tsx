@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Linking } from 'react-native';
-import { ChevronRight, Tag, Settings, Wifi, LogOut, TrendingUp, MessageCircle, Shield } from 'lucide-react-native';
+import { ChevronRight, Tag, Settings, Wifi, LogOut, TrendingUp, MessageCircle, Shield, Crown } from 'lucide-react-native';
 import Constants from 'expo-constants';
 import { useDatabase } from '../context/DatabaseContext';
+import { useAppStore } from '../store/useAppStore';
 import { theme, useTheme } from '../styles/theme';
 import { useNavigation } from '@react-navigation/native';
 import TermsPrivacyModal from '../components/TermsPrivacyModal';
+import PaywallModal from '../components/PaywallModal';
 
 const SUPPORT_PHONE = '5583996448504';
 const SUPPORT_PHONE_DISPLAY = '+55 (83) 99644-8504';
@@ -14,7 +16,9 @@ export default function MoreMenuScreen() {
   const navigation = useNavigation<any>();
   const { colors } = useTheme();
   const { settings, signOut, online } = useDatabase();
+  const { isSubscribed } = useAppStore();
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showPaywallModal, setShowPaywallModal] = useState(false);
 
   const handleOpenSupport = () => {
     const text = encodeURIComponent('Olá! Preciso de suporte com o aplicativo MecânicaPro.');
@@ -37,6 +41,31 @@ export default function MoreMenuScreen() {
       </View>
 
       <View style={[styles.menuContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        {/* Assinatura / Plano Pro */}
+        <TouchableOpacity
+          onPress={() => setShowPaywallModal(true)}
+          style={[styles.menuItem, { borderBottomColor: colors.border }]}
+        >
+          <View style={styles.menuItemLeft}>
+            <View style={[styles.iconBg, { backgroundColor: 'rgba(234, 179, 8, 0.15)' }]}>
+              <Crown size={18} color="#eab308" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={[styles.menuItemTitle, { color: colors.text }]}>Plano Oficina Pro</Text>
+                <View style={{ backgroundColor: isSubscribed ? 'rgba(34, 197, 94, 0.15)' : 'rgba(59, 102, 255, 0.15)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                  <Text style={{ fontSize: 10, fontWeight: 'bold', color: isSubscribed ? '#22c55e' : '#3b66ff' }}>
+                    {isSubscribed ? 'ATIVO' : 'R$ 49,90/MÊS'}
+                  </Text>
+                </View>
+              </View>
+              <Text style={[styles.menuItemSubtitle, { color: colors.textMuted }]}>
+                {isSubscribed ? 'Assinatura ativa no Google Play' : 'Desbloqueie todos os recursos da sua oficina'}
+              </Text>
+            </View>
+          </View>
+          <ChevronRight size={18} color="#eab308" />
+        </TouchableOpacity>
         <TouchableOpacity
           onPress={() => navigation.navigate('CashFlow')}
           style={[styles.menuItem, { borderBottomColor: colors.border }]}
@@ -141,6 +170,11 @@ export default function MoreMenuScreen() {
       <TermsPrivacyModal
         visible={showTermsModal}
         onClose={() => setShowTermsModal(false)}
+      />
+
+      <PaywallModal
+        visible={showPaywallModal}
+        onClose={() => setShowPaywallModal(false)}
       />
     </View>
   );

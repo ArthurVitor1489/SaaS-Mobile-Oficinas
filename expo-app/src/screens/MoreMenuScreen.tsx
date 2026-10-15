@@ -53,14 +53,14 @@ export default function MoreMenuScreen() {
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Text style={[styles.menuItemTitle, { color: colors.text }]}>Plano Oficina Pro</Text>
-                <View style={{ backgroundColor: isSubscribed ? 'rgba(34, 197, 94, 0.15)' : 'rgba(59, 102, 255, 0.15)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                  <Text style={{ fontSize: 10, fontWeight: 'bold', color: isSubscribed ? '#22c55e' : '#3b66ff' }}>
-                    {isSubscribed ? 'ATIVO' : 'R$ 49,90/MÊS'}
+                <View style={{ backgroundColor: isSubscribed ? 'rgba(34, 197, 94, 0.15)' : 'rgba(234, 179, 8, 0.18)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                  <Text style={{ fontSize: 10, fontWeight: 'bold', color: isSubscribed ? '#22c55e' : '#eab308' }}>
+                    {isSubscribed ? 'ATIVO' : '7 DIAS GRÁTIS'}
                   </Text>
                 </View>
               </View>
               <Text style={[styles.menuItemSubtitle, { color: colors.textMuted }]}>
-                {isSubscribed ? 'Assinatura ativa no Google Play' : 'Desbloqueie todos os recursos da sua oficina'}
+                {isSubscribed ? 'Assinatura ativa no Google Play' : 'Teste grátis por 7 dias • depois R$ 49,90/mês'}
               </Text>
             </View>
           </View>

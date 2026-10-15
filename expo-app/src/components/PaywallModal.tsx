@@ -90,29 +90,33 @@ export default function PaywallModal({ visible, onClose }: PaywallModalProps) {
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
             {/* Destaque do Plano */}
-            <View style={[styles.planCard, { borderColor: '#3b66ff', backgroundColor: 'rgba(59, 102, 255, 0.08)' }]}>
+            <View style={[styles.planCard, { borderColor: '#eab308', backgroundColor: 'rgba(234, 179, 8, 0.08)' }]}>
               <View style={styles.planBadgeRow}>
-                <View style={styles.popularBadge}>
-                  <Text style={styles.popularBadgeText}>PLANO RECOMENDADO</Text>
+                <View style={[styles.popularBadge, { backgroundColor: '#eab308' }]}>
+                  <Text style={[styles.popularBadgeText, { color: '#000' }]}>7 DIAS GRÁTIS</Text>
                 </View>
                 <View style={styles.googleBadge}>
                   <ShieldCheck size={12} color="#22c55e" />
-                  <Text style={styles.googleBadgeText}>Google Play</Text>
+                  <Text style={styles.googleBadgeText}>Google Play Oficial</Text>
                 </View>
               </View>
 
               <Text style={[styles.planName, { color: colors.text }]}>Oficina Pro Completa</Text>
+              
               <View style={styles.priceRow}>
-                <Text style={styles.priceValue}>R$ 49,90</Text>
-                <Text style={[styles.pricePeriod, { color: colors.textMuted }]}> / mês</Text>
+                <Text style={[styles.priceValue, { color: '#eab308' }]}>R$ 0,00</Text>
+                <Text style={[styles.pricePeriod, { color: colors.textMuted }]}> por 7 dias</Text>
               </View>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: 4 }}>
+                Depois apenas R$ 49,90 / mês
+              </Text>
               <Text style={[styles.cancelNotice, { color: colors.textMuted }]}>
-                Cancele facilmente a qualquer momento na sua conta Google Play
+                Sem cobrança hoje. Cancele quando quiser antes do fim do período de teste sem custo algum.
               </Text>
             </View>
 
             {/* Lista de Vantagens */}
-            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>O QUE ESTÁ INCLUSO NO SEU PLANO:</Text>
+            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>O QUE VOCÊ TERÁ LIBERADO:</Text>
 
             <View style={styles.featuresList}>
               {[
@@ -147,7 +151,7 @@ export default function PaywallModal({ visible, onClose }: PaywallModalProps) {
               ) : (
                 <>
                   <Zap size={18} color="#fff" style={{ marginRight: 8 }} />
-                  <Text style={styles.subscribeBtnText}>Assinar por R$ 49,90 / mês</Text>
+                  <Text style={styles.subscribeBtnText}>Começar 7 Dias Grátis</Text>
                 </>
               )}
             </TouchableOpacity>

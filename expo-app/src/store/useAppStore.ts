@@ -814,6 +814,12 @@ export const useAppStore = create<AppState>()(
         const original = get().workOrders.find((w) => w.id === id);
         if (!original) return false;
 
+        // Bloqueia edição de itens/valores caso a OS já esteja faturada
+        const existingBilling = get().billings.find((b) => b.osId === id && b.status !== 'Cancelado');
+        if (existingBilling && (dto.services !== undefined || dto.parts !== undefined)) {
+          return false;
+        }
+
         const services = dto.services ?? original.services;
         const parts = dto.parts ?? original.parts;
 

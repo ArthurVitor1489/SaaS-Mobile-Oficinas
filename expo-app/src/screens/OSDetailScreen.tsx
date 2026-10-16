@@ -47,6 +47,7 @@ export default function OSDetailScreen() {
 
   const os = useMemo(() => workOrders.find(o => o.id === osId), [workOrders, osId]);
   const billing = billingMap.get(os?.id || '');
+  const isBilled = !!billing && billing.status !== 'Cancelado';
   const isPaid = billing?.status === 'Pago';
 
   const handleGoBack = useCallback(() => {
@@ -98,10 +99,12 @@ export default function OSDetailScreen() {
   const vehicle = vehicleMap.get(os.vehicleId);
 
   const handleDeleteOS = () => {
-    if (isPaid) {
+    if (isBilled) {
       Alert.alert(
         'OS Bloqueada para Exclusão',
-        'Esta Ordem de Serviço já possui faturamento quitado (PAGA). Por motivos de integridade contábil e histórico financeiro, ordens de serviço pagas não podem ser excluídas.',
+        isPaid
+          ? 'Esta Ordem de Serviço já possui faturamento quitado (PAGA). Por motivos de integridade contábil e histórico financeiro, ordens de serviço pagas não podem ser excluídas.'
+          : 'Esta Ordem de Serviço já foi faturada e possui uma cobrança vinculada. Ordens de serviço faturadas não podem ser excluídas.',
         [{ text: 'Entendido', style: 'default' }]
       );
       return;
@@ -130,10 +133,12 @@ export default function OSDetailScreen() {
   };
 
   const handleOpenOSWizardForEdit = () => {
-    if (isPaid) {
+    if (isBilled) {
       Alert.alert(
         'OS Bloqueada para Edição',
-        'Esta Ordem de Serviço já está com o faturamento quitado (PAGA). Não é permitido alterar peças, serviços ou valores de uma OS já quitada.',
+        isPaid
+          ? 'Esta Ordem de Serviço já está com o faturamento quitado (PAGA). Não é permitido alterar peças, serviços ou valores de uma OS faturada.'
+          : 'Esta Ordem de Serviço já foi faturada. Depois que uma OS é faturada, não é mais permitido editar seus serviços, peças ou valores.',
         [{ text: 'Entendido', style: 'default' }]
       );
       return;
@@ -620,31 +625,31 @@ export default function OSDetailScreen() {
               onPress={handleOpenOSWizardForEdit}
               style={[
                 styles.editOSButton,
-                isPaid
+                isBilled
                   ? { backgroundColor: isDark ? '#1e293b' : '#f1f5f9', opacity: 0.6 }
                   : { backgroundColor: isDark ? 'rgba(59, 102, 255, 0.1)' : 'rgba(59, 102, 255, 0.12)' }
               ]}
               activeOpacity={0.7}
             >
-              {isPaid ? (
+              {isBilled ? (
                 <Lock size={14} color={colors.textMuted} style={styles.editButtonIcon} />
               ) : (
                 <Edit2 size={14} color={colors.primary} style={styles.editButtonIcon} />
               )}
-              <Text style={[styles.editOSButtonText, { color: isPaid ? colors.textMuted : colors.primary }]}>
-                {isPaid ? 'Bloqueada' : 'Editar'}
+              <Text style={[styles.editOSButtonText, { color: isBilled ? colors.textMuted : colors.primary }]}>
+                {isBilled ? 'Bloqueada' : 'Editar'}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleDeleteOS}
               style={[
                 styles.deleteOSButton,
-                isPaid && { backgroundColor: isDark ? '#1e293b' : '#f1f5f9', opacity: 0.5 }
+                isBilled && { backgroundColor: isDark ? '#1e293b' : '#f1f5f9', opacity: 0.5 }
               ]}
               activeOpacity={0.7}
             >
-              <Trash2 size={14} color={isPaid ? colors.textMuted : colors.error} style={styles.deleteButtonIcon} />
-              <Text style={[styles.deleteOSButtonText, { color: isPaid ? colors.textMuted : colors.error }]}>
+              <Trash2 size={14} color={isBilled ? colors.textMuted : colors.error} style={styles.deleteButtonIcon} />
+              <Text style={[styles.deleteOSButtonText, { color: isBilled ? colors.textMuted : colors.error }]}>
                 Excluir
               </Text>
             </TouchableOpacity>

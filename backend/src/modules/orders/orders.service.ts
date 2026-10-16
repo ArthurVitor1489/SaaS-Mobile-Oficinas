@@ -209,6 +209,12 @@ export class OrdersService {
   async update(tenantId: string, id: string, dto: UpdateOrderDto) {
     const original = await this.findOne(tenantId, id);
 
+    if (original.billing && (dto.services !== undefined || dto.parts !== undefined)) {
+      throw new BadRequestException(
+        'Não é permitido editar serviços ou peças de uma Ordem de Serviço que já foi faturada.',
+      );
+    }
+
     const services = dto.services ?? original.services;
     const parts = dto.parts ?? original.parts;
 

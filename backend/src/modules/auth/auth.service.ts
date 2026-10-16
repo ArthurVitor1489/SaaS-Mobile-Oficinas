@@ -43,6 +43,17 @@ export class AuthService {
         },
       });
 
+      const trialDueDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      await tx.subscription.create({
+        data: {
+          tenantId: workshop.id,
+          plan: 'PRO',
+          status: 'TRIAL',
+          dueDate: trialDueDate,
+          paymentProvider: 'GOOGLE_PLAY',
+        },
+      });
+
       return {
         success: true,
         message: 'Oficina cadastrada com sucesso!',

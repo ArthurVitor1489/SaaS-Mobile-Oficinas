@@ -545,7 +545,7 @@ function AppContent() {
     startSyncEngine();
     if (accessToken && user && !accessToken.startsWith('local-')) {
       pullAll();
-      initPurchases(user.id);
+      initPurchases(user.tenantId || user.id);
       checkGoogleSubscriptionStatus().then(active => {
         if (active) useAppStore.getState().setSubscription(true, 'pro');
       }).catch(() => {});

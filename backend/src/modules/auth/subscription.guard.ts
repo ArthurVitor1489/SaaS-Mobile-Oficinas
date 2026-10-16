@@ -20,24 +20,32 @@ export class SubscriptionGuard implements CanActivate {
     }
 
     // Buscar assinatura do tenant correspondente
-    const subscription = await this.prisma.subscription.findUnique({
+    let subscription = await this.prisma.subscription.findUnique({
       where: { tenantId: user.tenantId },
     });
 
-    // Se por algum motivo não houver assinatura cadastrada, bloqueia a escrita por precaução
+    // Se a oficina foi criada antes da criação automática de trial, provisiona 7 dias de TRIAL automaticamente
     if (!subscription) {
-      throw new ForbiddenException('Assinatura não encontrada para este tenant.');
+      subscription = await this.prisma.subscription.create({
+        data: {
+          tenantId: user.tenantId,
+          plan: 'PRO',
+          status: 'TRIAL',
+          dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          paymentProvider: 'GOOGLE_PLAY',
+        },
+      });
     }
 
     const { status, dueDate } = subscription;
     const now = new Date();
     const dueDateObj = new Date(dueDate);
 
-    // 1. Plano de Testes (TRIAL) expirado bloqueia imediatamente (sem carência)
+    // 1. Plano de Testes (TRIAL) expirado bloqueia imediatamente
     if (status === 'TRIAL') {
       if (now > dueDateObj) {
         throw new ForbiddenException(
-          'Seu período de avaliação gratuita de 30 dias expirou. Efetue o pagamento para liberar as funções de escrita.',
+          'Seu período de avaliação gratuita de 7 dias expirou. Assine o Plano Oficina Pro para liberar as funções de escrita.',
         );
       }
       return true;
@@ -48,7 +56,17 @@ export class SubscriptionGuard implements CanActivate {
       return true;
     }
 
-    // 3. Assinatura Atrasada ou Pendente (OVERDUE ou PENDING)
+    // 3. Assinatura Expirada ou Cancelada (EXPIRED ou CANCELED)
+    if (status === 'EXPIRED' || status === 'CANCELED') {
+      if (now > dueDateObj) {
+        throw new ForbiddenException(
+          'Sua assinatura está inativa ou expirada. Reative o Plano Oficina Pro no Google Play para continuar.',
+        );
+      }
+      return true;
+    }
+
+    // 4. Assinatura Atrasada ou Pendente (OVERDUE ou PENDING)
     if (status === 'OVERDUE' || status === 'PENDING') {
       // Calcular a diferença em dias
       const diffTime = now.getTime() - dueDateObj.getTime();
@@ -60,8 +78,9 @@ export class SubscriptionGuard implements CanActivate {
           'Assinatura vencida há mais de 7 dias. Funcionalidades de alteração bloqueadas. Por favor, regularize o pagamento.',
         );
       }
+      return true;
     }
 
-    return true;
+    return false;
   }
 }

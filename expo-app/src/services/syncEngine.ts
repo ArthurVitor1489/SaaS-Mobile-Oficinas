@@ -4,6 +4,8 @@ import { useAppStore, OfflineQueueItem } from '../store/useAppStore';
 
 let isSyncing = false;
 let checkInterval: NodeJS.Timeout | null = null;
+let lastPullTimestamp = 0;
+const PULL_COOLDOWN_MS = 3 * 60 * 1000; // 3 minutos para sincronização passiva quando ocioso
 
 export const checkConnection = async (): Promise<boolean> => {
   const store = useAppStore.getState();
@@ -25,7 +27,7 @@ export const checkConnection = async (): Promise<boolean> => {
   }
 };
 
-export const processOfflineQueue = async () => {
+export const processOfflineQueue = async (forcePull = false) => {
   if (isSyncing) return;
   
   const store = useAppStore.getState();
@@ -37,8 +39,12 @@ export const processOfflineQueue = async () => {
   const queue = [...store.offlineQueue];
   
   if (queue.length === 0) {
-    // Sincroniza e puxa todos os dados atualizados da nuvem mesmo quando a fila de envio estiver vazia
-    await store.pullAll();
+    // Evita disparar 7 chamadas HTTP a cada 15s quando a fila está vazia, economizando bateria e banda
+    const now = Date.now();
+    if (forcePull || now - lastPullTimestamp >= PULL_COOLDOWN_MS) {
+      lastPullTimestamp = now;
+      await store.pullAll();
+    }
     return;
   }
 
@@ -70,6 +76,7 @@ export const processOfflineQueue = async () => {
   }
 
   // Fetch updated database to reconcile state
+  lastPullTimestamp = Date.now();
   await store.pullAll();
   isSyncing = false;
 };

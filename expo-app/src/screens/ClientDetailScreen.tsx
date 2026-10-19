@@ -123,27 +123,6 @@ export default function ClientDetailScreen() {
     return success;
   };
 
-  const handleDeleteClientClick = () => {
-    Alert.alert(
-      'Excluir Cliente',
-      'Tem certeza que deseja excluir este cliente e todos os seus veículos associados?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Excluir',
-          style: 'destructive',
-          onPress: async () => {
-            const success = await deleteClient(clientId);
-            if (success) {
-              navigation.goBack();
-              Alert.alert('Sucesso', 'Cliente excluído com sucesso!');
-            }
-          }
-        }
-      ]
-    );
-  };
-
   const handleDeleteVehicleClick = (carId: string) => {
     Alert.alert(
       'Excluir Veículo',
@@ -182,12 +161,6 @@ export default function ClientDetailScreen() {
                 onPress={handleOpenClientModalForEdit}
               >
                 <Edit2 size={12} color="#fff" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.deleteBtn, { backgroundColor: colors.error }]}
-                onPress={handleDeleteClientClick}
-              >
-                <Trash2 size={12} color="#fff" />
               </TouchableOpacity>
             </View>
           </View>

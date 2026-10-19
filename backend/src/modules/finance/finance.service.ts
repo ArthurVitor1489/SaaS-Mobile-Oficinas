@@ -239,6 +239,28 @@ export class FinanceService {
     });
   }
 
+  async removeBilling(tenantId: string, id: string) {
+    const billing = await this.prisma.billing.findFirst({
+      where: { id, tenantId },
+      include: { installments: true },
+    });
+    if (!billing) {
+      throw new NotFoundException('Cobrança não encontrada.');
+    }
+
+    const hasPaidInstallment = billing.installments.some((i) => i.status === 'PAGO');
+    if (billing.status === 'PAGO' || hasPaidInstallment) {
+      throw new BadRequestException(
+        'Não é permitido excluir uma cobrança que já possui parcelas pagas.',
+      );
+    }
+
+    await this.prisma.billing.delete({
+      where: { id },
+    });
+    return { success: true };
+  }
+
   async removeTransaction(tenantId: string, id: string) {
     const trans = await this.prisma.financialTransaction.findFirst({
       where: { id, tenantId },

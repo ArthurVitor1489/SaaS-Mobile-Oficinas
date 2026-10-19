@@ -939,6 +939,14 @@ export const useAppStore = create<AppState>()(
       },
 
       deleteBilling: async (id) => {
+        const target = get().billings.find((b) => b.id === id);
+        if (target) {
+          const hasPaid = target.status === 'Pago' || target.installments.some((i) => i.status === 'Pago');
+          if (hasPaid) {
+            return false;
+          }
+        }
+
         set((state) => ({
           billings: state.billings.filter((b) => b.id !== id),
         }));

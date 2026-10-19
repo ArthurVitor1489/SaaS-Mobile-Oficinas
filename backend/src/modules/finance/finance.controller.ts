@@ -57,6 +57,14 @@ export class FinanceController {
     return this.financeService.createTransaction(tenantId, dto);
   }
 
+  @Delete('billings/:id')
+  removeBilling(
+    @Tenant() tenantId: string,
+    @Param('id') id: string,
+  ) {
+    return this.financeService.removeBilling(tenantId, id);
+  }
+
   @Delete('transactions/:id')
   removeTransaction(
     @Tenant() tenantId: string,

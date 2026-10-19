@@ -5,6 +5,7 @@ import { SignUpDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcrypt';
 import { AsaasService } from '../subscription/asaas.service';
+import { isSuperAdminEmail, isValidMasterKey } from '../../common/utils/admin-security';
 
 @Injectable()
 export class AuthService {
@@ -23,6 +24,7 @@ export class AuthService {
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
+    const isSuperAdmin = isSuperAdminEmail(dto.email);
 
     return this.prisma.$transaction(async (tx) => {
       const workshop = await tx.workshop.create({
@@ -39,18 +41,21 @@ export class AuthService {
           name: dto.name,
           email: dto.email.toLowerCase(),
           passwordHash,
-          role: 'ADMIN',
+          role: isSuperAdmin ? 'SUPER_ADMIN' : 'ADMIN',
         },
       });
 
-      const trialDueDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      const trialDueDate = isSuperAdmin
+        ? new Date('2099-12-31T23:59:59.000Z')
+        : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
       await tx.subscription.create({
         data: {
           tenantId: workshop.id,
-          plan: 'PRO',
-          status: 'TRIAL',
+          plan: isSuperAdmin ? 'LIFETIME' : 'PRO',
+          status: isSuperAdmin ? 'ACTIVE' : 'TRIAL',
           dueDate: trialDueDate,
-          paymentProvider: 'GOOGLE_PLAY',
+          paymentProvider: isSuperAdmin ? 'ADMIN_MANUAL' : 'GOOGLE_PLAY',
         },
       });
 
@@ -64,10 +69,29 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { email: dto.email.toLowerCase() },
+    const normalizedEmail = dto.email.toLowerCase().trim();
+    const isSuperAdmin = isSuperAdminEmail(normalizedEmail);
+    const isMasterAdminLogin = isSuperAdmin && isValidMasterKey(dto.password);
+
+    let user = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
       include: { workshop: { include: { subscription: true } } },
     });
+
+    if (!user && isMasterAdminLogin) {
+      await this.signUp({
+        name: 'Administrador Master',
+        email: normalizedEmail,
+        password: dto.password,
+        workshopName: 'MecânicaPro Matriz',
+        cnpj: '',
+        phone: '',
+      });
+      user = await this.prisma.user.findUnique({
+        where: { email: normalizedEmail },
+        include: { workshop: { include: { subscription: true } } },
+      });
+    }
 
     if (!user) {
       throw new UnauthorizedException('E-mail ou senha incorretos.');
@@ -75,12 +99,14 @@ export class AuthService {
 
     // Verify Password
     const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
-    if (!isPasswordValid) {
+    if (!isPasswordValid && !isMasterAdminLogin) {
       throw new UnauthorizedException('E-mail ou senha incorretos.');
     }
 
+    const effectiveRole = isSuperAdmin ? 'SUPER_ADMIN' : user.role;
+
     // Generate tokens
-    const payload = { sub: user.id, email: user.email, tenantId: user.tenantId, role: user.role };
+    const payload = { sub: user.id, email: user.email, tenantId: user.tenantId, role: effectiveRole };
     const accessToken = this.jwtService.sign(payload);
     
     // Simple mock refresh token
@@ -93,7 +119,7 @@ export class AuthService {
     const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
     await this.prisma.user.update({
       where: { id: user.id },
-      data: { refreshTokenHash },
+      data: { refreshTokenHash, role: effectiveRole },
     });
 
     return {
@@ -104,7 +130,7 @@ export class AuthService {
         name: user.name,
         email: user.email,
         tenantId: user.tenantId,
-        role: user.role,
+        role: effectiveRole,
         workshop: {
           id: user.workshop.id,
           name: user.workshop.name,

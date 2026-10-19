@@ -421,7 +421,7 @@ export const useAppStore = create<AppState>()(
         try {
           const [
             clientsRes, vehiclesRes, servicesRes, partsRes, 
-            ordersRes, billingsRes, transactionsRes, settingsRes
+            ordersRes, billingsRes, transactionsRes, settingsRes, subRes
           ] = await Promise.all([
             api.get('/clients'),
             api.get('/vehicles'),
@@ -431,6 +431,7 @@ export const useAppStore = create<AppState>()(
             api.get('/finance/billings'),
             api.get('/finance/transactions'),
             api.get('/tenant/settings'),
+            api.get('/subscription').catch(() => null),
           ]);
 
           // Normalize prices and types
@@ -474,8 +475,29 @@ export const useAppStore = create<AppState>()(
             return [...remoteList, ...preservedLocal];
           };
 
+          let isSubscribed = current.isSubscribed;
+          let subscriptionPlan = current.subscriptionPlan;
+          if (subRes && subRes.data) {
+            const sub = subRes.data;
+            if (sub.plan === 'LIFETIME') {
+              isSubscribed = true;
+              subscriptionPlan = 'lifetime';
+            } else if (sub.status === 'ACTIVE') {
+              isSubscribed = true;
+              subscriptionPlan = 'pro';
+            } else if (sub.status === 'TRIAL') {
+              isSubscribed = false;
+              subscriptionPlan = 'trial';
+            } else {
+              isSubscribed = false;
+              subscriptionPlan = 'expired';
+            }
+          }
+
           set({
             isOnline: true,
+            isSubscribed,
+            subscriptionPlan,
             clients: mergeEntities(clientsRes.data, current.clients),
             vehicles: mergeEntities(vehiclesRes.data, current.vehicles),
             services: mergeEntities(services, current.services),

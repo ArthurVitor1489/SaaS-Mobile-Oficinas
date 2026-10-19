@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, NotFoundException, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { isSuperAdminEmail, isValidMasterKey } from '../../common/utils/admin-security';
 
 export type SubscriptionStatus = 'ACTIVE' | 'OVERDUE' | 'EXPIRED' | 'TRIAL' | 'CANCELED';
 
@@ -7,14 +8,155 @@ export type SubscriptionStatus = 'ACTIVE' | 'OVERDUE' | 'EXPIRED' | 'TRIAL' | 'C
 export class SubscriptionService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private verifyAdminAccess(userEmail?: string, masterKey?: string) {
+    const isEmailAllowed = isSuperAdminEmail(userEmail);
+    const isKeyAllowed = isValidMasterKey(masterKey);
+
+    if (!isEmailAllowed && !isKeyAllowed) {
+      throw new UnauthorizedException('Acesso restrito ao Administrador Master.');
+    }
+  }
+
   async getSubscription(tenantId: string) {
-    const sub = await this.prisma.subscription.findUnique({
+    let sub = await this.prisma.subscription.findUnique({
       where: { tenantId },
     });
     if (!sub) {
-      throw new NotFoundException('Assinatura não encontrada para esta oficina.');
+      sub = await this.prisma.subscription.create({
+        data: {
+          tenantId,
+          plan: 'PRO',
+          status: 'TRIAL',
+          dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          paymentProvider: 'GOOGLE_PLAY',
+        },
+      });
     }
     return sub;
+  }
+
+  async getAdminWorkshops(userEmail?: string, masterKey?: string) {
+    this.verifyAdminAccess(userEmail, masterKey);
+
+    const workshops = await this.prisma.workshop.findMany({
+      include: {
+        users: {
+          select: { id: true, name: true, email: true, role: true },
+        },
+        subscription: true,
+        _count: {
+          select: { clients: true, workOrders: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return workshops.map((w) => {
+      const owner = w.users[0] || null;
+      return {
+        tenantId: w.id,
+        workshopName: w.name,
+        phone: w.phone || w.whatsapp || '',
+        cnpj: w.cnpj || '',
+        createdAt: w.createdAt,
+        ownerName: owner?.name || 'Sem usuário',
+        ownerEmail: owner?.email || w.email || '',
+        clientsCount: w._count.clients,
+        ordersCount: w._count.workOrders,
+        subscription: w.subscription || {
+          plan: 'PRO',
+          status: 'TRIAL',
+          dueDate: new Date(new Date(w.createdAt).getTime() + 7 * 24 * 60 * 60 * 1000),
+        },
+      };
+    });
+  }
+
+  async adminManageSubscription(
+    userEmail: string | undefined,
+    masterKey: string | undefined,
+    body: {
+      tenantId?: string;
+      email?: string;
+      action: 'LIFETIME' | 'ACTIVE_30D' | 'TRIAL_7D' | 'BLOCK';
+    },
+  ) {
+    this.verifyAdminAccess(userEmail, masterKey);
+
+    let targetTenantId = body.tenantId;
+
+    if (!targetTenantId && body.email) {
+      const user = await this.prisma.user.findUnique({
+        where: { email: body.email.toLowerCase().trim() },
+      });
+      if (!user) {
+        throw new NotFoundException(`Nenhuma oficina encontrada com o e-mail ${body.email}`);
+      }
+      targetTenantId = user.tenantId;
+    }
+
+    if (!targetTenantId) {
+      throw new BadRequestException('Informe o tenantId ou o e-mail da oficina.');
+    }
+
+    const workshop = await this.prisma.workshop.findUnique({
+      where: { id: targetTenantId },
+    });
+    if (!workshop) {
+      throw new NotFoundException('Oficina não encontrada.');
+    }
+
+    let plan = 'PRO';
+    let status: SubscriptionStatus = 'ACTIVE';
+    let dueDate = new Date();
+
+    switch (body.action) {
+      case 'LIFETIME':
+        plan = 'LIFETIME';
+        status = 'ACTIVE';
+        dueDate = new Date('2099-12-31T23:59:59.000Z');
+        break;
+      case 'ACTIVE_30D':
+        plan = 'PRO';
+        status = 'ACTIVE';
+        dueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        break;
+      case 'TRIAL_7D':
+        plan = 'PRO';
+        status = 'TRIAL';
+        dueDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        break;
+      case 'BLOCK':
+        plan = 'PRO';
+        status = 'EXPIRED';
+        dueDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        break;
+      default:
+        throw new BadRequestException('Ação inválida.');
+    }
+
+    const updatedSub = await this.prisma.subscription.upsert({
+      where: { tenantId: targetTenantId },
+      create: {
+        tenantId: targetTenantId,
+        plan,
+        status,
+        dueDate,
+        paymentProvider: 'ADMIN_MANUAL',
+      },
+      update: {
+        plan,
+        status,
+        dueDate,
+        paymentProvider: 'ADMIN_MANUAL',
+      },
+    });
+
+    return {
+      success: true,
+      workshopName: workshop.name,
+      subscription: updatedSub,
+    };
   }
 
   async handleWebhook(body: any) {
@@ -109,8 +251,6 @@ export class SubscriptionService {
         status = 'EXPIRED';
         break;
       case 'CANCELLATION':
-        // Se cancelou a renovação automática, mas a expiração ainda está no futuro,
-        // mantém como ACTIVE até que a data de expiração expire.
         if (dueDate.getTime() < Date.now()) {
           status = 'CANCELED';
         } else {
@@ -138,7 +278,7 @@ export class SubscriptionService {
         dueDate,
         paymentProvider: 'REVENUECAT',
         paymentId: original_transaction_id || null,
-        invoiceUrl: null, // Faturas nativas não usam URL externa
+        invoiceUrl: null,
       },
       update: {
         status,

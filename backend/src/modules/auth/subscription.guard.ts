@@ -1,5 +1,6 @@
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { isSuperAdminEmail } from '../../common/utils/admin-security';
 
 @Injectable()
 export class SubscriptionGuard implements CanActivate {
@@ -16,6 +17,10 @@ export class SubscriptionGuard implements CanActivate {
 
     // Leitura (GET) sempre liberada para visualização histórica e exportações
     if (request.method === 'GET') {
+      return true;
+    }
+
+    if (user.role === 'SUPER_ADMIN' || isSuperAdminEmail(user.email)) {
       return true;
     }
 
@@ -37,7 +42,11 @@ export class SubscriptionGuard implements CanActivate {
       });
     }
 
-    const { status, dueDate } = subscription;
+    const { status, dueDate, plan } = subscription;
+    if (plan === 'LIFETIME') {
+      return true;
+    }
+
     const now = new Date();
     const dueDateObj = new Date(dueDate);
 

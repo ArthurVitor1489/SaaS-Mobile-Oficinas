@@ -160,7 +160,7 @@ function MainTabNavigator() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.headerBg} />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} translucent />
       
       {/* HEADER PRINCIPAL */}
       <View style={[styles.header, { backgroundColor: colors.headerBg, borderBottomColor: colors.border }]}>

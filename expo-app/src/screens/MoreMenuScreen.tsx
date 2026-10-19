@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Linking } from 'react-native';
-import { ChevronRight, Tag, Settings, Wifi, LogOut, TrendingUp, MessageCircle, Shield, Crown } from 'lucide-react-native';
+import { ChevronRight, Tag, Settings, Wifi, LogOut, TrendingUp, MessageCircle, Shield, Crown, ShieldAlert } from 'lucide-react-native';
 import Constants from 'expo-constants';
 import { useDatabase } from '../context/DatabaseContext';
 import { useAppStore } from '../store/useAppStore';
@@ -8,6 +8,7 @@ import { theme, useTheme } from '../styles/theme';
 import { useNavigation } from '@react-navigation/native';
 import TermsPrivacyModal from '../components/TermsPrivacyModal';
 import PaywallModal from '../components/PaywallModal';
+import AdminPanelModal from '../components/AdminPanelModal';
 
 const SUPPORT_PHONE = '5583996448504';
 const SUPPORT_PHONE_DISPLAY = '+55 (83) 99644-8504';
@@ -16,9 +17,31 @@ export default function MoreMenuScreen() {
   const navigation = useNavigation<any>();
   const { colors } = useTheme();
   const { settings, signOut, online } = useDatabase();
-  const { isSubscribed } = useAppStore();
+  const { isSubscribed, subscriptionPlan, user } = useAppStore();
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
+  const [showAdminModal, setShowAdminModal] = useState(false);
+
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const isLifetime = subscriptionPlan === 'lifetime' || isSuperAdmin;
+
+  // 5-tap secret trigger on version text
+  const tapCountRef = useRef(0);
+  const tapTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleVersionTap = () => {
+    tapCountRef.current += 1;
+    if (tapTimeoutRef.current) clearTimeout(tapTimeoutRef.current);
+
+    if (tapCountRef.current >= 5) {
+      tapCountRef.current = 0;
+      setShowAdminModal(true);
+    } else {
+      tapTimeoutRef.current = setTimeout(() => {
+        tapCountRef.current = 0;
+      }, 2000);
+    }
+  };
 
   const handleOpenSupport = () => {
     const text = encodeURIComponent('Olá! Preciso de suporte com o aplicativo MecânicaPro.');
@@ -41,6 +64,32 @@ export default function MoreMenuScreen() {
       </View>
 
       <View style={[styles.menuContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        {/* Painel do Administrador (Exclusivo Super Admin) */}
+        {isSuperAdmin && (
+          <TouchableOpacity
+            onPress={() => setShowAdminModal(true)}
+            style={[styles.menuItem, { borderBottomColor: colors.border, backgroundColor: 'rgba(234, 179, 8, 0.05)' }]}
+          >
+            <View style={styles.menuItemLeft}>
+              <View style={[styles.iconBg, { backgroundColor: 'rgba(234, 179, 8, 0.18)' }]}>
+                <ShieldAlert size={18} color="#eab308" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={[styles.menuItemTitle, { color: '#eab308' }]}>Painel do Administrador</Text>
+                  <View style={{ backgroundColor: 'rgba(234, 179, 8, 0.2)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                    <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#eab308' }}>MASTER</Text>
+                  </View>
+                </View>
+                <Text style={[styles.menuItemSubtitle, { color: colors.textMuted }]}>
+                  Gerenciar oficinas e liberar acesso vitalício
+                </Text>
+              </View>
+            </View>
+            <ChevronRight size={18} color="#eab308" />
+          </TouchableOpacity>
+        )}
+
         {/* Assinatura / Plano Pro */}
         <TouchableOpacity
           onPress={() => setShowPaywallModal(true)}
@@ -53,14 +102,18 @@ export default function MoreMenuScreen() {
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Text style={[styles.menuItemTitle, { color: colors.text }]}>Plano Oficina Pro</Text>
-                <View style={{ backgroundColor: isSubscribed ? 'rgba(34, 197, 94, 0.15)' : 'rgba(234, 179, 8, 0.18)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                  <Text style={{ fontSize: 10, fontWeight: 'bold', color: isSubscribed ? '#22c55e' : '#eab308' }}>
-                    {isSubscribed ? 'ATIVO' : '7 DIAS GRÁTIS'}
+                <View style={{ backgroundColor: (isSubscribed || isLifetime) ? 'rgba(34, 197, 94, 0.15)' : 'rgba(234, 179, 8, 0.18)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                  <Text style={{ fontSize: 10, fontWeight: 'bold', color: (isSubscribed || isLifetime) ? '#22c55e' : '#eab308' }}>
+                    {isLifetime ? 'VITALÍCIO' : isSubscribed ? 'ATIVO' : '7 DIAS GRÁTIS'}
                   </Text>
                 </View>
               </View>
               <Text style={[styles.menuItemSubtitle, { color: colors.textMuted }]}>
-                {isSubscribed ? 'Assinatura ativa no Google Play' : 'Teste grátis por 7 dias • depois R$ 49,90/mês'}
+                {isLifetime
+                  ? 'Acesso Vitalício Liberado • Sem mensalidades'
+                  : isSubscribed
+                  ? 'Assinatura ativa no Google Play'
+                  : 'Teste grátis por 7 dias • depois R$ 49,90/mês'}
               </Text>
             </View>
           </View>
@@ -163,9 +216,11 @@ export default function MoreMenuScreen() {
         </TouchableOpacity>
       </View>
 
-      <Text style={[styles.versionText, { color: colors.textMuted }]}>
-        MecânicaPro v{Constants.expoConfig?.version || '1.0.6'} • Gestão de Oficinas
-      </Text>
+      <TouchableOpacity activeOpacity={0.9} onPress={handleVersionTap}>
+        <Text style={[styles.versionText, { color: colors.textMuted }]}>
+          MecânicaPro v{Constants.expoConfig?.version || '1.0.8'} • Gestão de Oficinas
+        </Text>
+      </TouchableOpacity>
 
       <TermsPrivacyModal
         visible={showTermsModal}
@@ -175,6 +230,11 @@ export default function MoreMenuScreen() {
       <PaywallModal
         visible={showPaywallModal}
         onClose={() => setShowPaywallModal(false)}
+      />
+
+      <AdminPanelModal
+        visible={showAdminModal}
+        onClose={() => setShowAdminModal(false)}
       />
     </View>
   );

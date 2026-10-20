@@ -8,8 +8,24 @@ export type SubscriptionStatus = 'ACTIVE' | 'OVERDUE' | 'EXPIRED' | 'TRIAL' | 'C
 export class SubscriptionService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private verifyAdminAccess(userEmail?: string, masterKey?: string) {
-    const isEmailAllowed = isSuperAdminEmail(userEmail);
+  private extractEmailFromAuthHeader(authHeader?: string): string | undefined {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) return undefined;
+    try {
+      const token = authHeader.slice(7);
+      const parts = token.split('.');
+      if (parts.length !== 3) return undefined;
+      const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
+      return payload?.email;
+    } catch {
+      return undefined;
+    }
+  }
+
+  private verifyAdminAccess(authHeaderOrEmail?: string, masterKey?: string) {
+    const email = authHeaderOrEmail?.startsWith('Bearer ')
+      ? this.extractEmailFromAuthHeader(authHeaderOrEmail)
+      : authHeaderOrEmail;
+    const isEmailAllowed = isSuperAdminEmail(email);
     const isKeyAllowed = isValidMasterKey(masterKey);
 
     if (!isEmailAllowed && !isKeyAllowed) {

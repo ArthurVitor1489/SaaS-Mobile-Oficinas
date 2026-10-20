@@ -14,18 +14,16 @@ export class SubscriptionController {
   }
 
   @Get('admin/tenants')
-  @UseGuards(JwtAuthGuard)
   getAdminWorkshops(
-    @Req() req: any,
+    @Headers('authorization') authHeader?: string,
     @Headers('x-admin-key') masterKey?: string,
   ) {
-    return this.subscriptionService.getAdminWorkshops(req.user?.email, masterKey);
+    return this.subscriptionService.getAdminWorkshops(authHeader, masterKey);
   }
 
   @Post('admin/grant')
-  @UseGuards(JwtAuthGuard)
   adminManageSubscription(
-    @Req() req: any,
+    @Headers('authorization') authHeader: string | undefined,
     @Headers('x-admin-key') masterKey: string | undefined,
     @Body()
     body: {
@@ -34,7 +32,7 @@ export class SubscriptionController {
       action: 'LIFETIME' | 'ACTIVE_30D' | 'TRIAL_7D' | 'BLOCK';
     },
   ) {
-    return this.subscriptionService.adminManageSubscription(req.user?.email, masterKey, body);
+    return this.subscriptionService.adminManageSubscription(authHeader, masterKey, body);
   }
 
   @Post('webhook')

@@ -51,6 +51,41 @@ export class SubscriptionService {
     return sub;
   }
 
+  async confirmGooglePlayPurchase(
+    tenantId: string,
+    body: { productId?: string; purchaseToken?: string; transactionId?: string },
+  ) {
+    const existing = await this.prisma.subscription.findUnique({
+      where: { tenantId },
+    });
+
+    if (existing?.plan === 'LIFETIME') {
+      return existing;
+    }
+
+    const dueDate = new Date(Date.now() + 31 * 24 * 60 * 60 * 1000);
+    const paymentId = body.purchaseToken || body.transactionId || 'google-play-direct';
+
+    return this.prisma.subscription.upsert({
+      where: { tenantId },
+      create: {
+        tenantId,
+        plan: 'PRO',
+        status: 'ACTIVE',
+        dueDate,
+        paymentProvider: 'GOOGLE_PLAY',
+        paymentId,
+      },
+      update: {
+        plan: 'PRO',
+        status: 'ACTIVE',
+        dueDate,
+        paymentProvider: 'GOOGLE_PLAY',
+        paymentId,
+      },
+    });
+  }
+
   async getAdminWorkshops(userEmail?: string, masterKey?: string) {
     this.verifyAdminAccess(userEmail, masterKey);
 

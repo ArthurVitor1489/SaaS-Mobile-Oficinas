@@ -21,11 +21,12 @@
         "backgroundColor": "#0f1115"
       },
       "package": "com.mecanicapro.app",
-      "versionCode": 9,
+      "versionCode": 10,
       "edgeToEdgeEnabled": true,
       "permissions": [
         "INTERNET",
-        "ACCESS_NETWORK_STATE"
+        "ACCESS_NETWORK_STATE",
+        "com.android.vending.BILLING"
       ]
     },
     "web": {
@@ -34,6 +35,12 @@
     "owner": "hudraf",
     "plugins": [
       "expo-secure-store",
+      [
+        "react-native-iap",
+        {
+          "paymentProvider": "Play Store"
+        }
+      ],
       [
         "expo-build-properties",
         {

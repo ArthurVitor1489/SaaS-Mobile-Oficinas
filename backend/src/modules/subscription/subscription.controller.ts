@@ -13,6 +13,15 @@ export class SubscriptionController {
     return this.subscriptionService.getSubscription(tenantId);
   }
 
+  @Post('google-play/confirm')
+  @UseGuards(JwtAuthGuard)
+  confirmGooglePlayPurchase(
+    @Tenant() tenantId: string,
+    @Body() body: { productId?: string; purchaseToken?: string; transactionId?: string },
+  ) {
+    return this.subscriptionService.confirmGooglePlayPurchase(tenantId, body);
+  }
+
   @Get('admin/tenants')
   getAdminWorkshops(
     @Headers('authorization') authHeader?: string,

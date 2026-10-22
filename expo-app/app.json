@@ -3,7 +3,7 @@
     "name": "MecânicaPro",
     "slug": "mecanicapro-mobile",
     "icon": "./assets/icon.png",
-    "version": "1.0.8",
+    "version": "1.0.9",
     "orientation": "default",
     "splash": {
       "resizeMode": "contain",
@@ -21,7 +21,7 @@
         "backgroundColor": "#0f1115"
       },
       "package": "com.mecanicapro.app",
-      "versionCode": 10,
+      "versionCode": 11,
       "edgeToEdgeEnabled": true,
       "permissions": [
         "INTERNET",

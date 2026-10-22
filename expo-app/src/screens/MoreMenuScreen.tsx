@@ -218,7 +218,7 @@ export default function MoreMenuScreen() {
 
       <TouchableOpacity activeOpacity={0.9} onPress={handleVersionTap}>
         <Text style={[styles.versionText, { color: colors.textMuted }]}>
-          MecânicaPro v{Constants.expoConfig?.version || '1.0.8'} • Gestão de Oficinas
+          MecânicaPro v{Constants.expoConfig?.version || '1.0.9'} • Gestão de Oficinas
         </Text>
       </TouchableOpacity>
 
